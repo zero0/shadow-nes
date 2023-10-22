@@ -73,7 +73,7 @@ PPU_CTRL_VAR1:      .res 1
 PPU_MASK_VAR:       .res 1
 RAND_SEED:          .res 2
 FT_TEMP:            .res 3
-
+_temp: .res 3
 TEMP:               .res 11
 
 PAD_BUF             =TEMP+1
@@ -91,7 +91,7 @@ RLE_HIGH            =TEMP+1
 RLE_TAG             =TEMP+2
 RLE_BYTE            =TEMP+3
 
-
+.export _temp;
 
 .segment "HEADER"
 
@@ -117,7 +117,6 @@ RLE_BYTE            =TEMP+3
 
 
 .segment "CHARS"
-
 
 .segment "CODE"
 
@@ -219,10 +218,10 @@ nmi:
     ; set PPU address to $3f00
     lda #$3f
     sta PPU_ADDR
+    ldx #0
     stx PPU_ADDR
-
     :
-        lda PALETTE, x
+        lda example_palette, x
         sta PPU_DATA
         inx
         cpx #32
@@ -276,6 +275,11 @@ nmi:
 ;
 
 .export _ppu_update
+.export _ppu_off
+.export _ppu_skip
+.export _ppu_address_tile
+.export _ppu_update_tile
+.export _ppu_update_tile_ptr
 
 .segment "RODATA"
 
@@ -302,7 +306,7 @@ _ppu_update:
     rts
 
 ; ppu_skip: waits until next NMI, does not update PPU
-ppu_skip:
+_ppu_skip:
     lda NMI_COUNT
     :
         cmp NMI_COUNT
@@ -310,7 +314,7 @@ ppu_skip:
     rts
 
 ; ppu_off: waits until next NMI, turns rendering off (now safe to write PPU directly via $2007)
-ppu_off:
+_ppu_off:
     lda #2
     sta NMI_READY
     :
@@ -318,11 +322,23 @@ ppu_off:
         bne :-
     rts
 
+.macro popa
+    ldy #0
+    lda (sp), y
+    inc sp
+.endmacro
+
 ; ppu_address_tile: use with rendering off, sets memory address to tile at X/Y, ready for a $2007 (PPU_DATA) write
 ;   Y =  0- 31 nametable $2000
 ;   Y = 32- 63 nametable $2400
 ;   Y = 64- 95 nametable $2800
 ;   Y = 96-127 nametable $2C00
+_ppu_address_tile:
+    sta TEMP ; y -> temp
+    popa
+    tax ; A -> x
+    ldy TEMP ; temp -> y
+
 ppu_address_tile:
     ; reset latch
     lda PPU_STATUS
@@ -355,6 +371,14 @@ ppu_address_tile:
     rts
 
 ; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
+_ppu_update_tile:
+    sta TEMP ; A -> temp
+    popa ; pull Y off sp
+    tay ; A -> y
+    popa ; pull X off sp
+    tax ; A -> x
+    lda TEMP ; TEMP -> A
+
 ppu_update_tile:
     ; temporarily store A on stack
     pha
@@ -402,6 +426,9 @@ ppu_update_tile:
     stx NAMETABLE_UPDATE_LEN
     rts
 
+_ppu_update_tile_ptr:
+
+    rts
 
 ; ppu_update_byte: like ppu_update_tile, but X/Y makes the high/low bytes of the PPU address to write
 ;    this may be useful for updating attribute tiles
@@ -437,6 +464,7 @@ ppu_update_byte:
 
 ; clears nametable data and resets 
 clear_nametable:
+    push_reg
     ; reset latch
     lda PPU_STATUS
 
@@ -465,6 +493,8 @@ clear_nametable:
         sta PPU_DATA
         dex
         bne :-
+
+    pop_reg
     rts
 
 ;
@@ -522,7 +552,7 @@ _gamepad_poll:
 
     rts
 
-; get game pad state at index A
+; return game pad state at index A into register A
 _gamepad_state:
 
     ; fix gamepad index to [0,3] and move to x
@@ -534,7 +564,7 @@ _gamepad_state:
 
     rts
 
-; get game pad state at index A
+; return game pad state at index A into register A
 _gamepad_prev_state:
 
     ; fix gamepad index to [0,3] and move to x
@@ -578,28 +608,39 @@ reset:
         bpl :-
 
     ; clear pallete (store $3f00)
-    lda #$3f
-    sta PPU_ADDR
-    stx PPU_ADDR 
-    lda #$0f
-    ldy #$20
+    ;lda #$3f
+    ;sta PPU_ADDR
+    ;stx PPU_ADDR 
+    ldy #0
     :
-        sta PPU_DATA
-        dey
+        lda example_palette, y
+        ;sta PPU_DATA
+        sta PALETTE, y
+        iny
+        cpy #32
         bne :-
 
-    ; clear nametable (store $2000)
-    txa
-    ldy #$20
-    sty PPU_ADDR
-    sta PPU_ADDR
-    ldy #$10
-    :
-        sta PPU_DATA
-        inx             ; x goes from 0 -> 255 -> 0
-        bne :-
-        dey
-        bne :-
+    jsr clear_nametable
+
+    ;; clear nametable (store $2000)
+    ;txa
+    ;ldy #$20
+    ;sty PPU_ADDR
+    ;sta PPU_ADDR
+    ;ldy #$10
+    ;:
+    ;    sta PPU_DATA
+    ;    inx             ; x goes from 0 -> 255 -> 0
+    ;    bne :-
+    ;    dey
+    ;    bne :-
+;
+    ;; clear all attributes
+    ;ldy #64
+    ;:
+    ;    sta PPU_DATA
+    ;    dey
+    ;    bne :-
 
     ; clear ram
     txa
@@ -627,5 +668,5 @@ reset:
     ; enable interupts
     cli
 
-    ; run main
+    ; run main()
     jsr _main
