@@ -50,7 +50,7 @@ NAMETABLE_C         =$2800
 NAMETABLE_D         =$2C00
 
 PALETTE_A           =$3f00
-ff
+
 ; PPU_CTRL Modes
 .define PPU_CTRL_BASE_NAMETABLE_ADDR_2000           $00 ; %00000000
 .define PPU_CTRL_BASE_NAMETABLE_ADDR_2400           $01 ; %00000001
