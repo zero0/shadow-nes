@@ -49,6 +49,44 @@ NAMETABLE_B         =$2400
 NAMETABLE_C         =$2800
 NAMETABLE_D         =$2C00
 
+PALETTE_A           =$3f00
+ff
+; PPU_CTRL Modes
+.define PPU_CTRL_BASE_NAMETABLE_ADDR_2000           $00 ; %00000000
+.define PPU_CTRL_BASE_NAMETABLE_ADDR_2400           $01 ; %00000001
+.define PPU_CTRL_BASE_NAMETABLE_ADDR_2800           $02 ; %00000010
+.define PPU_CTRL_BASE_NAMETABLE_ADDR_2C00           $03 ; %00000011
+.define PPU_CTRL_VRAM_ADDR_INC_1_ACROSS             $00 ; %00000000
+.define PPU_CTRL_VRAM_ADDR_INC_32_DOWN              $04 ; %00000100
+.define PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000     $00 ; %00000000
+.define PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000     $08 ; %00001000
+.define PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000 $00 ; %00000000
+.define PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_1000 $10 ; %00010000
+.define PPU_CTRL_SPRITE_SIZE_8x8                    $00 ; %00000000
+.define PPU_CTRL_SPRITE_SIZE_8x16                   $20 ; %00100000
+.define PPU_CTRL_READ_EXT                           $00 ; %00000000
+.define PPU_CTRL_WRITE_EXT                          $40 ; %01000000
+.define PPU_CTRL_GENERATE_NMI_OFF                   $00 ; %00000000
+.define PPU_CTRL_GENERATE_NMI_ON                    $80 ; %10000000
+
+; PPU_MASK Modes
+.define PPU_MASK_GRAYSCALE_OFF                      $00 ; %00000000
+.define PPU_MASK_GRAYSCALE_ON                       $01 ; %00000001
+.define PPU_MASK_BACKGROUND_LEFTMOST_8x8_HIDE       $00 ; %00000000
+.define PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW       $02 ; %00000010
+.define PPU_MASK_SPRITE_LEFTMOST_8x8_HIDE           $00 ; %00000000
+.define PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW           $04 ; %00000100
+.define PPU_MASK_BACKGROUND_HIDE                    $00 ; %00000000
+.define PPU_MASK_BACKGROUND_SHOW                    $08 ; %00001000
+.define PPU_MASK_SPRITE_HIDE                        $00 ; %00000000
+.define PPU_MASK_SPRITE_SHOW                        $10 ; %00010000
+.define PPU_MASK_EMPHASIZE_RED_OFF                  $00 ; %00000000
+.define PPU_MASK_EMPHASIZE_RED_ON                   $20 ; %00100000
+.define PPU_MASK_EMPHASIZE_GREEN_OFF                $00 ; %00000000
+.define PPU_MASK_EMPHASIZE_GREEN_ON                 $40 ; %01000000
+.define PPU_MASK_EMPHASIZE_BLUE_OFF                 $00 ; %00000000
+.define PPU_MASK_EMPHASIZE_BLUE_ON                  $80 ; %10000000
+
 
 .segment "ZEROPAGE"
 
@@ -162,14 +200,15 @@ irq:
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
+    PALETTE_UPDATEL_LEN:    .res 1 ;
 
 
 .segment "BSS"
-    NAMETABLE_UPDATE:   .res 256 ;
-    PALETTE:            .res 32 ;
+    NAMETABLE_UPDATE:       .res 256 ;
+    PALETTE_UPDATE:         .res 32 ;
 
 .segment "OAM"
-    OAM:                .res 256 ;
+    OAM:                    .res 256 ;
 
 .segment "CODE"
 nmi:
@@ -199,8 +238,7 @@ nmi:
     bne :+
         lda #0
         sta PPU_MASK
-        sta NMI_READY
-        jmp @ppu_update_end
+        jmp @nmi_ready
     :
 
     ; sprite oam dma
@@ -210,27 +248,41 @@ nmi:
     sta PPU_OAM_DMA
 
     ; palettes
-    ; set horizontal nametable inc 32
-    lda #%10001000
+    ; set horizontal nametable (inc 32)
+    ;lda #%10000000
+    lda #(PPU_CTRL_VRAM_ADDR_INC_32_DOWN | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
-    lda PPU_STATUS
     
-    ; set PPU address to $3f00
+    bit PPU_STATUS
+    
+@update_palette:
+    ; palette update
+    ldx #0
+    cpx PALETTE_UPDATEL_LEN
+    bcc @update_nametable
+
+    ; set PPU address to $3f00 (PALETTE_A)
     lda #$3f
     sta PPU_ADDR
     ldx #0
     stx PPU_ADDR
     :
-        lda example_palette, x
+        lda PALETTE_UPDATE, x
         sta PPU_DATA
         inx
-        cpx #32
+
+        ; loop while X !+ PALETTE_UPDATEL_LEN
+        cpx PALETTE_UPDATEL_LEN
         bcc :-
 
+    lda #0
+    sta PALETTE_UPDATEL_LEN
+
+@update_nametable:
     ; nametable update
     ldx #0
     cpx NAMETABLE_UPDATE_LEN
-    bcs @ppu_update_end
+    bcs @ppu_scroll
     :
         ; high byte address
         lda NAMETABLE_UPDATE, x
@@ -255,11 +307,34 @@ nmi:
     lda #0
     sta NAMETABLE_UPDATE_LEN
 
-@ppu_update_end:
-    ; clear NMI
+@ppu_scroll:
+
+    bit PPU_STATUS
+
+    lda NMI_COUNT
+    sta PPU_SCROLL
+
+    lda SCROLL_Y
+    sta PPU_SCROLL
+
+    ; enable 
+    ;ora #%10001000
+    lda #0 ; scroll_nmt
+    and #%00000011 ;
+    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000)
+    sta PPU_CTRL
+
+    ; enable rendering
+    ;lda #%00011110
+    lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
+    sta PPU_MASK
+
+@nmi_ready:
+    ; NMI ready
     ldx #0
     stx NMI_READY
 
+@ppu_update_end:
     ; TODO: play sound/music
 
     ; unlock NMI
@@ -341,7 +416,7 @@ _ppu_address_tile:
 
 ppu_address_tile:
     ; reset latch
-    lda PPU_STATUS
+    bit PPU_STATUS
 
     ; shift Y >> 3
     tya
@@ -466,7 +541,7 @@ ppu_update_byte:
 clear_nametable:
     push_reg
     ; reset latch
-    lda PPU_STATUS
+    bit PPU_STATUS
 
     ; store $2000 (NAMETABLE_A) to start
     lda #$20
@@ -474,7 +549,7 @@ clear_nametable:
     lda #$00
     sta PPU_ADDR
 
-    lda #0
+    lda #20
 
     ; empty nametable
     ldy #30 ; 30 rows
@@ -482,11 +557,13 @@ clear_nametable:
         ldx #32 ; 32 columns
         :
             sta PPU_DATA
+            adc #1
             dex
             bne :-
         dey
         bne :--
 
+    lda #$0f
     ; set all attributes to 0
     ldx #64 ; 64 bytes
     :
@@ -601,6 +678,9 @@ reset:
     stx APU_SOUND   ; disable APU sound
     stx DMC_FREQ    ; disable DMC IRQ
 
+    stx SCROLL_X
+    stx SCROLL_Y
+
     ; wait for first vblank
     bit PPU_STATUS
     :
@@ -614,11 +694,12 @@ reset:
     ldy #0
     :
         lda example_palette, y
-        ;sta PPU_DATA
-        sta PALETTE, y
+        sta PALETTE_UPDATE, y
         iny
         cpy #32
         bne :-
+
+    sty PALETTE_UPDATEL_LEN
 
     jsr clear_nametable
 
@@ -660,11 +741,14 @@ reset:
     :
         bit PPU_STATUS
         bpl :-
-    
+
     ; enable NMI
-    lda #%10001000
+    lda #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
 
+    lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW)
+    sta PPU_MASK
+    
     ; enable interupts
     cli
 

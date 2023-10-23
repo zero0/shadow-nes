@@ -53,18 +53,18 @@ cursor_x = 1;
 cursor_y = 2;
     while( 1 )
     {
-        //for( i = 0; i < num_players; ++i )
-        //{
-        //    gamepad_poll( i );
-        //    current_gamepad_state[i] = gamepad_state(i);
-        //    prev_gamepad_state[i] = gamepad_prev_state(i);
-        //}
+        for( i = 0; i < num_players; ++i )
+        {
+            gamepad_poll( i );
+            current_gamepad_state[i] = gamepad_state(i);
+            prev_gamepad_state[i] = gamepad_prev_state(i);
+        }
 
         //ppu_off();
 
         //ppu_address_tile( 1, 2 );
 
-        ppu_update_tile(cursor_x, cursor_y, 34);
+        //ppu_update_tile(cursor_x, cursor_y, 34);
 
         ppu_update();
     }

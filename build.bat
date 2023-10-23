@@ -1,5 +1,6 @@
 @echo off
 setlocal
+color
 
 set "CC65_HOME=C:\cc65"
 set "CC65_BIN=%CC65_HOME%\bin"
@@ -14,6 +15,10 @@ set "GAME_NAME=%1"
 rem set "CPU_TYPE=--cpu 6502"
 set "CPU_TYPE=-t nes"
 
+set "CA_DBG=-g"
+set "CC_DBG=-g"
+
+rem Create bin directory for final .nes file
 if not exist bin md bin
 
 rem Clean tmp and obj directories
@@ -21,13 +26,13 @@ if exist tmp (del /Q tmp) else md tmp
 if exist obj (del /Q obj) else md obj
 
 rem Compile source assemblie files
-for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% -o obj\%%~nS.o %%S
+for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
 
 rem Compile C files
-for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source -Oisr -o tmp\%%~nC.s %%C
+for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_DBG% -Oisr -o tmp\%%~nC.s %%C
 
 rem Compile temp assemblie files
-for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% -o obj\%%~nS.o %%S
+for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
 
 rem Build .o file list
 set "OBJ_FILES="
@@ -42,12 +47,15 @@ rem Link all .o files into .nes file
 %CC65_LD% %LD_CONFIG% %LD_DBG% --lib-path lib --lib-path %CC65_LIB% -o bin\%GAME_NAME%.nes %OBJ_FILES% nes.lib || goto :fail
 
 :success
+color 0A
 echo Compile bin\%GAME_NAME%.nes success.
 goto :end
 
 :fail
+color 0C
 echo Compile bin\%GAME_NAME%.nes failed.
 goto :end
 
 :end
+color
 endlocal
