@@ -1,6 +1,8 @@
 @echo off
 setlocal
-color
+
+rem Get ESC character
+for /F %%a in ('"prompt $E$S & echo on & for %%b in (1) do rem"') do set "ESC=%%a"
 
 set "CC65_HOME=C:\cc65"
 set "CC65_BIN=%CC65_HOME%\bin"
@@ -47,15 +49,12 @@ rem Link all .o files into .nes file
 %CC65_LD% %LD_CONFIG% %LD_DBG% --lib-path lib --lib-path %CC65_LIB% -o bin\%GAME_NAME%.nes %OBJ_FILES% nes.lib || goto :fail
 
 :success
-color 0A
-echo Compile bin\%GAME_NAME%.nes success.
+echo %ESC%[92mCompile bin\%GAME_NAME%.nes success.%ESC%[0m
 goto :end
 
 :fail
-color 0C
-echo Compile bin\%GAME_NAME%.nes failed.
+echo %ESC%[91mCompile bin\%GAME_NAME%.nes failed.%ESC%[0m
 goto :end
 
 :end
-color
 endlocal
