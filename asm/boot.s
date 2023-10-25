@@ -22,7 +22,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __RODATA_LOAD__     ,__RODATA_RUN__ ,__RODATA_SIZE__
 .import __DMC_START__
 .import NES_MAPPER          ,NES_PRG_BANKS  ,NES_CHR_BANKS  ,NES_MIRRORING
-.import ppu_init, ppu_enable_default, ppu_wait_vblank, clear_nametable, nmi
+.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, nmi
 .include "zeropage.inc"
 
 FT_BASE_ADR         =$0100    ;page in RAM, should be $xx00
@@ -127,6 +127,8 @@ reset:
     jsr ppu_wait_vblank
 
     ; clear pallete (store $3f00)
+    jsr ppu_clear_palette
+
     ;lda #$3f
     ;sta PPU_ADDR
     ;stx PPU_ADDR 
@@ -143,19 +145,23 @@ reset:
     ; clear all nametables
     ldx #$20
     lda #$00
-    jsr clear_nametable
+    ldy #65
+    jsr ppu_clear_nametable
 
     ldx #$24
     lda #$00
-    jsr clear_nametable
+    ldy #66
+    jsr ppu_clear_nametable
 
     ldx #$28
     lda #$00
-    jsr clear_nametable
+    ldy #67
+    jsr ppu_clear_nametable
 
     ldx #$2C
     lda #$00
-    jsr clear_nametable
+    ldy #68
+    jsr ppu_clear_nametable
 
     ; clear ram
     lda #0

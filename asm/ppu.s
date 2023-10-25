@@ -21,7 +21,26 @@ NAMETABLE_B         =$2400
 NAMETABLE_C         =$2800
 NAMETABLE_D         =$2C00
 
-PALETTE_A           =$3f00
+; palette addresses
+.define PALETTE_BASE_ADDR               $3f00
+.define PALETTE_BYTE_COUNT              32
+
+.define PALETTE_BACKGROUND_BASE_ADDR    PALETTE_BASE_ADDR
+.define PALETTE_BACKGROUND_0_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $0
+.define PALETTE_BACKGROUND_1_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $4
+.define PALETTE_BACKGROUND_2_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $8
+.define PALETTE_BACKGROUND_3_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $C
+.define PALETTE_BACKGROUND_BYTE_COUNT   16
+
+.define PALETTE_SPRITE_BASE_ADDR        PALETTE_BASE_ADDR + $10
+.define PALETTE_SPRITE_0_ADDR           PALETTE_SPRITE_BASE_ADDR + $0
+.define PALETTE_SPRITE_1_ADDR           PALETTE_SPRITE_BASE_ADDR + $4
+.define PALETTE_SPRITE_2_ADDR           PALETTE_SPRITE_BASE_ADDR + $8
+.define PALETTE_SPRITE_3_ADDR           PALETTE_SPRITE_BASE_ADDR + $C
+.define PALETTE_SPRITE_BYTE_COUNT       16
+
+.define NAMETABLE_ROWS      30
+.define NAMETABLE_COLS      32
 
 .macro popa
     ldy #0
@@ -67,13 +86,13 @@ PALETTE_A           =$3f00
 
 .segment "ZEROPAGE"
 
-    NMI_LOCK:               .res 1 ; 
-    NMI_COUNT:              .res 1 ;
-    NMI_READY:              .res 1 ;
-    NAMETABLE_UPDATE_LEN:   .res 1 ;
-    PALETTE_UPDATEL_LEN:    .res 1 ;
-    SCROLL_X:               .res 1 ;
-    SCROLL_Y:               .res 1 ;
+    NMI_LOCK:               .res 1, 0 ; 
+    NMI_COUNT:              .res 1, 0 ;
+    NMI_READY:              .res 1, 2 ;
+    NAMETABLE_UPDATE_LEN:   .res 1, 0 ;
+    PALETTE_UPDATEL_LEN:    .res 1, 0 ;
+    SCROLL_X:               .res 1, 0 ;
+    SCROLL_Y:               .res 1, 0 ;
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
@@ -90,7 +109,10 @@ PALETTE_A           =$3f00
 .export ppu_wait_vblank
 .export ppu_enable_default
 
-.export clear_nametable
+.export ppu_clear_nametable
+.export ppu_clear_palette
+
+.export _ppu_set_scroll
 
 .export _ppu_update
 .export _ppu_off
@@ -118,21 +140,31 @@ PALETTE_A           =$3f00
 
 ; ppu_init: initialize PPU ( assumes X == 0)
 ppu_init:
-    stx PPU_CTRL    ; disable NMI
-    stx PPU_MASK    ; disable rendering
-
     stx SCROLL_X
     stx SCROLL_Y
+
+    stx PPU_SCROLL
+    stx PPU_SCROLL
+
+    stx PPU_CTRL    ; disable NMI
+    stx PPU_MASK    ; disable rendering
     rts
 
 ; ppu_wait_vblank: waits for the next vblank
 ppu_wait_vblank:
+    bit PPU_STATUS
     :
         bit PPU_STATUS
         bpl :- 
     rts
 
 ppu_enable_default:
+    lda SCROLL_X
+    sta PPU_SCROLL
+
+    lda SCROLL_Y
+    sta PPU_SCROLL
+
     lda #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
 
@@ -165,6 +197,13 @@ _ppu_off:
         lda NMI_READY
         bne :-
     rts
+
+; ppu_set_scroll: sets the (x,y) scroll position from X and A
+_ppu_set_scroll:
+    stx SCROLL_X
+    sta SCROLL_Y
+    rts
+
 ; ppu_address_tile: use with rendering off, sets memory address to tile at X/Y, ready for a $2007 (PPU_DATA) write
 ;   Y =  0- 31 nametable $2000
 ;   Y = 32- 63 nametable $2400
@@ -303,10 +342,10 @@ ppu_update_byte:
     sty NAMETABLE_UPDATE_LEN
     rts
 
-; clears specific name table $X/A
+; clears specific nametable at $X/A to value Y
 _ppu_clear_nametable:
 
-clear_nametable:
+ppu_clear_nametable:
     ; reset latch
     bit PPU_STATUS
 
@@ -314,28 +353,54 @@ clear_nametable:
     stx PPU_ADDR
     sta PPU_ADDR
 
-    lda #65
+    tya
 
-    ; empty nametable
-    ldy #30 ; 30 rows
+    ldy #(NAMETABLE_ROWS) ; 30 rows
     :
-        ldx #32 ; 32 columns
+        ldx #(NAMETABLE_COLS) ; 32 columns
         :
             sta PPU_DATA
+            adc #1
             dex
             bne :-
         dey
         bne :--
 
-    ; set all attributes to 0
+    lda #0
+
+    ; empty attribute table
     ldx #64 ; 64 bytes
     :
         sta PPU_DATA
+        clc
+        adc #%01010101
         dex
         bne :-
 
-    sta PPU_SCROLL
-    sta PPU_SCROLL
+    rts
+
+; ppu_clear_palette: clear all palettes
+_ppu_clear_palette:
+
+ppu_clear_palette:
+    ; reset latch
+    bit PPU_STATUS
+
+    ; load palette address
+    ldx #(>PALETTE_BASE_ADDR)
+    lda #(<PALETTE_BASE_ADDR)
+
+    ; store
+    stx PPU_ADDR
+    sta PPU_ADDR
+
+    ldy #0
+    :
+        lda example_palette, y ; temp
+        sta PPU_DATA
+        iny
+        cpy #32
+        bne :-
     
     rts
 
@@ -407,7 +472,7 @@ ppu_fill_nametable_attr:
 nmi:
     push_reg
 
-    ; prevent nmi reentry
+    ; prevent nmi reentry (0 == locked)
     lda NMI_LOCK
     beq :+
         jmp @nmi_end
@@ -429,36 +494,30 @@ nmi:
     ; nmi ready == 2, turn off rendering
     cmp #2
     bne :+
-        lda #0
-        sta PPU_MASK
+
+        ;lda #0
+        ;sta PPU_MASK
         jmp @nmi_ready
     :
 
-    ; sprite oam dma
-    ldx #0
-    stx PPU_OAM_ADDR
-    lda #>OAM
-    sta PPU_OAM_DMA
+    ;; sprite oam dma
+    ;ldx #0
+    ;stx PPU_OAM_ADDR
+    ;lda #>OAM
+    ;sta PPU_OAM_DMA
 
-    ; palettes
-    ; set horizontal nametable (inc 32)
-    ;lda #%10000000
-    lda #(PPU_CTRL_VRAM_ADDR_INC_32_DOWN | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
-    sta PPU_CTRL
-    
-    bit PPU_STATUS
-    
 @update_palette:
     ; palette update
     ldx #0
     cpx PALETTE_UPDATEL_LEN
-    bcc @update_nametable
+    beq @update_nametable
 
-    ; set PPU address to $3f00 (PALETTE_A)
-    lda #$3f
-    sta PPU_ADDR
-    ldx #0
+    ; set PPU palette address
+    ldx #(>PALETTE_BASE_ADDR)
+    lda #(<PALETTE_BASE_ADDR)
+
     stx PPU_ADDR
+    sta PPU_ADDR
     :
         lda PALETTE_UPDATE, x
         sta PPU_DATA
@@ -475,7 +534,7 @@ nmi:
     ; nametable update
     ldx #0
     cpx NAMETABLE_UPDATE_LEN
-    bcs @ppu_scroll
+    beq @ppu_scroll
     :
         ; high byte address
         lda NAMETABLE_UPDATE, x
@@ -501,8 +560,6 @@ nmi:
     sta NAMETABLE_UPDATE_LEN
 
 @ppu_scroll:
-
-    bit PPU_STATUS
 
     lda SCROLL_X ; NMI_COUNT
     sta PPU_SCROLL

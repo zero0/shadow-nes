@@ -3,12 +3,11 @@
 //#define b d[1];
 //static char i, b;
 
-#include "gamepad.h"
 #include <nes.h>
 #include <stdlib.h>
 
-typedef unsigned int ptr_t;
-typedef unsigned char uint8_t;
+#include "gamepad.h"
+#include "ppu.h"
 
 typedef struct
 {
@@ -40,26 +39,6 @@ typedef union
     ppu_fill_nametable_attr_args_t ppu_fill_nametable_attr_args;
 } args_t;
 
-void __fastcall__ ppu_update(void);
-
-void __fastcall__ ppu_off(void);
-
-void __fastcall__ ppu_skip(void);
-
-void __fastcall__ ppu_address_tile( char x, char y );
-
-void __fastcall__ ppu_update_tile( char x, char y, char t );
-
-void __fastcall__ ppu_update_byte( char x, char y, char b );
-
-void __fastcall__ ppu_clear_nametable( ptr_t tableAddress );
-
-void __fastcall__ ppu_fill_nametable( ptr_t tableAddress, char tile );
-
-void __fastcall__ ppu_fill_nametable_attr( ptr_t tableAddress );
-
-void __fastcall__ ppu_fill_nametable_attr_only( ptr_t tableAddress, char attr );
-
 
 extern args_t ARGS;
 #pragma zpsym("ARGS");
@@ -68,9 +47,7 @@ extern args_t ARGS;
 //
 //
 
-static char current_gamepad_state[4];
-static char prev_gamepad_state[4];
-static char gamepad_index;
+static char current_gamepad_state;
 static char num_players;
 
 static char cursor_x;
@@ -81,22 +58,41 @@ static char i;
 
 void main(void)
 {
-    gamepad_index = 0;
     num_players = 2;
-cursor_x = 1;
-cursor_y = 2;
+cursor_x = 0;
+cursor_y = 0;
         ptr = 0;
     while( 1 )
     {
         for( i = 0; i < num_players; ++i )
         {
             gamepad_poll( i );
-            current_gamepad_state[i] = gamepad_state(i);
-            prev_gamepad_state[i] = gamepad_prev_state(i);
+        }
+
+        current_gamepad_state = gamepad_state(0);
+
+        if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_R))
+        {
+            ++cursor_x;
+        }
+        else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_L))
+        {
+            --cursor_x;
+        }
+        
+        if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_U))
+        {
+            --cursor_y;
+        }
+        else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_D))
+        {
+            ++cursor_y;
         }
 
         ppu_off();
 
+
+        ppu_set_scroll( MAKE_SCROLL( cursor_x, cursor_y ) );
         //ARGS.ppu_fill_nametable_attr_args.address = 0x2000;
         //ARGS.ppu_fill_nametable_attr_args.tile = 65;
         //ARGS.ppu_fill_nametable_attr_args.attr = 44;

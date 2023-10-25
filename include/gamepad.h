@@ -21,8 +21,8 @@ STATIC_ASSERT( sizeof( GAMEPAD_A ) == 1 );
 
 // true if the button is pressed
 #define GAMEPAD_BTN(v, b)               ( ( (v) & (b) ) == (b) )
-#define GAMEPAD_BTN_DONW(p, c, b)       ( GAMEPAD_BTN( c, b ) )
-#define GAMEPAD_BTN_UP(p, c, b)         ( !GAMEPAD_BTN( c, b ) )
+#define GAMEPAD_BTN_DONW(c, b)          ( GAMEPAD_BTN( c, b ) )
+#define GAMEPAD_BTN_UP(c, b)            ( !GAMEPAD_BTN( c, b ) )
 #define GAMEPAD_BTN_PRESSED(p, c, b)    ( !GAMEPAD_BTN(p, b) && GAMEPAD_BTN(c, b) )
 #define GAMEPAD_BTN_RELEASED(p, c, b)   ( GAMEPAD_BTN(p, b) && !GAMEPAD_BTN(c, b) )
 
