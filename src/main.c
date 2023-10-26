@@ -6,8 +6,11 @@
 #include <nes.h>
 #include <stdlib.h>
 
+#include "types.h"
+#include "macros.h"
 #include "gamepad.h"
 #include "ppu.h"
+#include "subpixel.h"
 
 typedef struct
 {
@@ -56,12 +59,27 @@ static char cursor_y;
 static ptr_t ptr;
 static char i;
 
+static subpixel_t camera_x;
+static subpixel_t camera_y;
+
+static subpixel_t player_pos_x;
+static subpixel_t temp_subpixel;
+static subpixel_t temp_subpixel_fast;
+
 void main(void)
 {
     num_players = 2;
-cursor_x = 0;
-cursor_y = 0;
-        ptr = 0;
+    cursor_x = 0;
+    cursor_y = 0;
+    subpixel_set( camera_x, 0, 0 );
+    subpixel_set( camera_x, 0, 0 );
+    ptr = 0;
+
+    //player_pos = subpixel( 10, 0 );
+    //subpixel_set( player_pos_x, 10, 0 );
+    subpixel_set( temp_subpixel, 0, 5 );
+    subpixel_set( temp_subpixel_fast, 1, 9 );
+
     while( 1 )
     {
         for( i = 0; i < num_players; ++i )
@@ -73,26 +91,32 @@ cursor_y = 0;
 
         if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_R))
         {
-            ++cursor_x;
+            //++cursor_x;
+            subpixel_add( camera_x, camera_x, GAMEPAD_BTN_DONW(current_gamepad_state, GAMEPAD_A ) ? temp_subpixel_fast : temp_subpixel );
         }
         else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_L))
         {
-            --cursor_x;
+            //--cursor_x;
+            subpixel_sub( camera_x, camera_x, GAMEPAD_BTN_DONW(current_gamepad_state, GAMEPAD_A ) ? temp_subpixel_fast : temp_subpixel );
         }
         
         if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_U))
         {
-            --cursor_y;
+            //--cursor_y;
+            subpixel_sub( camera_y, camera_y, temp_subpixel );
         }
         else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_D))
         {
-            ++cursor_y;
+            //++cursor_y;
+            subpixel_add( camera_y, camera_y, temp_subpixel );
         }
 
-        ppu_off();
+        //ppu_off();
 
+        //subpixel_set( temp_pos, 0, 8 );
+        //subpixel_add( player_pos, player_pos, temp_pos );
 
-        ppu_set_scroll( MAKE_SCROLL( cursor_x, cursor_y ) );
+        ppu_set_scroll( MAKE_SCROLL( subpixel_to_pixel( camera_x ), subpixel_to_pixel( camera_y ) ) );
         //ARGS.ppu_fill_nametable_attr_args.address = 0x2000;
         //ARGS.ppu_fill_nametable_attr_args.tile = 65;
         //ARGS.ppu_fill_nametable_attr_args.attr = 44;

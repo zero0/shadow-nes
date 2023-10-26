@@ -102,8 +102,10 @@ NAMETABLE_D         =$2C00
     OAM:                    .res 256 ;
 
 ;
-; drawing utils
+; ppu functions
 ;
+
+.export _ppu_frame_index
 
 .export ppu_init
 .export ppu_wait_vblank
@@ -137,6 +139,11 @@ NAMETABLE_D         =$2C00
         .byte $0F,$12,$22,$32 ; sp3 marine
 
 .segment "CODE"
+
+; ppu_frame_index: returns in A the frame count [0..255]
+_ppu_frame_index:
+    lda NMI_COUNT
+    rts
 
 ; ppu_init: initialize PPU ( assumes X == 0)
 ppu_init:
@@ -495,8 +502,8 @@ nmi:
     cmp #2
     bne :+
 
-        ;lda #0
-        ;sta PPU_MASK
+        lda #0
+        sta PPU_MASK
         jmp @nmi_ready
     :
 
@@ -561,10 +568,11 @@ nmi:
 
 @ppu_scroll:
 
-    lda SCROLL_X ; NMI_COUNT
+    ; set scroll x, y
+    lda SCROLL_X
     sta PPU_SCROLL
 
-    lda SCROLL_Y ; NMI_COUNT
+    lda SCROLL_Y
     sta PPU_SCROLL
 
     ; enable 

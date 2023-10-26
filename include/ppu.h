@@ -1,7 +1,8 @@
 #ifndef PPU_H
 #define PPU_H
 
-#include "core.h"
+#include "types.h"
+#include "macros.h"
 
 #define NAMETABLE_0             (char)0
 #define NAMETABLE_1             (char)1
@@ -19,6 +20,8 @@
 #define PALETTE_SPRITE_3        (char)3
 
 #define MAKE_SCROLL( x, y )     ( ( (char)(x) << 8 ) | (char)(y) )
+
+unsigned char __fastcall__ ppu_frame_index(void);
 
 void __fastcall__ ppu_update(void);
 

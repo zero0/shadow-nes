@@ -1,7 +1,8 @@
 #ifndef GAMEPAD_H
 #define GAMEPAD_H
 
-#include "core.h"
+#include "macros.h"
+#include "types.h"
 
 void __fastcall__ gamepad_poll( char pad );
 
