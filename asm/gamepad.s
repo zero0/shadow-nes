@@ -32,27 +32,25 @@ _gamepad_poll:
     and #$3
     tax
 
-    ; strobe game pad
-    lda #1
-    sta CTRL_PORT1
-    lda #0
-    sta CTRL_PORT1
-
     ; store previous state
     ldy GAMEPAD_STATE, x
     sty GAMEPAD_PREV_STATE, x
 
-    ; clear state
+    ; clear state (set to 1 so when carry == 1, loop is over)
+    lda #1
     sta GAMEPAD_STATE, x
 
+    ; strobe game pad
+    sta CTRL_PORT1
+    lda #0
+    sta CTRL_PORT1
+
     ; read 8 bytes from controller[x]
-    ldy #8
     :
-        lda CTRL_PORT1, x
-        ror a
-        ror GAMEPAD_STATE, x
-        dey
-        bne :-
+        lda CTRL_PORT1
+        lsr a
+        rol GAMEPAD_STATE, x
+        bcc :-
 
     rts
 
