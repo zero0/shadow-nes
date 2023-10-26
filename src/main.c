@@ -77,8 +77,6 @@ void main(void)
 
     //player_pos = subpixel( 10, 0 );
     //subpixel_set( player_pos_x, 10, 0 );
-    subpixel_set( temp_subpixel, 0, 5 );
-    subpixel_set( temp_subpixel_fast, 1, 9 );
 
     while( 1 )
     {
@@ -89,25 +87,30 @@ void main(void)
 
         current_gamepad_state = gamepad_state(0);
 
+        if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_A ) )
+        {
+            subpixel_set( temp_subpixel, 1, 200 );
+        }
+        else
+        {
+            subpixel_set( temp_subpixel, 0, 100 );
+        }
+
         if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_R))
         {
-            //++cursor_x;
-            subpixel_add( camera_x, camera_x, GAMEPAD_BTN_DONW(current_gamepad_state, GAMEPAD_A ) ? temp_subpixel_fast : temp_subpixel );
+            subpixel_add( camera_x, camera_x, temp_subpixel );
         }
         else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_L))
         {
-            //--cursor_x;
-            subpixel_sub( camera_x, camera_x, GAMEPAD_BTN_DONW(current_gamepad_state, GAMEPAD_A ) ? temp_subpixel_fast : temp_subpixel );
+            subpixel_sub( camera_x, camera_x, temp_subpixel );
         }
         
         if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_U))
         {
-            //--cursor_y;
             subpixel_sub( camera_y, camera_y, temp_subpixel );
         }
         else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_D))
         {
-            //++cursor_y;
             subpixel_add( camera_y, camera_y, temp_subpixel );
         }
 

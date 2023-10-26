@@ -3,24 +3,59 @@
 
 #include "types.h"
 
-#define SUBPIXEL_MASK   (char)0x0F
-
 typedef struct
 {
     pixel_t pix;
-    char sub;
+    uint8_t sub;
 } subpixel_t;
 STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
 
 #define subpixel_to_pixel( s )          (s).pix
 
 // increases pixel if sub >= 8
-#define subpixel_round_to_pixel( s )    ( (s).pix + ( 0x01 & ( (s).sub >> 3 ) ) )
+#define subpixel_round_to_pixel( s )    ( (s).pix + ( (s).sub >=  ? 1 : 0 ) )
 
-#define subpixel_set( s, p, h )         (s).pix = (p); (s).sub = SUBPIXEL_MASK & (h)
+#define subpixel_set( s, p, h )         (s).pix = (p); (s).sub = (h)
 
-#define subpixel_add( s, rh, lh )       (s).sub = (rh).sub + (lh).sub; (s).pix = (rh).pix + (lh).pix + ( (s).sub >> 4 ); (s).sub &= SUBPIXEL_MASK
+// add subpixels s = rh + lh (asm to use carry bit)
+#define subpixel_add( s, rh, lh )       \
+__asm__ ( "lda %v+%b", rh, 1 ); \
+__asm__ ( "clc" );              \
+__asm__ ( "adc %v+%b", lh, 1 ); \
+__asm__ ( "sta %v+%b", s, 1 );  \
+__asm__ ( "lda %v", rh );       \
+__asm__ ( "adc %v", lh );       \
+__asm__ ( "sta %v", s )
 
-#define subpixel_sub( s, rh, lh )       (s).sub = (rh).sub - (lh).sub; (s).pix = (rh).pix - (lh).pix - ( (s).sub >> 4 ); (s).sub &= SUBPIXEL_MASK
+// equal to rh += lh;
+#define subpixel_inc( rh, lh )          subpixel_add( rh, rh, lh )
+
+static void __fastcall__ negate()
+{
+    __asm__ ( "bpl %g", neg);
+    __asm__ ( "eor #$FF" );
+    __asm__ ( "adc #1" );
+neg:
+    return;
+}
+
+// subtract subpixels s = rh - lh (asm to use carry/negative bits)
+#define subpixel_sub( s, rh, lh )       \
+__asm__ ( "lda %v+%b", rh, 1 ); \
+__asm__ ( "clc" );              \
+__asm__ ( "sbc %v+%b", lh, 1 ); \
+__asm__ ( "jsr %v", negate );   \
+__asm__ ( "sta %v+%b", s, 1 );  \
+__asm__ ( "lda %v", rh );       \
+__asm__ ( "sbc %v", lh );       \
+__asm__ ( "sta %v", s )
+
+//__asm__ ( "bpl %g", neg ); \
+//__asm__ ( "  eor #$FF" ); \
+//__asm__ ( "  inc" ); \
+//neg: \
+
+// equal to rh -= lh
+//#define subpixel_inc( rh, lh )          subpixel_sub( rh, rh, lh )
 
 #endif // SUBPIXEL_H
