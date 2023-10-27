@@ -17,6 +17,9 @@ STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
 
 #define subpixel_set( s, p, h )         (s).pix = (p); (s).sub = (h)
 
+// rh = lh
+#define subpixel_move( rh, lh )         (rh).pix = (lh).pix; (rh).sub = (lh).sub
+
 // add subpixels s = rh + lh (asm to use carry bit)
 #define subpixel_add( s, rh, lh )       \
 __asm__ ( "lda %v+%b", rh, 1 ); \
@@ -56,6 +59,6 @@ __asm__ ( "sta %v", s )
 //neg: \
 
 // equal to rh -= lh
-//#define subpixel_inc( rh, lh )          subpixel_sub( rh, rh, lh )
+#define subpixel_dec( rh, lh )          subpixel_sub( rh, rh, lh )
 
 #endif // SUBPIXEL_H

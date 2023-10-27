@@ -43,9 +43,8 @@ NAMETABLE_D         =$2C00
 .define NAMETABLE_COLS      32
 
 .macro popa
-    ldy #0
     lda (sp), y
-    inc sp
+    iny
 .endmacro
 
 ; PPU_CTRL Modes
@@ -91,15 +90,19 @@ NAMETABLE_D         =$2C00
     NMI_READY:              .res 1, 2 ;
     NAMETABLE_UPDATE_LEN:   .res 1, 0 ;
     PALETTE_UPDATEL_LEN:    .res 1, 0 ;
+    OAM_UPDATE_LEN:         .res 1, 0 ;
     SCROLL_X:               .res 1, 0 ;
     SCROLL_Y:               .res 1, 0 ;
+    _OAM_ARGS:               .res 4, 0 ;
+
+.export _OAM_ARGS
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
     PALETTE_UPDATE:         .res 32 ;
 
 .segment "OAM"
-    OAM:                    .res 256 ;
+    OAM_UPDATE:             .res 256 ;
 
 ;
 ; ppu functions
@@ -119,11 +122,16 @@ NAMETABLE_D         =$2C00
 .export _ppu_update
 .export _ppu_off
 .export _ppu_skip
+
 .export _ppu_address_tile
 .export _ppu_update_tile
 .export _ppu_update_byte
 .export _ppu_clear_nametable
 .export _ppu_fill_nametable_attr
+
+.export _ppu_oam_clear
+.export _ppu_oam_sprite
+.export _ppu_oam_meta_sprite
 
 .segment "RODATA"
 
@@ -218,6 +226,7 @@ _ppu_set_scroll:
 ;   Y = 96-127 nametable $2C00
 _ppu_address_tile:
     sta TEMP ; y -> temp
+    ldy #0
     popa
     tax ; A -> x
     ldy TEMP ; temp -> y
@@ -256,6 +265,7 @@ ppu_address_tile:
 ; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
 _ppu_update_tile:
     sta TEMP ; A -> temp
+    ldy #0
     popa ; pull Y off sp
     tay ; A -> y
     popa ; pull X off sp
@@ -313,6 +323,7 @@ ppu_update_tile:
 ;    this may be useful for updating attribute tiles
 _ppu_update_byte:
     sta TEMP ; A -> temp
+    ldy #0
     popa ; pull Y off sp
     tay ; A -> y
     popa ; pull X off sp
@@ -444,6 +455,50 @@ ppu_fill_nametable_attr:
 
     rts
 
+; ppu_oam_clean: clear oam buffer
+_ppu_oam_clear:
+
+    ldx #0
+    lda #$FF
+    :
+        sta OAM_UPDATE, x
+        inx
+        inx
+        inx
+        inx
+        bne :-
+
+    rts
+
+; ppu_oam_sprite: add a sprite from _OAM_ARGS to OAM_UPDATE
+_ppu_oam_sprite:
+
+ppu_oam_sprite:
+    ldx OAM_UPDATE_LEN
+
+    lda _OAM_ARGS+0
+    sta OAM_UPDATE, x
+    inx
+
+    lda _OAM_ARGS+1
+    sta OAM_UPDATE, x
+    inx
+
+    lda _OAM_ARGS+2
+    sta OAM_UPDATE, x
+    inx
+
+    lda _OAM_ARGS+3
+    sta OAM_UPDATE, x
+    inx
+
+    stx OAM_UPDATE_LEN
+
+    rts
+
+_ppu_oam_meta_sprite:
+    rts
+
 ;
 ; nmi
 ;
@@ -507,11 +562,18 @@ nmi:
         jmp @nmi_ready
     :
 
-    ;; sprite oam dma
-    ;ldx #0
-    ;stx PPU_OAM_ADDR
-    ;lda #>OAM
-    ;sta PPU_OAM_DMA
+    ; sprite oam dma
+    ldx #0
+    cpx OAM_UPDATE_LEN
+    beq @update_palette
+
+    ; clear oam update length
+    stx OAM_UPDATE_LEN
+
+    ; set OAM address
+    stx PPU_OAM_ADDR
+    lda #>OAM_UPDATE
+    sta PPU_OAM_DMA
 
 @update_palette:
     ; palette update
@@ -601,3 +663,5 @@ nmi:
 @nmi_end:
     pop_reg
     rti
+
+    iny
