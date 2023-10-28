@@ -163,9 +163,19 @@ void main(void)
             oam_sprite( subpixel_to_pixel(enemy_pos_x[i]), subpixel_to_pixel(enemy_pos_y[i]), SPRITE_0, PALETTE_SPRITE_0 + (i & 0x03), 80 );
         }
 
+        if( subpixel_cmp( camera_x, camera_y ) == 0 )
+        {
+
+        }
+
+        if( subpixel_cmp( camera_x, camera_y ) < 0 )
+        {
+            
+        }
+
         //oam_sprite( subpixel_to_pixel(player2_pos_x), subpixel_to_pixel(player2_pos_y), SPRITE_0, PALETTE_SPRITE_2, 80 );
 
-        ppu_set_scroll( MAKE_SCROLL( subpixel_to_pixel( camera_x ), subpixel_to_pixel( camera_y ) ) );
+        ppu_set_scroll( make_scroll_subpixel( camera_x, camera_y ) );
         //ARGS.ppu_fill_nametable_attr_args.address = 0x2000;
         //ARGS.ppu_fill_nametable_attr_args.tile = 65;
         //ARGS.ppu_fill_nametable_attr_args.attr = 44;

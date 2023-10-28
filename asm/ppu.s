@@ -39,8 +39,8 @@ NAMETABLE_D         =$2C00
 .define PALETTE_SPRITE_3_ADDR           PALETTE_SPRITE_BASE_ADDR + $C
 .define PALETTE_SPRITE_BYTE_COUNT       16
 
-.define NAMETABLE_ROWS      30
-.define NAMETABLE_COLS      32
+.define NAMETABLE_ROWS                  30
+.define NAMETABLE_COLS                  32
 
 .macro popa
     lda (sp), y
@@ -85,15 +85,15 @@ NAMETABLE_D         =$2C00
 
 .segment "ZEROPAGE"
 
-    NMI_LOCK:               .res 1, 0 ; 
-    NMI_COUNT:              .res 1, 0 ;
-    NMI_READY:              .res 1, 2 ;
-    NAMETABLE_UPDATE_LEN:   .res 1, 0 ;
-    PALETTE_UPDATEL_LEN:    .res 1, 0 ;
-    OAM_UPDATE_LEN:         .res 1, 0 ;
-    SCROLL_X:               .res 1, 0 ;
-    SCROLL_Y:               .res 1, 0 ;
-    _OAM_ARGS:               .res 4, 0 ;
+    NMI_LOCK:               .res 1 ; 
+    NMI_COUNT:              .res 1 ;
+    NMI_READY:              .res 1 ;
+    NAMETABLE_UPDATE_LEN:   .res 1 ;
+    PALETTE_UPDATEL_LEN:    .res 1 ;
+    OAM_UPDATE_LEN:         .res 1 ;
+    SCROLL_X:               .res 1 ;
+    SCROLL_Y:               .res 1 ;
+    _OAM_ARGS:              .res 4 ;
 
 .export _OAM_ARGS
 
@@ -147,7 +147,6 @@ NAMETABLE_D         =$2C00
         .byte $0F,$12,$22,$32 ; sp3 marine
 
 .segment "CODE"
-
 ; ppu_frame_index: returns in A the frame count [0..255]
 _ppu_frame_index:
     lda NMI_COUNT

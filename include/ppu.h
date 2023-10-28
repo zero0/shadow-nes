@@ -29,7 +29,7 @@
 #define SCREEN_HEIGH            (char)( NAMETABLE_ROWS * 8 )
 
 
-#define MAKE_SCROLL( x, y )     ( ( (char)(x) << 8 ) | (char)(y) )
+#define make_scroll( x, y )     ( ( (char)(x) << 8 ) | (char)(y) )
 
 extern uint8_t OAM_ARGS[4];
 #pragma zpsym("OAM_ARGS");
