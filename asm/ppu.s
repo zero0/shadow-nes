@@ -179,7 +179,7 @@ ppu_enable_default:
     lda SCROLL_Y
     sta PPU_SCROLL
 
-    lda #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
+    lda #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
 
     lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW)
@@ -370,27 +370,22 @@ ppu_clear_nametable:
     stx PPU_ADDR
     sta PPU_ADDR
 
-    tya
-
+    lda #0
     ldy #(NAMETABLE_ROWS) ; 30 rows
     :
         ldx #(NAMETABLE_COLS) ; 32 columns
         :
             sta PPU_DATA
-            adc #1
             dex
             bne :-
         dey
         bne :--
 
-    lda #0
 
     ; empty attribute table
     ldx #64 ; 64 bytes
     :
         sta PPU_DATA
-        clc
-        adc #%01010101
         dex
         bne :-
 
@@ -640,7 +635,7 @@ nmi:
     ;ora #%10001000
     lda #0 ; scroll_nmt
     and #%00000011 ;
-    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_0000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000)
+    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000)
     sta PPU_CTRL
 
     ; enable rendering

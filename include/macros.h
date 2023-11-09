@@ -9,4 +9,10 @@
 
 #define STATIC_ASSERT(t)    static void CONCAT(sa, __LINE__)( char [ (t) ? 1 : -1 ] )
 
+#define STATE_RESET( s )     (s) = 0
+#define STATE_SET( s, f )    (s) |= (f)
+#define STATE_CLEAR( s, f )  (s) &= ~(f)
+#define STATE_TOGGLE( s, f ) (s) ^= (f)
+#define STATE_IS_SET( s, f ) ( ( (s) & (f) ) == (f) )
+
 #endif // MACROS_H

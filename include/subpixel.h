@@ -36,18 +36,28 @@ STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
 
 // add subpixels s = rh + lh (asm to use carry bit)
 #define subpixel_add( s, rh, lh )       \
-__asm__ ( "lda %v+%b", rh, 1 );         \
+__asm__ ( "lda %v+1", rh );         \
 __asm__ ( "clc" );                      \
-__asm__ ( "adc %v+%b", lh, 1 );         \
-__asm__ ( "sta %v+%b", s, 1 );          \
-__asm__ ( "lda %v+%b", rh, 0 );         \
-__asm__ ( "adc %v+%b", lh, 0 );         \
-__asm__ ( "sta %v+%b", s, 0 )
+__asm__ ( "adc %v+1", lh );         \
+__asm__ ( "sta %v+1", s );          \
+__asm__ ( "lda %v", rh );         \
+__asm__ ( "adc %v", lh );         \
+__asm__ ( "sta %v", s )
 
 #define subpixel_add_pixel( s, rh, p )  \
-__asm__ ( "lda %v+%b", rh, 0 );         \
+__asm__ ( "lda %v", rh );               \
 __asm__ ( "adc %v", p );                \
-__asm__ ( "sta %v+%b", s, 0 )
+__asm__ ( "sta %v", s )
+
+#define subpixel_add_direct( s, rh, p, pp ) \
+__asm__ ( "lda %v+1", rh );         \
+__asm__ ( "clc" );                      \
+__asm__ ( "adc %v", pp );               \
+__asm__ ( "sta %v+1", s );          \
+__asm__ ( "lda %v", rh );         \
+__asm__ ( "adc %v", p );                \
+__asm__ ( "sta %v", s )
+
 
 // equal to rh += lh;
 #define subpixel_inc( rh, lh )          subpixel_add( rh, rh, lh )
@@ -69,19 +79,19 @@ pos:
 
 // subtract subpixels s = rh - lh (asm to use carry/negative bits)
 #define subpixel_sub( s, rh, lh )       \
-__asm__ ( "lda %v+%b", rh, 1 );         \
+__asm__ ( "lda %v+1", rh );         \
 __asm__ ( "clc" );                      \
-__asm__ ( "sbc %v+%b", lh, 1 );         \
+__asm__ ( "sbc %v+1", lh );         \
 __asm__ ( "jsr %v", negate );           \
-__asm__ ( "sta %v+%b", s, 1 );          \
-__asm__ ( "lda %v+%b", rh, 0 );         \
-__asm__ ( "sbc %v+%b", lh, 0 );         \
-__asm__ ( "sta %v+%b", s, 0 )
+__asm__ ( "sta %v+1", s );          \
+__asm__ ( "lda %v", rh );         \
+__asm__ ( "sbc %v", lh );         \
+__asm__ ( "sta %v", s )
 
 #define subpixel_sub_pixel( s, rh, p )  \
-__asm__ ( "lda %v+%b", rh, 0 );         \
+__asm__ ( "lda %v", rh );               \
 __asm__ ( "sbc %v", p );                \
-__asm__ ( "sta %v+%b", s, 0 )
+__asm__ ( "sta %v", s )
 
 // equal to rh -= lh
 #define subpixel_dec( rh, lh )          subpixel_sub( rh, rh, lh )
