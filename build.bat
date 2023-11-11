@@ -41,7 +41,8 @@ set "OBJ_FILES="
 for %%F in (obj\*.o) do call set "OBJ_FILES=%%F %%OBJ_FILES%%"
 
 rem set "LD_CONFIG=-t nes"
-set "LD_CONFIG=-C config\nrom_256_horz.cfg"
+rem set "LD_CONFIG=-C config\nrom_256_horz.cfg"
+set "LD_CONFIG=-C config\nes.cfg"
 set "LD_DBG=--dbgfile bin\%GAME_NAME%.dbg"
 rem set "LD_DBG="
 

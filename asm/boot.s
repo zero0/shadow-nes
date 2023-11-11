@@ -67,11 +67,11 @@ TEMP:               .res 2
 
 .segment "HEADER"
 
-.byte 'N','E','S',$1a
+.byte 'N','E','S',$1A
 .byte <NES_PRG_BANKS
 .byte <NES_CHR_BANKS
-.byte <NES_MIRRORING | (<NES_MAPPER << 4)
-.byte <NES_MAPPER & $f0
+.byte <NES_MIRRORING | ( <NES_MAPPER << 4 )
+.byte (<NES_MAPPER & $F0)
 .res 8,0
 
 
@@ -113,7 +113,7 @@ reset:
     sta APU_CTRL    ; disable APU IRQ
 
     ; initialize stack
-    ldx #$ff
+    ldx #$FF
     txs
     inx     ; x == 0
 

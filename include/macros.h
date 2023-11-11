@@ -15,4 +15,10 @@
 #define STATE_TOGGLE( s, f ) (s) ^= (f)
 #define STATE_IS_SET( s, f ) ( ( (s) & (f) ) == (f) )
 
+#define ARRAY_SIZE( arr )    ( sizeof(arr) / sizeof(arr[0]) )
+
+#ifndef offsetof
+#define offsetof( t, m )     ((uint8_t)&(((t *)0)->m))
+#endif // offsetof
+
 #endif // MACROS_H

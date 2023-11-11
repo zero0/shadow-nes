@@ -93,9 +93,9 @@ NAMETABLE_D         =$2C00
     OAM_UPDATE_LEN:         .res 1 ;
     SCROLL_X:               .res 1 ;
     SCROLL_Y:               .res 1 ;
-    _OAM_ARGS:              .res 4 ;
+    _PPU_ARGS:              .res 4 ;
 
-.export _OAM_ARGS
+.export _PPU_ARGS
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
@@ -124,9 +124,10 @@ NAMETABLE_D         =$2C00
 .export _ppu_skip
 
 .export _ppu_address_tile
-.export _ppu_update_tile
+.export _ppu_update_tile_internal
 .export _ppu_update_byte
 .export _ppu_clear_nametable
+.export _ppu_clear_palette
 .export _ppu_fill_nametable_attr
 
 .export _ppu_oam_clear
@@ -262,28 +263,15 @@ ppu_address_tile:
     rts
 
 ; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
-_ppu_update_tile:
-    sta TEMP ; A -> temp
-    ldy #0
-    popa ; pull Y off sp
-    tay ; A -> y
-    popa ; pull X off sp
-    tax ; A -> x
-    lda TEMP ; TEMP -> A
+_ppu_update_tile_internal:
 
 ppu_update_tile:
-    ; temporarily store A on stack
-    pha
-
-    ; temporarily store X on stack
-    txa
-    pha
-
     ; load length in X
     ldx NAMETABLE_UPDATE_LEN
 
+    ; load Y
+    lda _PPU_ARGS+1
     ; shift Y >> 3
-    tya
     lsr
     lsr
     lsr
@@ -293,8 +281,9 @@ ppu_update_tile:
     sta NAMETABLE_UPDATE, x
     inx
     
+    ; load Y
+    lda _PPU_ARGS+1
     ; shift Y << 5
-    tya
     asl
     asl
     asl
@@ -302,15 +291,13 @@ ppu_update_tile:
     asl
 
     ; ( Y << 5 ) | X
-    sta TEMP
     ; recover X value
-    pla 
-    ora TEMP
+    ora _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
     inx
 
     ; recover A value
-    pla
+    lda _PPU_ARGS+2
     sta NAMETABLE_UPDATE, x
     inx
 
@@ -470,19 +457,19 @@ _ppu_oam_sprite:
 ppu_oam_sprite:
     ldx OAM_UPDATE_LEN
 
-    lda _OAM_ARGS+0
+    lda _PPU_ARGS+0
     sta OAM_UPDATE, x
     inx
 
-    lda _OAM_ARGS+1
+    lda _PPU_ARGS+1
     sta OAM_UPDATE, x
     inx
 
-    lda _OAM_ARGS+2
+    lda _PPU_ARGS+2
     sta OAM_UPDATE, x
     inx
 
-    lda _OAM_ARGS+3
+    lda _PPU_ARGS+3
     sta OAM_UPDATE, x
     inx
 
@@ -635,7 +622,7 @@ nmi:
     ;ora #%10001000
     lda #0 ; scroll_nmt
     and #%00000011 ;
-    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000)
+    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
 
     ; enable rendering

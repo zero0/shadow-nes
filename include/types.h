@@ -12,4 +12,10 @@ typedef signed int int16_t;
 
 typedef unsigned char pixel_t;
 
+typedef struct
+{
+    pixel_t px;
+    pixel_t py;
+} pixel2d_t;
+
 #endif // TYPES_H
