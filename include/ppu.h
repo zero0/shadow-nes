@@ -70,14 +70,14 @@ void __fastcall__ ppu_fill_nametable_attr( ptr_t tableAddress );
 
 void __fastcall__ ppu_fill_nametable_attr_only( ptr_t tableAddress, uint8_t attr );
 
-#define oam_sprite_full( px, py, pal, bg, fh, fv, spr )                             \
+#define ppu_add_oam_sprite_full( px, py, pal, bg, fh, fv, spr )                     \
     PPU_ARGS[0] = (py) - 1;                                                         \
     PPU_ARGS[1] = (spr);                                                            \
     PPU_ARGS[2] = ( (fv) << 7 ) | ( (fh) << 6 ) | ( (bg) << 5 ) | ( 0x03 & (pal) ); \
     PPU_ARGS[3] = (px);                                                             \
     ppu_oam_sprite()
 
-#define oam_sprite( px, py, pal, spr ) oam_sprite_full( px, py, pal, 0, 0, 0, spr )
+#define ppu_add_oam_sprite( px, py, pal, spr ) ppu_add_oam_sprite_full( px, py, pal, 0, 0, 0, spr )
 
 void __fastcall__ ppu_oam_clear();
 

@@ -85,7 +85,7 @@ NAMETABLE_D         =$2C00
 
 .segment "ZEROPAGE"
 
-    NMI_LOCK:               .res 1 ; 
+    NMI_LOCK:               .res 1 ;
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
@@ -170,7 +170,7 @@ ppu_wait_vblank:
     bit PPU_STATUS
     :
         bit PPU_STATUS
-        bpl :- 
+        bpl :-
     rts
 
 ppu_enable_default:
@@ -277,10 +277,10 @@ ppu_update_tile:
     lsr
 
     ; high bits of (Y >> 3 ) | $20
-    ora #$20 
+    ora #$20
     sta NAMETABLE_UPDATE, x
     inx
-    
+
     ; load Y
     lda _PPU_ARGS+1
     ; shift Y << 5
@@ -315,11 +315,11 @@ _ppu_update_byte:
     popa ; pull X off sp
     tax ; A -> x
     lda TEMP ; TEMP -> A
-    
+
 ppu_update_byte:
     ; temporarily store A on stack
     pha
-    
+
     ; temporarily store Y on stack
     tya
     pha
@@ -331,17 +331,17 @@ ppu_update_byte:
     txa
     sta NAMETABLE_UPDATE, y
     iny
-    
+
     ; recover Y value and store low byte Y
-    pla 
+    pla
     sta NAMETABLE_UPDATE, y
     iny
-    
+
     ; recover A value (byte)
     pla
     sta NAMETABLE_UPDATE, y
     iny
-    
+
     ; store new length
     sty NAMETABLE_UPDATE_LEN
     rts
@@ -353,11 +353,13 @@ ppu_clear_nametable:
     ; reset latch
     bit PPU_STATUS
 
-    ; store
+    ; store address
     stx PPU_ADDR
     sta PPU_ADDR
 
-    lda #0
+    ; transfer Y to A as clear valeu
+    tya
+
     ldy #(NAMETABLE_ROWS) ; 30 rows
     :
         ldx #(NAMETABLE_COLS) ; 32 columns
@@ -400,7 +402,7 @@ ppu_clear_palette:
         iny
         cpy #32
         bne :-
-    
+
     rts
 
 ; fill nametable at $ARGS+0/ARGS+1 with table ARGS+2 and attr ARGS+3
@@ -415,7 +417,7 @@ ppu_fill_nametable_attr:
     sta PPU_ADDR
 
     lda #0
-    
+
     ; empty nametable
     ldy #30 ; 30 rows
     :
@@ -444,10 +446,12 @@ _ppu_oam_clear:
     :
         sta OAM_UPDATE, x
         inx
-        inx
-        inx
-        inx
+        ; inx
+        ; inx
+        ; inx
         bne :-
+
+    sta OAM_UPDATE_LEN
 
     rts
 
@@ -590,17 +594,17 @@ nmi:
         lda NAMETABLE_UPDATE, x
         sta PPU_ADDR
         inx
-        
+
         ; low byte address
         lda NAMETABLE_UPDATE, x
         sta PPU_ADDR
         inx
-        
-        ; tile 
+
+        ; tile
         lda NAMETABLE_UPDATE, x
         sta PPU_DATA
         inx
-        
+
         ; loop while X != length
         cpx NAMETABLE_UPDATE_LEN
         bcc :-
@@ -618,7 +622,7 @@ nmi:
     lda SCROLL_Y
     sta PPU_SCROLL
 
-    ; enable 
+    ; enable
     ;ora #%10001000
     lda #0 ; scroll_nmt
     and #%00000011 ;

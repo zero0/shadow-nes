@@ -131,7 +131,7 @@ reset:
 
     ;lda #$3f
     ;sta PPU_ADDR
-    ;stx PPU_ADDR 
+    ;stx PPU_ADDR
     ;ldy #0
     ;:
     ;    lda example_palette, y
@@ -145,22 +145,22 @@ reset:
     ; clear all nametables
     ldx #$20
     lda #$00
-    ldy #65
+    ldy #0
     jsr ppu_clear_nametable
 
     ldx #$24
     lda #$00
-    ldy #66
+    ldy #0
     jsr ppu_clear_nametable
 
     ldx #$28
     lda #$00
-    ldy #67
+    ldy #0
     jsr ppu_clear_nametable
 
     ldx #$2C
     lda #$00
-    ldy #68
+    ldy #0
     jsr ppu_clear_nametable
 
     ; clear ram
@@ -183,7 +183,7 @@ reset:
 
     ; enable NMI
     jsr ppu_enable_default
-    
+
     ; enable interupts
     cli
 

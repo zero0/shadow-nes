@@ -578,48 +578,48 @@ static void __fastcall__ uint8_to_oam()
     v = ARGS[2] & 0x0F;
     switch( v )
     {
-        case 0x0: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
-        case 0x1: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
-        case 0x2: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
-        case 0x3: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
-        case 0x4: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
-        case 0x5: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
-        case 0x6: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
-        case 0x7: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
-        case 0x8: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
-        case 0x9: v = '0' + v; break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
-        case 0xa: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
-        case 0xb: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
-        case 0xc: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
-        case 0xd: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
-        case 0xe: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
-        case 0xf: v = 'a' + ( v - 10 ); break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
+        case 0x0: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
+        case 0x1: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
+        case 0x2: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
+        case 0x3: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
+        case 0x4: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
+        case 0x5: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
+        case 0x6: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
+        case 0x7: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
+        case 0x8: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
+        case 0x9: v = '0' + v; break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
+        case 0xa: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
+        case 0xb: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
+        case 0xc: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
+        case 0xd: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
+        case 0xe: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
+        case 0xf: v = 'a' + ( v - 10 ); break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
         default:  v = 'x'; break;
     }
-    oam_sprite( ARGS[0]+8, ARGS[1], PALETTE_SPRITE_0, v );
+    ppu_add_oam_sprite( ARGS[0]+8, ARGS[1], PALETTE_SPRITE_0, v );
 
     v = (ARGS[2] >> 4) & 0x0F;
     switch( v )
     {
-        case 0x0: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
-        case 0x1: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
-        case 0x2: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
-        case 0x3: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
-        case 0x4: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
-        case 0x5: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
-        case 0x6: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
-        case 0x7: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
-        case 0x8: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
-        case 0x9: v = '0' + v; break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
-        case 0xa: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
-        case 0xb: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
-        case 0xc: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
-        case 0xd: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
-        case 0xe: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
-        case 0xf: v = 'a' + ( v - 10 ); break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
+        case 0x0: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
+        case 0x1: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
+        case 0x2: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
+        case 0x3: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
+        case 0x4: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
+        case 0x5: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
+        case 0x6: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
+        case 0x7: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
+        case 0x8: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
+        case 0x9: v = '0' + v; break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
+        case 0xa: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
+        case 0xb: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
+        case 0xc: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
+        case 0xd: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
+        case 0xe: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
+        case 0xf: v = 'a' + ( v - 10 ); break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
         default:  v = 'x'; break;
     }
-    oam_sprite( ARGS[0], ARGS[1], PALETTE_SPRITE_0, v );
+    ppu_add_oam_sprite( ARGS[0], ARGS[1], PALETTE_SPRITE_0, v );
 }
 
 static void __fastcall__ uint8_to_chr()
@@ -627,22 +627,22 @@ static void __fastcall__ uint8_to_chr()
     v = ARGS[2] & 0x0F;
     switch( v )
     {
-        case 0x0: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
-        case 0x1: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
-        case 0x2: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
-        case 0x3: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
-        case 0x4: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
-        case 0x5: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
-        case 0x6: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
-        case 0x7: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
-        case 0x8: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
-        case 0x9: v = '0' + v; break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
-        case 0xa: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
-        case 0xb: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
-        case 0xc: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
-        case 0xd: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
-        case 0xe: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
-        case 0xf: v = 'a' + ( v - 10 ); break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
+        case 0x0: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
+        case 0x1: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
+        case 0x2: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
+        case 0x3: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
+        case 0x4: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
+        case 0x5: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
+        case 0x6: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
+        case 0x7: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
+        case 0x8: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
+        case 0x9: v = '0' + v; break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
+        case 0xa: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
+        case 0xb: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
+        case 0xc: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
+        case 0xd: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
+        case 0xe: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
+        case 0xf: v = 'a' + ( v - 10 ); break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
         default:  v = 'x'; break;
     }
     ppu_update_tile( ARGS[0]+1, ARGS[1], v );
@@ -650,22 +650,22 @@ static void __fastcall__ uint8_to_chr()
     v = (ARGS[2] >> 4) & 0x0F;
     switch( v )
     {
-        case 0x0: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
-        case 0x1: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
-        case 0x2: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
-        case 0x3: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
-        case 0x4: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
-        case 0x5: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
-        case 0x6: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
-        case 0x7: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
-        case 0x8: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
-        case 0x9: v = '0' + v; break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
-        case 0xa: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
-        case 0xb: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
-        case 0xc: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
-        case 0xd: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
-        case 0xe: // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
-        case 0xf: v = 'a' + ( v - 10 ); break; // oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
+        case 0x0: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '0' ); break;
+        case 0x1: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '1' ); break;
+        case 0x2: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '2' ); break;
+        case 0x3: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '3' ); break;
+        case 0x4: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '4' ); break;
+        case 0x5: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '5' ); break;
+        case 0x6: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '6' ); break;
+        case 0x7: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '7' ); break;
+        case 0x8: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '8' ); break;
+        case 0x9: v = '0' + v; break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, '9' ); break;
+        case 0xa: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'a' ); break;
+        case 0xb: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'b' ); break;
+        case 0xc: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'c' ); break;
+        case 0xd: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'd' ); break;
+        case 0xe: // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'e' ); break;
+        case 0xf: v = 'a' + ( v - 10 ); break; // ppu_add_oam_sprite( x, y, SPRITE_0, PALETTE_SPRITE_0, 'f' ); break;
         default:  v = 'x'; break;
     }
     ppu_update_tile( ARGS[0], ARGS[1], v );
@@ -743,11 +743,11 @@ void __fastcall__ player_render()
     l = flip_h ? 8 : 0;
     r = flip_h ? 0 : 8;
 
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 18, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_0[player_anim_head.frame_index] );
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 18, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_1[player_anim_head.frame_index] );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 18, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_0[player_anim_head.frame_index] );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 18, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_1[player_anim_head.frame_index] );
 
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 10, PALETTE_SPRITE_2, 0, flip_h, 0, 2 );
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 10, PALETTE_SPRITE_2, 0, flip_h, 0, 3 );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 10, PALETTE_SPRITE_2, 0, flip_h, 0, 2 );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_head.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_head.frame_index] - 10, PALETTE_SPRITE_2, 0, flip_h, 0, 3 );
 
     // body
     flip_h = STATE_IS_SET( player_movement_state, PLAYER_MOVEMENT_STATE_FACING_LEFT );
@@ -759,8 +759,8 @@ void __fastcall__ player_render()
     l = flip_h ? 8 : 0;
     r = flip_h ? 0 : 8;
 
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_body.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_body.frame_index] - 8, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_0[player_anim_body.frame_index] );
-    oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_body.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_body.frame_index] - 8, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_1[player_anim_body.frame_index] );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_body.frame_index] + l, player_pos_y.pix + anim_keyframes_y_offset[player_anim_body.frame_index] - 8, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_0[player_anim_body.frame_index] );
+    ppu_add_oam_sprite_full( player_pos_x.pix + anim_keyframes_x_offset[player_anim_body.frame_index] + r, player_pos_y.pix + anim_keyframes_y_offset[player_anim_body.frame_index] - 8, PALETTE_SPRITE_2, 0, flip_h, 0, anim_keyframes_sprite_1[player_anim_body.frame_index] );
 }
 
 void __fastcall__ player_render_debug()
