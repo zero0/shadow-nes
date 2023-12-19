@@ -54,6 +54,7 @@ dkms.conf
 # Extra
 tmp/
 bin/
+obj/
 *.lnk
 *.nes
 *.dbg
