@@ -1,5 +1,5 @@
 ;
-; Sprites
+; Assets
 ;
 
 .macro x_sprite x0, x1, x2, x3, x4, x5, x6, x7
@@ -18,6 +18,10 @@ x_sprite ( ( x0 & $2 ) << 6 ), ( ( x1 & $2 ) << 5 ), ( ( x2 & $2 ) << 4 ), ( ( x
 .define l 3
 .define m 2
 .define d 1
+
+.segment "CHARS"
+
+assets_root:
 
 .include "../assets/nesfont.s"
 
