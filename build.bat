@@ -27,6 +27,11 @@ rem Clean tmp and obj directories
 if exist tmp (del /Q tmp) else md tmp
 if exist obj (del /Q obj) else md obj
 
+rem Run img2chr tool to generate .s files from images
+pushd tools\img2chr\
+dotnet run ..\..\assets\
+popd
+
 rem Compile source assemblie files
 for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
 
