@@ -106,13 +106,17 @@ namespace img2chr
             sb.AppendLine($";  3: [{palettes[0].c3.R:D3}, {palettes[0].c3.G}, {palettes[0].c3.B}]");
             sb.AppendLine();
 
+            sb.AppendLine($".export {filename.Replace(' ', '_')}");
+            sb.AppendLine();
             sb.AppendLine(".segment \"CHARS\"");
+            sb.AppendLine();
+            sb.AppendLine($"{filename.Replace(' ', '_')}:");
             sb.AppendLine();
 
             static void GetPaletteAndIndex(Color color, SpritePalette[] palettes, out int palette, out int index)
             {
                 palette = -1;
-                index = -1;
+                index = 0;
 
                 for (int p = 0; p < palettes.Length; p++)
                 {
@@ -129,6 +133,8 @@ namespace img2chr
                 }
             }
 
+            int[] pixelIndices = new int[8 * 8];
+
             // read sprites (starging from 8,0 to leave room for palette info)
             for (int y = 0, ymax = bitmapImage.Height; y < ymax; y += 8)
             {
@@ -137,6 +143,7 @@ namespace img2chr
                     byte0.Clear();
                     byte1.Clear();
 
+                    int i = 0;
                     for (int py = 0; py < 8; ++py)
                     {
                         byte0.Append(".byte %");
@@ -152,6 +159,7 @@ namespace img2chr
                             Color pixel = bitmapImage.GetPixel(vx, vy);
 
                             GetPaletteAndIndex(pixel, palettes, out var _, out int pixelIndex);
+                            pixelIndices[i++] = pixelIndex;
 
                             byte0.Append((pixelIndex & 0x1) == 0x1 ? "1" : "0");
                             byte1.Append((pixelIndex & 0x2) == 0x2 ? "1" : "0");
@@ -161,12 +169,16 @@ namespace img2chr
                         byte1.AppendLine();
                     }
 
-                    sb.AppendLine($"; {x},{y}");
-                    sb.Append(byte0.ToString());
-                    sb.AppendLine();
-                    sb.Append(byte1.ToString());
-                    sb.AppendLine();
-                    sb.AppendLine();
+                    // only add non-all blank tiles
+                    if (!Array.TrueForAll(pixelIndices, x => x == 0))
+                    {
+                        sb.AppendLine($"; {x},{y}");
+                        sb.Append(byte0.ToString());
+                        sb.AppendLine();
+                        sb.Append(byte1.ToString());
+                        sb.AppendLine();
+                        sb.AppendLine();
+                    }
                 }
             }
 
