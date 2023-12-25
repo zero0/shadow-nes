@@ -177,8 +177,66 @@ namespace img2chr
             return !condition;
         }
 
-        static void ConvertImageFile(string imageFilename, in ConvertOptions options)
+        static bool TryGetFileSpriteParamters(string srcFilename, out Dictionary<string, string> parameters)
         {
+            parameters = null;
+
+            string spriteFilename = $"{srcFilename}.sprite";
+            if (File.Exists(spriteFilename))
+            {
+                try
+                {
+                    parameters = new();
+
+                    FileStreamOptions fileOptions = new()
+                    {
+                        Mode = FileMode.Open,
+                        Access = FileAccess.Read
+                    };
+                    using StreamReader sr = new StreamReader(new FileStream(spriteFilename, fileOptions));
+
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        int idx = line.IndexOf('=');
+                        if (idx > 0)
+                        {
+                            string key = line.Substring(0, idx).Trim();
+                            string value = line.Substring(idx + 1).Trim();
+
+                            if (!string.IsNullOrEmpty(key))
+                            {
+                                parameters[key] = value;
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogError(e.Message);
+                    parameters = null;
+                }
+            }
+
+            return parameters != null;
+        }
+
+        static int GetIntParameter(Dictionary<string, string> parameters, string key, int defaultValue = 0)
+        {
+            int value = parameters?.TryGetValue(key, out string strValue) ?? false ? int.TryParse(strValue, out int intValue) ? intValue : defaultValue : defaultValue;
+            return value;
+        }
+
+        static void ConvertImageFile(string imageFilename, in ConvertOptions cmdOptions)
+        {
+            ConvertOptions options = cmdOptions;
+
+            if (TryGetFileSpriteParamters(imageFilename, out var parameters))
+            {
+                options.spriteWidth = GetIntParameter(parameters, "meta-sprite.width", cmdOptions.spriteWidth);
+                options.spriteHeight = GetIntParameter(parameters, "meta-sprite.height", cmdOptions.spriteHeight);
+            }
+
             string filename = Path.GetFileNameWithoutExtension(imageFilename);
             string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".s";
 
@@ -214,7 +272,6 @@ namespace img2chr
             palettes[0].c1 = bitmapImage.GetPixel(1, 0);
             palettes[0].c2 = bitmapImage.GetPixel(2, 0);
             palettes[0].c3 = bitmapImage.GetPixel(3, 0);
-
 
             static void GetPaletteAndIndex(Color color, SpritePalette[] palettes, out int palette, out int index)
             {
@@ -275,38 +332,6 @@ namespace img2chr
                 }
             }
 
-            List<MetaSpriteEntry> allMetaSprites = new List<MetaSpriteEntry>();
-
-            // if meta sprite is used, group sprites and de-duplicate
-            if (options.spriteHeight > 0 && options.spriteWidth > 0)
-            {
-                // group tiles into sprites
-                for (int y = 0, ymax = bitmapImage.Height; y < ymax; y += options.spriteHeight)
-                {
-                    for (int x = 0, xmax = bitmapImage.Width; x < xmax; x += options.spriteWidth)
-                    {
-                        MetaSpriteEntry metaSpriteEntry = default;
-                        metaSpriteEntry.x = x;
-                        metaSpriteEntry.y = y;
-
-                        Rectangle spriteRect = new(x, y, options.spriteWidth, options.spriteHeight);
-
-                        for (int i = 0; i < allTiles.Count; i++)
-                        {
-                            TileEntry tileEntry = allTiles[i];
-                            Rectangle tileRect = new(tileEntry.x, tileEntry.y, 8, 8);
-
-                            if (spriteRect.Contains(tileRect))
-                            {
-                                metaSpriteEntry.Add(i);
-                            }
-                        }
-
-                        allMetaSprites.Add(metaSpriteEntry);
-                    }
-                }
-            }
-
             // remove duplcate tiles
             Dictionary<int, int> allTilesToUniqueTiles = new(allTiles.Count);
             Dictionary<int, int> uniqueTileHashToIndex = new(allTiles.Count);
@@ -345,6 +370,38 @@ namespace img2chr
                 allUniqueTiles.Add(uniqueTiles[tileHash]);
             }
 
+            List<MetaSpriteEntry> allMetaSprites = new List<MetaSpriteEntry>();
+
+            // if meta sprite is used, group sprites and de-duplicate
+            if (options.spriteHeight > 0 && options.spriteWidth > 0)
+            {
+                // group tiles into sprites
+                for (int y = 0, ymax = bitmapImage.Height; y < ymax; y += options.spriteHeight)
+                {
+                    for (int x = 0, xmax = bitmapImage.Width; x < xmax; x += options.spriteWidth)
+                    {
+                        MetaSpriteEntry metaSpriteEntry = default;
+                        metaSpriteEntry.x = x;
+                        metaSpriteEntry.y = y;
+
+                        Rectangle spriteRect = new(x, y, options.spriteWidth, options.spriteHeight);
+
+                        for (int i = 0; i < uniqueTileIndices.Count; i++)
+                        {
+                            TileEntry tileEntry = allTiles[uniqueTileIndices[i]];
+                            Rectangle tileRect = new(tileEntry.x, tileEntry.y, 8, 8);
+
+                            if (spriteRect.Contains(tileRect))
+                            {
+                                metaSpriteEntry.Add(uniqueTileIndices[i]);
+                            }
+                        }
+
+                        allMetaSprites.Add(metaSpriteEntry);
+                    }
+                }
+            }
+
             // generate text file
             StringBuilder sb = new StringBuilder();
             StringBuilder byte0 = new StringBuilder();
@@ -368,7 +425,7 @@ namespace img2chr
             sb.AppendLine($";    Size: {allUniqueTiles.Count * 8 * 2:N0}b");
             sb.AppendLine();
 
-            string exportName = filename.Replace(' ', '_');
+            string exportName = filename.Replace(' ', '_').Replace('-', '_');
             sb.AppendLine($".export {exportName}");
             sb.AppendLine();
             sb.AppendLine(".segment \"CHARS\"");
@@ -460,8 +517,8 @@ namespace img2chr
 
                             int rx = tileEntry.x - metaSprite.x;
                             int ry = tileEntry.y - metaSprite.y;
-                            Assert(rx >= 0);
-                            Assert(ry >= 0);
+                            Assert(rx >= 0, $"({i}) @ ({metaSprite[s]}) {rx} (rx) >= 0");
+                            Assert(ry >= 0, $"({i}) @ ({metaSprite[s]}) {ry} (ry) >= 0");
 
                             int attr = (0x3 & uniqueTileEntry.attr) << 6;
                             attr |= (0x7 & (rx >> 3)) << 3;
