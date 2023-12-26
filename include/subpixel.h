@@ -2,6 +2,7 @@
 #define SUBPIXEL_H
 
 #include "types.h"
+#include "macros.h"
 
 typedef struct
 {

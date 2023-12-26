@@ -23,28 +23,52 @@ NAMETABLE_D         =$2C00
 
 ; palette addresses
 .define PALETTE_BASE_ADDR               $3f00
-.define PALETTE_BYTE_COUNT              32
+.define PALETTE_BYTE_COUNT              #32
 
 .define PALETTE_BACKGROUND_BASE_ADDR    PALETTE_BASE_ADDR
 .define PALETTE_BACKGROUND_0_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $0
 .define PALETTE_BACKGROUND_1_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $4
 .define PALETTE_BACKGROUND_2_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $8
 .define PALETTE_BACKGROUND_3_ADDR       PALETTE_BACKGROUND_BASE_ADDR + $C
-.define PALETTE_BACKGROUND_BYTE_COUNT   16
+.define PALETTE_BACKGROUND_BYTE_COUNT   #16
 
 .define PALETTE_SPRITE_BASE_ADDR        PALETTE_BASE_ADDR + $10
 .define PALETTE_SPRITE_0_ADDR           PALETTE_SPRITE_BASE_ADDR + $0
 .define PALETTE_SPRITE_1_ADDR           PALETTE_SPRITE_BASE_ADDR + $4
 .define PALETTE_SPRITE_2_ADDR           PALETTE_SPRITE_BASE_ADDR + $8
 .define PALETTE_SPRITE_3_ADDR           PALETTE_SPRITE_BASE_ADDR + $C
-.define PALETTE_SPRITE_BYTE_COUNT       16
+.define PALETTE_SPRITE_BYTE_COUNT       #16
 
-.define NAMETABLE_ROWS                  30
-.define NAMETABLE_COLS                  32
+.define NAMETABLE_ROWS                  #30
+.define NAMETABLE_COLS                  #32
 
 .macro popa
     lda (sp), y
     iny
+.endmacro
+
+; push all registers to the stack
+.macro push_reg
+    ; push a
+    pha
+    ; push x
+    txa
+    pha
+    ; push y
+    tya
+    pha
+.endmacro
+
+; pop all registers from the stack
+.macro pop_reg
+    ; pop y
+    pla
+    tay
+    ; pop x
+    pla
+    tax
+    ; pop a
+    pla
 .endmacro
 
 ; PPU_CTRL Modes
@@ -89,11 +113,11 @@ NAMETABLE_D         =$2C00
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
-    PALETTE_UPDATEL_LEN:    .res 1 ;
+    PALETTE_UPDATE_LEN:     .res 1 ;
     OAM_UPDATE_LEN:         .res 1 ;
     SCROLL_X:               .res 1 ;
     SCROLL_Y:               .res 1 ;
-    _PPU_ARGS:              .res 4 ;
+    _PPU_ARGS:              .res 6 ;
 
 .export _PPU_ARGS
 
@@ -117,7 +141,7 @@ NAMETABLE_D         =$2C00
 .export ppu_clear_nametable
 .export ppu_clear_palette
 
-.export _ppu_set_scroll
+.export _ppu_set_scroll_internal
 
 .export _ppu_update
 .export _ppu_off
@@ -127,10 +151,13 @@ NAMETABLE_D         =$2C00
 .export _ppu_update_tile_internal
 .export _ppu_update_byte
 .export _ppu_clear_nametable
-.export _ppu_clear_palette
 .export _ppu_fill_nametable_attr
 
-.export _ppu_oam_clear
+.export _ppu_clear_palette
+.export _ppu_set_palette_internal
+.export _ppu_set_palette_background_internal
+
+.export _ppu_clear_oam
 .export _ppu_oam_sprite
 .export _ppu_oam_meta_sprite
 
@@ -213,10 +240,14 @@ _ppu_off:
         bne :-
     rts
 
-; ppu_set_scroll: sets the (x,y) scroll position from X and A
-_ppu_set_scroll:
-    stx SCROLL_X
+; ppu_set_scroll: sets the (x,y) scroll position from PPU_ARGS 0 & 1
+_ppu_set_scroll_internal:
+
+    lda _PPU_ARGS+0
+    sta SCROLL_X
+    lda _PPU_ARGS+1
     sta SCROLL_Y
+
     rts
 
 ; ppu_address_tile: use with rendering off, sets memory address to tile at X/Y, ready for a $2007 (PPU_DATA) write
@@ -265,18 +296,18 @@ ppu_address_tile:
 ; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
 _ppu_update_tile_internal:
 
-ppu_update_tile:
     ; load length in X
     ldx NAMETABLE_UPDATE_LEN
 
     ; load Y
     lda _PPU_ARGS+1
+
     ; shift Y >> 3
     lsr
     lsr
     lsr
 
-    ; high bits of (Y >> 3 ) | $20
+    ; high bits of (Y >> 3) | $20 (nametable base)
     ora #$20
     sta NAMETABLE_UPDATE, x
     inx
@@ -303,47 +334,34 @@ ppu_update_tile:
 
     ; store new length
     stx NAMETABLE_UPDATE_LEN
+
     rts
 
 ; ppu_update_byte: like ppu_update_tile, but X/Y makes the high/low bytes of the PPU address to write
 ;    this may be useful for updating attribute tiles
 _ppu_update_byte:
-    sta TEMP ; A -> temp
-    ldy #0
-    popa ; pull Y off sp
-    tay ; A -> y
-    popa ; pull X off sp
-    tax ; A -> x
-    lda TEMP ; TEMP -> A
-
-ppu_update_byte:
-    ; temporarily store A on stack
-    pha
-
-    ; temporarily store Y on stack
-    tya
-    pha
 
     ; load length
-    ldy NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_LEN
 
-    ; store high byte X
-    txa
-    sta NAMETABLE_UPDATE, y
-    iny
+    ; store high byte
+    lda _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
 
-    ; recover Y value and store low byte Y
-    pla
-    sta NAMETABLE_UPDATE, y
-    iny
+    ; store low byte
+    lda _PPU_ARGS+1
+    sta NAMETABLE_UPDATE, x
+    inx
 
-    ; recover A value (byte)
-    pla
-    sta NAMETABLE_UPDATE, y
-    iny
+    ; store byte
+    lda _PPU_ARGS+2
+    sta NAMETABLE_UPDATE, x
+    inx
 
     ; store new length
-    sty NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_LEN
+
     rts
 
 ; clears specific nametable at $X/A to value Y
@@ -360,9 +378,9 @@ ppu_clear_nametable:
     ; transfer Y to A as clear valeu
     tya
 
-    ldy #(NAMETABLE_ROWS) ; 30 rows
+    ldy NAMETABLE_ROWS ; 30 rows
     :
-        ldx #(NAMETABLE_COLS) ; 32 columns
+        ldx NAMETABLE_COLS ; 32 columns
         :
             sta PPU_DATA
             dex
@@ -384,24 +402,61 @@ ppu_clear_nametable:
 _ppu_clear_palette:
 
 ppu_clear_palette:
-    ; reset latch
-    bit PPU_STATUS
-
-    ; load palette address
-    ldx #(>PALETTE_BASE_ADDR)
-    lda #(<PALETTE_BASE_ADDR)
-
-    ; store
-    stx PPU_ADDR
-    sta PPU_ADDR
-
-    ldy #0
+    ldx #0
     :
-        lda example_palette, y ; temp
-        sta PPU_DATA
-        iny
-        cpy #32
+        lda #0 ; example_palette, x ; temp
+        sta PALETTE_UPDATE, x
+        inx
+        cpx PALETTE_BYTE_COUNT
         bne :-
+
+    stx PALETTE_UPDATE_LEN
+
+    rts
+
+; Updates
+_ppu_set_palette_internal:
+
+    ; convert palette index to memory location (mul 4)
+    lda _PPU_ARGS+0;
+    asl
+    asl
+
+    ; transfer to A -> X
+    tax
+
+    ; store colors into update buffer
+    lda _PPU_ARGS+1
+    sta PALETTE_UPDATE+1, x
+    lda _PPU_ARGS+2
+    sta PALETTE_UPDATE+2, x
+    lda _PPU_ARGS+3
+    sta PALETTE_UPDATE+3, x
+
+    ; mark palette as dirty
+    inc PALETTE_UPDATE_LEN
+
+    rts
+
+; Set the background for all palettes
+_ppu_set_palette_background_internal:
+
+    lda _PPU_ARGS+0;
+
+    ; nametable backgroupds
+    sta PALETTE_UPDATE+0
+    sta PALETTE_UPDATE+4
+    sta PALETTE_UPDATE+8
+    sta PALETTE_UPDATE+12
+
+    ; sprite backgrouds
+    sta PALETTE_UPDATE+16
+    sta PALETTE_UPDATE+20
+    sta PALETTE_UPDATE+24
+    sta PALETTE_UPDATE+28
+
+    ; mark palette as dirty
+    inc PALETTE_UPDATE_LEN
 
     rts
 
@@ -438,9 +493,10 @@ ppu_fill_nametable_attr:
 
     rts
 
-; ppu_oam_clean: clear oam buffer
-_ppu_oam_clear:
+; _ppu_clear_oam: clear oam buffer
+_ppu_clear_oam:
 
+    ; clear OAM buffer
     ldx #0
     lda #$FF
     :
@@ -451,6 +507,8 @@ _ppu_oam_clear:
         ; inx
         bne :-
 
+    ; reset length
+    lda #0
     sta OAM_UPDATE_LEN
 
     rts
@@ -458,9 +516,10 @@ _ppu_oam_clear:
 ; ppu_oam_sprite: add a sprite from _OAM_ARGS to OAM_UPDATE
 _ppu_oam_sprite:
 
-ppu_oam_sprite:
+    ; load OAM buffer length
     ldx OAM_UPDATE_LEN
 
+    ; store OAM updates
     lda _PPU_ARGS+0
     sta OAM_UPDATE, x
     inx
@@ -477,6 +536,7 @@ ppu_oam_sprite:
     sta OAM_UPDATE, x
     inx
 
+    ; store updated length
     stx OAM_UPDATE_LEN
 
     rts
@@ -491,30 +551,6 @@ _ppu_oam_meta_sprite:
 .export nmi
 
 .segment "CODE"
-
-; push all registers to the stack
-.macro push_reg
-    ; push a
-    pha
-    ; push x
-    txa
-    pha
-    ; push y
-    tya
-    pha
-.endmacro
-
-; pop all registers from the stack
-.macro pop_reg
-    ; pop y
-    pla
-    tay
-    ; pop x
-    pla
-    tax
-    ; pop a
-    pla
-.endmacro
 
 nmi:
     push_reg
@@ -547,13 +583,14 @@ nmi:
         jmp @nmi_ready
     :
 
+@update_oam:
     ; sprite oam dma
-    ldx #0
-    cpx OAM_UPDATE_LEN
+    ldx OAM_UPDATE_LEN
     beq @update_palette
 
     ; clear oam update length
-    stx OAM_UPDATE_LEN
+    lda #0
+    sta OAM_UPDATE_LEN
 
     ; set OAM address
     stx PPU_OAM_ADDR
@@ -561,34 +598,38 @@ nmi:
     sta PPU_OAM_DMA
 
 @update_palette:
+    ; reset latch
+    bit PPU_STATUS
+
     ; palette update
-    ldx #0
-    cpx PALETTE_UPDATEL_LEN
+    ldx PALETTE_UPDATE_LEN
     beq @update_nametable
 
     ; set PPU palette address
-    ldx #(>PALETTE_BASE_ADDR)
-    lda #(<PALETTE_BASE_ADDR)
-
-    stx PPU_ADDR
+    lda #(>PALETTE_BASE_ADDR)
     sta PPU_ADDR
+    lda #(<PALETTE_BASE_ADDR)
+    sta PPU_ADDR
+
+    ldx #0
     :
         lda PALETTE_UPDATE, x
         sta PPU_DATA
         inx
 
-        ; loop while X !+ PALETTE_UPDATEL_LEN
-        cpx PALETTE_UPDATEL_LEN
+        ; fill all palette data
+        cpx PALETTE_BYTE_COUNT
         bcc :-
 
     lda #0
-    sta PALETTE_UPDATEL_LEN
+    sta PALETTE_UPDATE_LEN
 
 @update_nametable:
     ; nametable update
-    ldx #0
-    cpx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_LEN
     beq @ppu_scroll
+
+    ldx #0
     :
         ; high byte address
         lda NAMETABLE_UPDATE, x
@@ -648,5 +689,3 @@ nmi:
 @nmi_end:
     pop_reg
     rti
-
-    iny

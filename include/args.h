@@ -4,6 +4,8 @@
 extern uint8_t ARGS[8];
 #pragma zpsym("ARGS");
 
+#define args_pack_ax_uint16( a, x )     ( ( (uint16_t)(x) << 8 ) | (uint16_t)(a) )
+
 #define args_call_0( f )    \
 f()
 
@@ -29,5 +31,13 @@ ARGS[2] = (p2);                     \
 ARGS[3] = (p3);                     \
 f()
 
+#define lda_arg( a )                \
+asm("lda %v,%b", ARGS, a)
+
+#define ldx_arg( a )                \
+asm("ldx %v,%b", ARGS, a)
+
+#define ldy_arg( a )                \
+asm("ldy %v,%b", ARGS, a)
 
 #endif // ARGS_H

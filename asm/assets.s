@@ -21,10 +21,44 @@ x_sprite ( ( x0 & $2 ) << 6 ), ( ( x1 & $2 ) << 5 ), ( ( x2 & $2 ) << 4 ), ( ( x
 
 .segment "CHARS"
 
-assets_root:
+chars_root:
 
-.include "../assets/nesfont.s"
+blank:
 
-.include "../assets/player.s"
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
 
-.include "../assets/env.s"
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+.byte   %00000000
+
+.define TEXT_LANGUAGE   "en"
+.define VERSION         "0.1.0"
+.define COPYRIGHT_YEAR  "2024"
+
+.macro include_asset file
+.include .concat("../assets/", file);
+.endmacro
+
+;.include "../assets/nesfont.s"
+
+;.include "../assets/player.s"
+
+;.include "../assets/env.s"
+
+include_asset "shadow-font.s"
+
+include_asset "knight.s"
+
+include_asset .concat("text.", TEXT_LANGUAGE, ".s")
