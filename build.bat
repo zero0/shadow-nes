@@ -36,7 +36,7 @@ rem Compile source assemblie files
 for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
 
 rem Compile C files
-for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_DBG% -Oisr -o tmp\%%~nC.s %%C
+for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_DBG% -Oisr -o tmp\c_%%~nC.s %%C
 
 rem Compile temp assemblie files
 for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
