@@ -4,8 +4,7 @@
 #include "subpixel.h"
 #include "text.h"
 #include "ppu.h"
-
-static uint8_t t;
+#include "globals.h"
 
 void __fastcall__ game_state_title_enter()
 {
@@ -43,7 +42,7 @@ void __fastcall__ game_state_title_update()
     switch( t )
     {
         case 0:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 3);
+            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 1);
             if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
             {
                 t = 1;
@@ -55,7 +54,7 @@ void __fastcall__ game_state_title_update()
             break;
 
         case 1:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 3);
+            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 1);
             if( GAMEPAD_PRESSED(0, GAMEPAD_U))
             {
                 t = 0;

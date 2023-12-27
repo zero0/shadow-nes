@@ -4,16 +4,12 @@
 #include "subpixel.h"
 #include "macros.h"
 #include "args.h"
-
-static uint8_t i;
-static uint8_t j;
+#include "globals.h"
 
 static uint8_t current_gamepad_state;
 static uint8_t prev_gamepad_state;
-static uint8_t l, r, t, b;
 static uint8_t anim_frame;
 static uint8_t flip_h, flip_v;
-
 
 #define PLAYER_MOVEMENT_STATE_FACING_LEFT    0x01
 #define PLAYER_MOVEMENT_STATE_GROUNDED       0x02
@@ -572,7 +568,6 @@ static void __fastcall__ player_update_anim(void)
     }
 }
 
-static    uint8_t v;
 static void __fastcall__ uint8_to_oam()
 {
     v = ARGS[2] & 0x0F;

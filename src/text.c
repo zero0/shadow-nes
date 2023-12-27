@@ -1,9 +1,7 @@
 #include "text.h"
 #include "ppu.h"
 #include "subpixel.h"
-
-static char c;
-static uint8_t i, x, y;
+#include "globals.h"
 
 #define CHAR_SPACE          78
 #define CHAR_NEW_LINE       79
