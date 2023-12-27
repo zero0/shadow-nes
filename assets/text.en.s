@@ -12,19 +12,23 @@
 ;
 
 .segment        "ZEROPAGE"
-.export         _temp_text_table
-
 _temp_text_table:   .res  2 ;
 
-.segment        "RODATA"
-.export         _text_table
+.export         _temp_text_table
 
+;
+;
+;
+
+.segment        "RODATA"
 _text_table:
 .byte           <tr_title_title, >tr_title_title
-.byte           <tr_title_player, >tr_title_player
+.byte           <tr_title_new_game, >tr_title_new_game
 .byte           <tr_title_continue, >tr_title_continue
 .byte           <tr_title_version, >tr_title_version
 .byte           <tr_title_copyright, >tr_title_copyright
+
+.export         _text_table
 
 ;
 ;
@@ -102,24 +106,28 @@ _text_table:
 .charmap '@', 63 ; something
 .charmap '.', 64
 .charmap '!', 65
-.charmap '"', 66 ; " - fix for formatting
+.charmap  34, 66 ; double-quote "
 .charmap '?', 67
 .charmap ',', 68
 .charmap ':', 69
-.charmap '(', 70
-.charmap ')', 71
+.charmap  59, 70 ; semicolon
+.charmap '(', 71 ; (
+.charmap ')', 72 ; )
+.charmap '[', 73 ; [
+.charmap ']', 74 ; ]
+.charmap '/', 75 ; /
 
 ; extra
-.charmap ' ', 72 ; make spaces a character that can be read and handled
-.charmap 10, 73 ; handle new lines
-.charmap 13, 74 ; handle new screens
-.charmap 9, 75 ; tab over
+.charmap ' ', 76 ; make spaces a character that can be read and handled
+.charmap  10, 77 ; handle new lines
+.charmap  13, 78 ; handle new carage return (new screen)
+.charmap   9, 79 ; handl tab
 .endif
 
 _text_root:
 
 tr_title_title:     TR "Shadowborn"
-tr_title_player:    TR "New Game"
+tr_title_new_game:  TR "New Game"
 tr_title_continue:  TR "Continue"
 tr_title_version:   TR .concat("Version ", VERSION)
 tr_title_copyright: TR .concat("(C) ", COPYRIGHT_YEAR)

@@ -66,6 +66,32 @@ void __fastcall__ ppu_address_tile( uint8_t x, uint8_t y );
 
 void __fastcall__ ppu_update_tile_internal(void);
 
+//
+//
+//
+
+#define ppu_begin_tile_batch( px, py )  \
+    PPU_ARGS[0] = (px);                 \
+    PPU_ARGS[1] = (py);                 \
+    ppu_begin_tile_batch_internal()
+
+void __fastcall__ ppu_begin_tile_batch_internal(void);
+
+#define ppu_push_tile_batch( t )    \
+    PPU_ARGS[0] = (t);              \
+    ppu_push_tile_batch_internal()
+
+void __fastcall__ ppu_push_tile_batch_internal(void);
+
+#define ppu_end_tile_batch()        \
+    ppu_end_tile_batch_internal()
+
+void __fastcall__ ppu_end_tile_batch_internal(void);
+
+//
+//
+//
+
 void __fastcall__ ppu_update_byte( uint8_t x, uint8_t y, uint8_t b );
 
 void __fastcall__ ppu_clear_nametable( ptr_t tableAddress );

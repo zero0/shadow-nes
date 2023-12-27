@@ -118,6 +118,7 @@ NAMETABLE_D         =$2C00
     SCROLL_X:               .res 1 ;
     SCROLL_Y:               .res 1 ;
     _PPU_ARGS:              .res 6 ;
+    TILE_BATCH_INDEX:       .res 1 ;
 
 .export _PPU_ARGS
 
@@ -149,6 +150,11 @@ NAMETABLE_D         =$2C00
 
 .export _ppu_address_tile
 .export _ppu_update_tile_internal
+
+.export _ppu_begin_tile_batch_internal
+.export _ppu_push_tile_batch_internal
+.export _ppu_end_tile_batch_internal
+
 .export _ppu_update_byte
 .export _ppu_clear_nametable
 .export _ppu_fill_nametable_attr
@@ -296,9 +302,6 @@ ppu_address_tile:
 ; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
 _ppu_update_tile_internal:
 
-    ; load length in X
-    ldx NAMETABLE_UPDATE_LEN
-
     ; load Y
     lda _PPU_ARGS+1
 
@@ -306,6 +309,9 @@ _ppu_update_tile_internal:
     lsr
     lsr
     lsr
+
+    ; load length in X
+    ldx NAMETABLE_UPDATE_LEN
 
     ; high bits of (Y >> 3) | $20 (nametable base)
     ora #$20
@@ -324,6 +330,11 @@ _ppu_update_tile_internal:
     ; ( Y << 5 ) | X
     ; recover X value
     ora _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; tile count
+    lda #1
     sta NAMETABLE_UPDATE, x
     inx
 
@@ -361,6 +372,82 @@ _ppu_update_byte:
 
     ; store new length
     stx NAMETABLE_UPDATE_LEN
+
+    rts
+
+;
+_ppu_begin_tile_batch_internal:
+
+    ; load Y
+    lda _PPU_ARGS+1
+
+    ; shift Y >> 3
+    lsr
+    lsr
+    lsr
+
+    ; load length in X
+    ldx NAMETABLE_UPDATE_LEN
+
+    ; high bits of (Y >> 3) | $20 (nametable base)
+    ora #$20
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; load Y
+    lda _PPU_ARGS+1
+    ; shift Y << 5
+    asl
+    asl
+    asl
+    asl
+    asl
+
+    ; ( Y << 5 ) | X
+    ; recover X value
+    ora _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; tile count
+    lda #0
+    sta NAMETABLE_UPDATE, x
+
+    ; store tile batch index to update
+    stx TILE_BATCH_INDEX
+    inx
+
+    ; store new length
+    stx NAMETABLE_UPDATE_LEN
+
+    rts
+
+;
+_ppu_push_tile_batch_internal:
+
+    ; load length
+    ldx NAMETABLE_UPDATE_LEN
+
+    ; store tile
+    lda _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store new lenght
+    stx NAMETABLE_UPDATE_LEN
+
+    ; increment batch count
+    ldx TILE_BATCH_INDEX
+    inc NAMETABLE_UPDATE, x
+
+    rts
+
+;
+_ppu_end_tile_batch_internal:
+
+    ; clear tile bach index
+    lda #0
+    sta TILE_BATCH_INDEX
 
     rts
 
@@ -641,14 +728,28 @@ nmi:
         sta PPU_ADDR
         inx
 
-        ; tile
-        lda NAMETABLE_UPDATE, x
-        sta PPU_DATA
+        ; tile count
+        ldy NAMETABLE_UPDATE, x
         inx
 
+        ; check tile count != 0
+        cpy #0
+        :
+            beq :+
+
+            ; tile
+            lda NAMETABLE_UPDATE, x
+            sta PPU_DATA
+            inx
+
+            ; decrement count
+            dey
+            jmp :-
+
+        :
         ; loop while X != length
         cpx NAMETABLE_UPDATE_LEN
-        bcc :-
+        bcc :---
 
     ; reset nametable update length
     lda #0
