@@ -9,9 +9,9 @@
 ;  3: [255, 255, 255]
 
 ; Tiles
-;     All: 76
-;  Unique: 75
-;    Size: 1,200b
+;     All: 77
+;  Unique: 77
+;    Size: 1,232b
 
 .export shadow_font
 
@@ -1339,7 +1339,27 @@ shadow_font_16x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 66 32x32
+; Tile 66 24x32
+shadow_font_24x32:
+.byte %00000000
+.byte %00110110
+.byte %00110110
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+
+.byte %00000000
+.byte %00110110
+.byte %00110110
+.byte %01101100
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+
+; Tile 67 32x32
 shadow_font_32x32:
 .byte %00111100
 .byte %01100110
@@ -1359,7 +1379,7 @@ shadow_font_32x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 67 40x32
+; Tile 68 40x32
 shadow_font_40x32:
 .byte %00000000
 .byte %00000000
@@ -1379,7 +1399,7 @@ shadow_font_40x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 68 48x32
+; Tile 69 48x32
 shadow_font_48x32:
 .byte %00000000
 .byte %00000000
@@ -1399,7 +1419,7 @@ shadow_font_48x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 69 56x32
+; Tile 70 56x32
 shadow_font_56x32:
 .byte %00000000
 .byte %00000000
@@ -1419,7 +1439,7 @@ shadow_font_56x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 70 64x32
+; Tile 71 64x32
 shadow_font_64x32:
 .byte %00001100
 .byte %00011000
@@ -1439,7 +1459,7 @@ shadow_font_64x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 71 72x32
+; Tile 72 72x32
 shadow_font_72x32:
 .byte %00110000
 .byte %00011000
@@ -1459,7 +1479,7 @@ shadow_font_72x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 72 80x32
+; Tile 73 80x32
 shadow_font_80x32:
 .byte %00011110
 .byte %00011000
@@ -1479,7 +1499,7 @@ shadow_font_80x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 73 88x32
+; Tile 74 88x32
 shadow_font_88x32:
 .byte %00111100
 .byte %00001100
@@ -1499,7 +1519,7 @@ shadow_font_88x32:
 .byte %00000000
 .byte %00000000
 
-; Tile 74 96x32
+; Tile 75 96x32
 shadow_font_96x32:
 .byte %00000011
 .byte %00000110
@@ -1515,6 +1535,26 @@ shadow_font_96x32:
 .byte %00001100
 .byte %00011000
 .byte %00110000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+
+; Tile 76 104x32
+shadow_font_104x32:
+.byte %00000000
+.byte %00011000
+.byte %00011000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+
+.byte %00000000
+.byte %00011000
+.byte %00011000
+.byte %00110000
+.byte %00000000
 .byte %00000000
 .byte %00000000
 .byte %00000000

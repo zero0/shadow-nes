@@ -21,6 +21,15 @@ NAMETABLE_B         =$2400
 NAMETABLE_C         =$2800
 NAMETABLE_D         =$2C00
 
+; nametable addresses
+.define NAMETABLE_ROWS                  #30
+.define NAMETABLE_COLS                  #32
+.define NAMETABLE_BYTE_COUNT            NAMETABLE_ROWS * NAMETABLE_COLS
+.define NAMETABLE_ATTR_BYTE_COUNT       #64
+
+.define NAMETABLE_A_BASE_ADDR           $2000
+.define NAMETABLE_A_ATTR_ADDR           NAMETABLE_A_BASE_ADDR + NAMETABLE_BYTE_COUNT
+
 ; palette addresses
 .define PALETTE_BASE_ADDR               $3f00
 .define PALETTE_BYTE_COUNT              #32
@@ -38,9 +47,6 @@ NAMETABLE_D         =$2C00
 .define PALETTE_SPRITE_2_ADDR           PALETTE_SPRITE_BASE_ADDR + $8
 .define PALETTE_SPRITE_3_ADDR           PALETTE_SPRITE_BASE_ADDR + $C
 .define PALETTE_SPRITE_BYTE_COUNT       #16
-
-.define NAMETABLE_ROWS                  #30
-.define NAMETABLE_COLS                  #32
 
 .macro popa
     lda (sp), y
@@ -489,12 +495,11 @@ ppu_clear_nametable:
 _ppu_clear_palette:
 
 ppu_clear_palette:
-    ldx #0
+    lda #0
+    ldx PALETTE_BYTE_COUNT
     :
-        lda #0 ; example_palette, x ; temp
         sta PALETTE_UPDATE, x
-        inx
-        cpx PALETTE_BYTE_COUNT
+        dex
         bne :-
 
     stx PALETTE_UPDATE_LEN

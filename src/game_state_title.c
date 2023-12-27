@@ -17,9 +17,10 @@ void __fastcall__ game_state_title_enter()
 
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
-    ppu_set_palette( PALETTE_SPRITE_0, 0x10, 0x20, 0x30 );
+    ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
+    ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
 
-    text_draw_string( (SCREEN_WIDTH/2) - ( 10 / 2 ), 5, PALETTE_BACKGROUND_0, 0 );
+    text_draw_string( (SCREEN_WIDTH/2) - ( 12 / 2 ), 5, PALETTE_BACKGROUND_0, 0 );
 
     text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 13, PALETTE_BACKGROUND_0, 2 );
     text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 16, PALETTE_BACKGROUND_0, 4 );

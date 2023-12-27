@@ -5,10 +5,10 @@
 static char c;
 static uint8_t i, x, y;
 
-#define CHAR_SPACE          76
-#define CHAR_NEW_LINE       77
-#define CHAR_CARAGE_RETURN  78
-#define CHAR_TAB            79
+#define CHAR_SPACE          78
+#define CHAR_NEW_LINE       79
+#define CHAR_CARAGE_RETURN  80
+#define CHAR_TAB            81
 
 void __fastcall__ text_draw_string_impl(void)
 {

@@ -38,6 +38,8 @@ _text_table:
 
 ; Map characters to sprite sheet ordering
 .if 1
+.feature string_escapes +
+
 .charmap '0', 1
 .charmap '1', 2
 .charmap '2', 3
@@ -106,27 +108,29 @@ _text_table:
 .charmap '@', 63 ; something
 .charmap '.', 64
 .charmap '!', 65
-.charmap  34, 66 ; double-quote "
-.charmap '?', 67
-.charmap ',', 68
-.charmap ':', 69
-.charmap  59, 70 ; semicolon
-.charmap '(', 71 ; (
-.charmap ')', 72 ; )
-.charmap '[', 73 ; [
-.charmap ']', 74 ; ]
-.charmap '/', 75 ; /
+.charmap '<', 66 ; double-quote left "
+.charmap '>', 67 ; double-quote right "
+.charmap '?', 68
+.charmap ',', 69
+.charmap ':', 70
+.charmap  59, 71 ; semicolon
+.charmap '(', 72
+.charmap ')', 73
+.charmap '[', 74
+.charmap ']', 75
+.charmap '/', 76
+.charmap  39, 77 ; single-quote '
 
 ; extra
-.charmap ' ', 76 ; make spaces a character that can be read and handled
-.charmap  10, 77 ; handle new lines
-.charmap  13, 78 ; handle new carage return (new screen)
-.charmap   9, 79 ; handl tab
+.charmap ' ', 78 ; make spaces a character that can be read and handled
+.charmap  10, 79 ; handle new lines
+.charmap  13, 80 ; handle new carage return (new screen)
+.charmap   9, 81 ; handl tab
 .endif
 
 _text_root:
 
-tr_title_title:     TR "Shadowborn"
+tr_title_title:     TR "<Shadowborn>"
 tr_title_new_game:  TR "New Game"
 tr_title_continue:  TR "Continue"
 tr_title_version:   TR .concat("Version ", VERSION)
