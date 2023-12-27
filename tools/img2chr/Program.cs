@@ -295,10 +295,17 @@ namespace img2chr
 
             List<TileEntry> allTiles = new List<TileEntry>();
 
+            Rectangle area = new Rectangle(0, 0, bitmapImage.Width, bitmapImage.Height);
+
+            area.X =      Math.Clamp(GetIntParameter(parameters, "image.max-rect.x", area.X), 0, bitmapImage.Width);
+            area.Y =      Math.Clamp(GetIntParameter(parameters, "image.max-rect.y", area.Y), 0, bitmapImage.Height);
+            area.Width =  Math.Clamp(GetIntParameter(parameters, "image.max-rect.w", area.Width), 0, bitmapImage.Width);
+            area.Height = Math.Clamp(GetIntParameter(parameters, "image.max-rect.h", area.Height), 0, bitmapImage.Height);
+
             // read tiles (starging from 8,0 to leave room for palette info)
-            for (int y = 0, ymax = bitmapImage.Height; y < ymax; y += 8)
+            for (int y = area.Y, ymax = area.Height; y < ymax; y += 8)
             {
-                for (int x = y == 0 ? 8 : 0, xmax = bitmapImage.Width; x < xmax; x += 8)
+                for (int x = y == area.Y ? area.X + 8 : area.X, xmax = area.Width; x < xmax; x += 8)
                 {
                     TileIndices tileIndices = default;
 
@@ -482,7 +489,7 @@ namespace img2chr
                 sb.AppendLine(";             : H - flip horizontal V - flip vertical");
                 sb.AppendLine(";             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite");
                 sb.AppendLine();
-                sb.AppendLine(".segment \"DATA\"");
+                sb.AppendLine(".segment \"RODATA\"");
                 sb.AppendLine();
 
                 // write meta sprite format
@@ -507,7 +514,7 @@ namespace img2chr
                         sb.Append($">{exportName}_{minTile.x}x{minTile.y}");
                         sb.Append($", <{exportName}_{minTile.x}x{minTile.y}");
 
-                        sb.Append($", ${metaSprite.tileCount:X2}");
+                        sb.Append($", ${metaSprite.tileCount * 2:X2}"); // include [attr, tile] pairs
 
                         for (int s = 0; s < metaSprite.tileCount; s++)
                         {

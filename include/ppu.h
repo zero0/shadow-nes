@@ -132,4 +132,19 @@ void __fastcall__ ppu_clear_oam();
 
 void __fastcall__ ppu_oam_sprite();
 
+//
+//
+//
+
+#define ppu_add_meta_sprite( px, py, pal, metaspr ) ppu_add_meta_sprite_full( px, py, pal, 0, 0, 0, metaspr )
+
+#define ppu_add_meta_sprite_full( px, py, pal, bg, fh, fv, metaspr )                \
+    PPU_ARGS[0] = (py) - 1;                                                         \
+    PPU_ARGS[1] = (metaspr);                                                        \
+    PPU_ARGS[2] = ( (fv) << 7 ) | ( (fh) << 6 ) | ( (bg) << 5 ) | ( 0x03 & (pal) ); \
+    PPU_ARGS[3] = (px);                                                             \
+    ppu_add_meta_sprite_full_internal()
+
+void __fastcall__ ppu_add_meta_sprite_full_internal(void);
+
 #endif // PPU_H

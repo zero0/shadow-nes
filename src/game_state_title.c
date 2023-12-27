@@ -66,5 +66,5 @@ void __fastcall__ game_state_title_update()
             break;
     }
 
-
+    ppu_add_meta_sprite( 10, 10, PALETTE_SPRITE_0, 0 );
 }

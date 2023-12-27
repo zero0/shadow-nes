@@ -125,6 +125,9 @@ NAMETABLE_D         =$2C00
     SCROLL_Y:               .res 1 ;
     _PPU_ARGS:              .res 6 ;
     TILE_BATCH_INDEX:       .res 1 ;
+    META_SPRITE_LEN:        .res 1 ;
+    META_SPRITE_ATTR:       .res 1 ;
+    META_SPRITE_ADDR:       .res 2 ;
 
 .export _PPU_ARGS
 
@@ -171,7 +174,12 @@ NAMETABLE_D         =$2C00
 
 .export _ppu_clear_oam
 .export _ppu_oam_sprite
-.export _ppu_oam_meta_sprite
+
+.export _ppu_add_meta_sprite_full_internal
+
+.import knight_sprite_0
+.import knight_sprite_1
+.import knight_sprite_2
 
 .segment "RODATA"
 
@@ -633,7 +641,70 @@ _ppu_oam_sprite:
 
     rts
 
-_ppu_oam_meta_sprite:
+;
+_ppu_add_meta_sprite_full_internal:
+
+    ; load OAM buffer length
+    ldx OAM_UPDATE_LEN
+
+    ; store metasprite address
+    lda #(<knight_sprite_0)
+    sta META_SPRITE_ADDR+0
+    lda #(>knight_sprite_0)
+    sta META_SPRITE_ADDR+1
+
+    ; load metasprite length
+    ldy #2
+    lda (META_SPRITE_ADDR), y
+    sta META_SPRITE_LEN
+    iny
+
+    :
+        ; load metasprite attributes
+        lda (META_SPRITE_ADDR), y
+        sta META_SPRITE_ATTR
+        iny
+
+        ; store OAM updates
+        ; y
+        ; get Y tile offset from metasprite attributes
+        and #%00000111
+        ; go from tiles to pixels (mul 8)
+        asl
+        asl
+        asl
+
+        adc _PPU_ARGS+0
+        sta OAM_UPDATE, x
+        inx
+
+        ; tile
+        lda (META_SPRITE_ADDR), y
+        sta OAM_UPDATE, x
+        inx
+        iny
+
+        ; attr
+        lda _PPU_ARGS+2
+        sta OAM_UPDATE, x
+        inx
+
+        ; x
+        ; get X tile offset from metasprite attributes (X is already shifted)
+        lda META_SPRITE_ATTR
+        and #%00111000
+
+        adc _PPU_ARGS+3
+        sta OAM_UPDATE, x
+        inx
+
+        ; check length
+        cpy META_SPRITE_LEN
+        bcc :-
+
+    ; store updated length
+    stx OAM_UPDATE_LEN
+
     rts
 
 ;

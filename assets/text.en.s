@@ -37,6 +37,8 @@ _text_table:
 .segment        "RODATA"
 
 ; Map characters to sprite sheet ordering
+.pushcharmap
+
 .if 1
 .feature string_escapes +
 
@@ -135,3 +137,5 @@ tr_title_new_game:  TR "New Game"
 tr_title_continue:  TR "Continue"
 tr_title_version:   TR .concat("Version ", VERSION)
 tr_title_copyright: TR .concat("(C) ", COPYRIGHT_YEAR)
+
+.popcharmap
