@@ -1,0 +1,62 @@
+key,en
+tr_game_title,Shadowborn
+tr_new_game,New Game
+tr_continue,Continue
+tr_version,"%.concat(""Version "", VERSION)%"
+tr_copyright,"%.concat(""(C) "", COPYRIGHT_YEAR)%"
+
+tr_tower_name,Tower of Luxluma
+
+tr_boss_1_location,${tr_tower_name} Bridge ${tr_title_screen_title}
+tr_boss_1_name,"Yrkargarin, Last Knight of Luxluma"
+
+tr_boss_2_location,ab${tr_tower_name} Courtyard
+tr_boss_2_name,Brightbeast
+
+tr_boss_3_location,${tr_tower_name} Upper Chapel
+tr_boos_3_name,Corrupted High Radiance Auhmn
+
+tr_boss_4_location,${tr_tower_name} Gleaming Road (walkway up to the top of the tower)
+tr_boss_4_name,Iridecence Dragon
+
+tr_boss_5_location,${tr_tower_name} Sewers
+tr_boss_5_name,Ophiotroph Dragon Corpse
+
+tr_boss_6_location,${tr_tower_name} Ramparts
+tr_boss_6_name,Shadowkin Invader
+
+tr_boss_7_location,${tr_tower_name} Gleaming Road End (door to Radiant Throne)
+tr_boss_7_name,Specular Gaurds Dirk & Quince
+
+tr_boss_8_location,${tr_tower_name} Radiant Throne
+tr_boss_8_name,Lightlord of Sin
+
+tr_cutscene_intro_0,Those born of shadow are forever doomed to serve the light.
+tr_cutscene_intro_1,This corrupted light must be snuffed out. Those born of shadow have devine right to fufill this task.
+tr_cutscene_intro_2,When the light is stained; dim; corrupted. Those born to shadow are bound to act.
+tr_cutscene_intro_3,fa
+tr_cutscene_intro_4,ee
+
+
+
+#
+# game flow:
+# intro
+# enter the tower via the bridge
+# boss 1
+# enter the courtyard
+# boss 2
+# enter the chapel that leads to the tower
+# boss 3
+# walk up stares to top, about halfway up
+# boss 4
+# defeating boss cases the stairs to break, falling down the tower into the sewers below, boss corpse is taken over
+# boss 5
+# exit sewers, go on to ramparts outside the tower, meet another shadowborn (mirror match)
+# boss 6
+# reenter the tower, make it to doors before the throne room
+# boss 7
+# enter the throne room
+# boss 8
+# end (or is it?)
+#
