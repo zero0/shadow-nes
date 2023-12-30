@@ -3,10 +3,12 @@
 #include "subpixel.h"
 #include "globals.h"
 
-#define CHAR_SPACE          78
-#define CHAR_NEW_LINE       79
-#define CHAR_CARAGE_RETURN  80
-#define CHAR_TAB            81
+#define EMPTY_TILE          0xFF
+
+#define CHAR_SPACE          77
+#define CHAR_NEW_LINE       78
+#define CHAR_CARAGE_RETURN  79
+#define CHAR_TAB            80
 
 void __fastcall__ text_draw_string_impl(void)
 {
@@ -23,7 +25,7 @@ void __fastcall__ text_draw_string_impl(void)
         if( c == '\0' ) break;
         if( c == CHAR_SPACE )
         {
-            ppu_push_tile_batch(0); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             ++x;
             continue;
         }
@@ -49,9 +51,9 @@ void __fastcall__ text_draw_string_impl(void)
         }
         if( c == CHAR_TAB )
         {
-            ppu_push_tile_batch(0); // push empty tile
-            ppu_push_tile_batch(0); // push empty tile
-            ppu_push_tile_batch(0); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             x += 3;
             continue;
         }

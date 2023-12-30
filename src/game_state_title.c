@@ -32,7 +32,7 @@ void __fastcall__ game_state_title_enter()
 
 void __fastcall__ game_state_title_leave()
 {
-    ppu_clear_nametable( NAMETABLE_0_ADDR );
+    ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
 }
 
 void __fastcall__ game_state_title_update()

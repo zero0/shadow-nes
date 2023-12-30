@@ -204,6 +204,11 @@ namespace img2chr
 
                             if (!string.IsNullOrEmpty(key))
                             {
+                                if (value.StartsWith('"') && value.EndsWith('"'))
+                                {
+                                    value = value.Substring(1, value.Length - 2);
+                                }
+
                                 parameters[key] = value;
                             }
                         }
@@ -232,6 +237,12 @@ namespace img2chr
             return value;
         }
 
+        static string GetStringParameter(Dictionary<string, string> parameters, string key, string defaultValue = null)
+        {
+            string value = parameters?.TryGetValue(key, out string strValue) ?? false ? strValue : defaultValue;
+            return value;
+        }
+
         delegate void ConvertFunc(string inputFilename, in ConvertOptions convertOptions);
 
         static void ConvertImageFile(string imageFilename, in ConvertOptions cmdOptions)
@@ -241,14 +252,13 @@ namespace img2chr
             int metaSpriteWidth = 0;
             int metaSpriteHeight = 0;
 
-            if (TryGetFileParamters(imageFilename, "sprite", out var parameters))
+            if (TryGetFileParamters(imageFilename, "sprite", out var spriteParameters))
             {
-                metaSpriteWidth = GetIntParameter(parameters, "meta-sprite.width", metaSpriteWidth);
-                metaSpriteHeight = GetIntParameter(parameters, "meta-sprite.height", metaSpriteHeight);
+                metaSpriteWidth = GetIntParameter(spriteParameters, "meta-sprite.width", metaSpriteWidth);
+                metaSpriteHeight = GetIntParameter(spriteParameters, "meta-sprite.height", metaSpriteHeight);
             }
 
             string filename = Path.GetFileNameWithoutExtension(imageFilename);
-            string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".s";
 
             FileStreamOptions fileOptions = new()
             {
@@ -307,10 +317,10 @@ namespace img2chr
 
             Rectangle area = new Rectangle(0, 0, bitmapImage.Width, bitmapImage.Height);
 
-            area.X = Math.Clamp(GetIntParameter(parameters, "image.max-rect.x", area.X), 0, bitmapImage.Width);
-            area.Y = Math.Clamp(GetIntParameter(parameters, "image.max-rect.y", area.Y), 0, bitmapImage.Height);
-            area.Width = Math.Clamp(GetIntParameter(parameters, "image.max-rect.w", area.Width), 0, bitmapImage.Width);
-            area.Height = Math.Clamp(GetIntParameter(parameters, "image.max-rect.h", area.Height), 0, bitmapImage.Height);
+            area.X = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.x", area.X), 0, bitmapImage.Width);
+            area.Y = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.y", area.Y), 0, bitmapImage.Height);
+            area.Width = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.w", area.Width), 0, bitmapImage.Width);
+            area.Height = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.h", area.Height), 0, bitmapImage.Height);
 
             // read tiles (starging from 8,0 to leave room for palette info)
             for (int y = area.Y, ymax = area.Height; y < ymax; y += 8)
@@ -445,7 +455,8 @@ namespace img2chr
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
             sb.AppendLine($".export {exportName}");
             sb.AppendLine();
-            sb.AppendLine(".segment \"CHARS\"");
+            //sb.AppendLine(".segment \"CHARS\"");
+            sb.AppendLine(".segment \"RODATA\"");
             sb.AppendLine();
             sb.AppendLine($"{exportName}:");
             sb.AppendLine();
@@ -554,8 +565,78 @@ namespace img2chr
             }
 
             // output
-            File.WriteAllText(sFilename, sb.ToString(), UTF8);
-            LogInfo($"Converted {imageFilename} -> {sFilename}");
+            {
+                string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".s";
+                File.WriteAllText(sFilename, sb.ToString(), UTF8);
+                LogInfo($"Converted {imageFilename} -> {sFilename}");
+            }
+
+            // if the image is also a font, do some extra processing
+            if (TryGetFileParamters(imageFilename, "font", out var fontParameters))
+            {
+                string charMap = GetStringParameter(fontParameters, "charmap");
+                if (!string.IsNullOrEmpty(charMap))
+                {
+                    sb.Clear();
+
+                    sb.AppendLine(";");
+                    sb.AppendLine($"; Generated from {imageFilename}");
+                    sb.AppendLine(";");
+                    sb.AppendLine();
+
+                    sb.AppendLine(".feature string_escapes +");
+                    sb.AppendLine();
+
+                    sb.AppendLine("; Char Map");
+
+                    int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
+
+                    int index = 0;
+                    for (int i = 0; i < charMap.Length; ++i, ++index)
+                    {
+                        char c = charMap[i];
+                        sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {c}");
+                    }
+
+                    string charMapExtra = GetStringParameter(fontParameters, "charmap.extra");
+                    if (!string.IsNullOrEmpty(charMapExtra))
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine("; Extra Char Map");
+
+                        string str = string.Empty;
+                        for (int i = 0; i < charMapExtra.Length; ++i, ++index)
+                        {
+                            char c = charMapExtra[i];
+                            if (c == '\\')
+                            {
+                                ++i;
+                                c = charMapExtra[i];
+                                switch (c)
+                                {
+                                    case 'n': c = '\n'; str = "\\n"; break;
+                                    case 'r': c = '\r'; str = "\\r"; break;
+                                    case 't': c = '\t'; str = "\\t"; break;
+                                    case 'b': c = '\b'; str = "\\b"; break;
+                                    case '\\': c = '\\'; str = "\\"; break;
+                                    default: Assert(false, $"Invalid escape character {c}"); break;
+                                }
+                            }
+                            else if (c == ' ')
+                            {
+                                str = "<space>";
+                            }
+
+                            sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {str}");
+                        }
+                    }
+
+                    // write font file
+                    string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.s";
+                    File.WriteAllText(sFilename, sb.ToString(), UTF8);
+                    LogInfo($"Converted {imageFilename} -> {sFilename}");
+                }
+            }
         }
 
         static void ConvertTextFile(string textFilename, in ConvertOptions cmdOptions)

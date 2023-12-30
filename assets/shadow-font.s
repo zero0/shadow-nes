@@ -15,7 +15,7 @@
 
 .export shadow_font
 
-.segment "CHARS"
+.segment "RODATA"
 
 shadow_font:
 
@@ -1266,7 +1266,7 @@ shadow_font_120x24:
 .byte %11001011
 .byte %00000000
 .byte %00000000
-.byte %01000110
+.byte %01100110
 .byte %00111100
 .byte %00000000
 

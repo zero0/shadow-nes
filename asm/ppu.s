@@ -118,6 +118,8 @@ NAMETABLE_D         =$2C00
     NMI_LOCK:               .res 1 ;
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
+    PPU_CTRL_BUFFER:        .res 1 ;
+    PPU_MASK_BUFFER:        .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
     PALETTE_UPDATE_LEN:     .res 1 ;
     OAM_UPDATE_LEN:         .res 1 ;
@@ -128,6 +130,7 @@ NAMETABLE_D         =$2C00
     META_SPRITE_LEN:        .res 1 ;
     META_SPRITE_ATTR:       .res 1 ;
     META_SPRITE_ADDR:       .res 2 ;
+    CHR_UPLOAD_ADDR:        .res 2 ;
 
 .export _PPU_ARGS
 
@@ -165,7 +168,7 @@ NAMETABLE_D         =$2C00
 .export _ppu_end_tile_batch_internal
 
 .export _ppu_update_byte
-.export _ppu_clear_nametable
+.export _ppu_clear_nametable_internal
 .export _ppu_fill_nametable_attr
 
 .export _ppu_clear_palette
@@ -176,6 +179,8 @@ NAMETABLE_D         =$2C00
 .export _ppu_oam_sprite
 
 .export _ppu_add_meta_sprite_full_internal
+
+.export ppu_upload_chr_ram
 
 .import knight_sprite_0
 .import knight_sprite_1
@@ -210,6 +215,9 @@ ppu_init:
 
     stx PPU_CTRL    ; disable NMI
     stx PPU_MASK    ; disable rendering
+
+    stx PPU_CTRL_BUFFER
+    stx PPU_MASK_BUFFER
     rts
 
 ; ppu_wait_vblank: waits for the next vblank
@@ -229,9 +237,11 @@ ppu_enable_default:
 
     lda #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
+    sta PPU_CTRL_BUFFER
 
     lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW)
     sta PPU_MASK
+    sta PPU_MASK_BUFFER
     rts
 
 ; ppu_update: waits until next NMI, turns rendering on (if not already), uploads OAM, palette, and nametable update to PPU
@@ -465,19 +475,25 @@ _ppu_end_tile_batch_internal:
 
     rts
 
-; clears specific nametable at $X/A to value Y
-_ppu_clear_nametable:
+; clears specific nametable at PPU_ARGS[0..1] to PPU_ARGS[2] with attr PPU_ARS[3]
+_ppu_clear_nametable_internal:
 
-ppu_clear_nametable:
+.proc ppu_clear_nametable
     ; reset latch
     bit PPU_STATUS
 
+    ; disable rendering
+    lda #0
+    sta PPU_MASK
+
     ; store address
-    stx PPU_ADDR
+    lda _PPU_ARGS+0
+    sta PPU_ADDR
+    lda _PPU_ARGS+1
     sta PPU_ADDR
 
-    ; transfer Y to A as clear valeu
-    tya
+    ; clear valeu
+    lda _PPU_ARGS+2
 
     ldy NAMETABLE_ROWS ; 30 rows
     :
@@ -489,6 +505,8 @@ ppu_clear_nametable:
         dey
         bne :--
 
+    ; attribue clear value
+    lda _PPU_ARGS+3
 
     ; empty attribute table
     ldx #64 ; 64 bytes
@@ -497,7 +515,12 @@ ppu_clear_nametable:
         dex
         bne :-
 
+    ; reset ppu mask
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
     rts
+.endproc
 
 ; ppu_clear_palette: clear all palettes
 _ppu_clear_palette:
@@ -707,6 +730,59 @@ _ppu_add_meta_sprite_full_internal:
 
     rts
 
+; Upload a row of tiles into CHR RAM
+.proc ppu_upload_chr_ram
+    ;_PPU_ARGS[0] ; src address
+    ;_PPU_ARGS[1]
+;
+    ;_PPU_ARGS[2] ; row count
+;
+    ;_PPU_ARGS[3] ; dst address (row, 0x00, 0x01, 0x02, ...)
+    ;_PPU_ARGS[0] ; dst address (col, 0x00, 0x10, ...)
+
+    ; store address
+    lda _PPU_ARGS+0 ;
+    sta CHR_UPLOAD_ADDR+0
+    lda _PPU_ARGS+1 ;
+    sta CHR_UPLOAD_ADDR+1
+
+    lda #0
+
+    ; disable rendering
+    sta PPU_MASK
+
+    ; load starting address
+    ldy _PPU_ARGS+3
+    sty PPU_ADDR
+    ldy #0
+    sty PPU_ADDR
+
+    ; number of 256-byte pages to load
+    ldx _PPU_ARGS+2
+
+@loop:
+    ; load byte from address
+    lda (CHR_UPLOAD_ADDR), y
+    sta PPU_DATA
+
+    ; inc, loop until wrapped back to 0
+    iny
+    bne @loop
+
+    ; increment to next page
+    inc CHR_UPLOAD_ADDR+1
+    dex
+
+    ; repeat until complete
+    bne @loop
+
+    ; reset mask
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
+    rts
+.endproc
+
 ;
 ; nmi
 ;
@@ -715,7 +791,7 @@ _ppu_add_meta_sprite_full_internal:
 
 .segment "CODE"
 
-nmi:
+.proc nmi
     push_reg
 
     ; prevent nmi reentry (0 == locked)
@@ -846,10 +922,12 @@ nmi:
     and #%00000011 ;
     ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
     sta PPU_CTRL
+    sta PPU_CTRL_BUFFER
 
     ; enable rendering
     lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
     sta PPU_MASK
+    sta PPU_MASK_BUFFER
 
 @nmi_ready:
     ; NMI ready
@@ -866,3 +944,4 @@ nmi:
 @nmi_end:
     pop_reg
     rti
+.endproc

@@ -15,7 +15,7 @@
 
 .export knight
 
-.segment "CHARS"
+.segment "RODATA"
 
 knight:
 

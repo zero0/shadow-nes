@@ -94,7 +94,14 @@ void __fastcall__ ppu_end_tile_batch_internal(void);
 
 void __fastcall__ ppu_update_byte( uint8_t x, uint8_t y, uint8_t b );
 
-void __fastcall__ ppu_clear_nametable( ptr_t tableAddress );
+#define ppu_clear_nametable( ptr, c, a )            \
+    PPU_ARGS[0] = 0xFF & ((ptr) >> 8);              \
+    PPU_ARGS[1] = 0xFF & (ptr);                     \
+    PPU_ARGS[2] = (c);                              \
+    PPU_ARGS[3] = (a);                              \
+    ppu_clear_nametable_internal()
+
+void __fastcall__ ppu_clear_nametable_internal(void);
 
 void __fastcall__ ppu_clear_palette();
 
