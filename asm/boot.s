@@ -184,30 +184,6 @@ reset:
     ; wait for second vblank
     jsr ppu_wait_vblank
 
-    ;
-    lda #<shadow_font
-    sta _PPU_ARGS+0
-    lda #>shadow_font
-    sta _PPU_ARGS+1
-    lda #5
-    sta _PPU_ARGS+2
-    lda #$00
-    sta _PPU_ARGS+3
-
-    jsr ppu_upload_chr_ram
-
-    ;
-    lda knight_sprite_0+1
-    sta _PPU_ARGS+0
-    lda knight_sprite_0+0
-    sta _PPU_ARGS+1
-    lda #2
-    sta _PPU_ARGS+2
-    lda #$10
-    sta _PPU_ARGS+3
-
-    jsr ppu_upload_chr_ram
-
     ; enable NMI
     jsr ppu_enable_default
 

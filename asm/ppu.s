@@ -21,6 +21,9 @@ NAMETABLE_B         =$2400
 NAMETABLE_C         =$2800
 NAMETABLE_D         =$2C00
 
+_PPU_DATA           =PPU_DATA
+.export _PPU_DATA
+
 ; nametable addresses
 .define NAMETABLE_ROWS                  #30
 .define NAMETABLE_COLS                  #32
@@ -121,11 +124,12 @@ NAMETABLE_D         =$2C00
     PPU_CTRL_BUFFER:        .res 1 ;
     PPU_MASK_BUFFER:        .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
+    NAMETABLE_UPDATE_POS:   .res 1 ;
     PALETTE_UPDATE_LEN:     .res 1 ;
     OAM_UPDATE_LEN:         .res 1 ;
     SCROLL_X:               .res 1 ;
     SCROLL_Y:               .res 1 ;
-    _PPU_ARGS:              .res 6 ;
+    _PPU_ARGS:              .res 8 ;
     TILE_BATCH_INDEX:       .res 1 ;
     META_SPRITE_LEN:        .res 1 ;
     META_SPRITE_ATTR:       .res 1 ;
@@ -180,11 +184,14 @@ NAMETABLE_D         =$2C00
 
 .export _ppu_add_meta_sprite_full_internal
 
-.export ppu_upload_chr_ram
+.export _ppu_upload_chr_ram_internal
+.export _ppu_begin_write_chr_ram_internal
+.export _ppu_write_chr_ram_internal
+.export _ppu_end_write_chr_ram_internal
 
-.import knight_sprite_0
-.import knight_sprite_1
-.import knight_sprite_2
+.import _knight_sprite_0
+.import _knight_sprite_1
+.import _knight_sprite_2
 
 .segment "RODATA"
 
@@ -245,13 +252,27 @@ ppu_enable_default:
     rts
 
 ; ppu_update: waits until next NMI, turns rendering on (if not already), uploads OAM, palette, and nametable update to PPU
-_ppu_update:
+.proc _ppu_update
+
+    ; clear remaining OAM data
+    lda #$FF
+    ldx OAM_UPDATE_LEN
+    :
+        sta OAM_UPDATE, x
+        inx
+        bne :-
+
+    ; clear OAM length
+    stx OAM_UPDATE_LEN
+
+    ; wait for NMI to be ready
     lda #1
     sta NMI_READY
     :
         lda NMI_READY
         bne :-
     rts
+.endproc
 
 ; ppu_skip: waits until next NMI, does not update PPU
 _ppu_skip:
@@ -447,7 +468,7 @@ _ppu_begin_tile_batch_internal:
     rts
 
 ;
-_ppu_push_tile_batch_internal:
+.proc _ppu_push_tile_batch_internal
 
     ; load length
     ldx NAMETABLE_UPDATE_LEN
@@ -465,6 +486,31 @@ _ppu_push_tile_batch_internal:
     inc NAMETABLE_UPDATE, x
 
     rts
+.endproc
+
+;
+.proc _ppu_repeat_tile_batch_internal
+
+    ; load length
+    ldx NAMETABLE_UPDATE_LEN
+
+    ; store tile
+    lda _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store new lenght
+    stx NAMETABLE_UPDATE_LEN
+
+    ; increment batch count by specified number
+    ldx TILE_BATCH_INDEX
+    lda _PPU_ARGS+1
+    clc
+    adc NAMETABLE_UPDATE, x
+    sta NAMETABLE_UPDATE, x
+
+    rts
+.endproc
 
 ;
 _ppu_end_tile_batch_internal:
@@ -671,9 +717,9 @@ _ppu_add_meta_sprite_full_internal:
     ldx OAM_UPDATE_LEN
 
     ; store metasprite address
-    lda #(<knight_sprite_0)
+    lda #(<_knight_sprite_0)
     sta META_SPRITE_ADDR+0
-    lda #(>knight_sprite_0)
+    lda #(>_knight_sprite_0)
     sta META_SPRITE_ADDR+1
 
     ; load metasprite length
@@ -731,6 +777,8 @@ _ppu_add_meta_sprite_full_internal:
     rts
 
 ; Upload a row of tiles into CHR RAM
+_ppu_upload_chr_ram_internal:
+
 .proc ppu_upload_chr_ram
     ;_PPU_ARGS[0] ; src address
     ;_PPU_ARGS[1]
@@ -784,6 +832,39 @@ _ppu_add_meta_sprite_full_internal:
 .endproc
 
 ;
+.proc _ppu_begin_write_chr_ram_internal
+
+    ; disable rendering
+    lda #0
+    sta PPU_MASK
+
+    ; store address
+    lda _PPU_ARGS+0
+    sta PPU_ADDR
+    lda _PPU_ARGS+1
+    sta PPU_ADDR
+
+    rts
+.endproc
+
+;
+.proc _ppu_write_chr_ram_internal
+
+    rts
+.endproc
+
+;
+.proc _ppu_end_write_chr_ram_internal
+
+    ; reenable rendering
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
+    rts
+.endproc
+
+
+;
 ; nmi
 ;
 
@@ -823,16 +904,7 @@ _ppu_add_meta_sprite_full_internal:
     :
 
 @update_oam:
-    ; sprite oam dma
-    ldx OAM_UPDATE_LEN
-    beq @update_palette
-
-    ; clear oam update length
-    lda #0
-    sta OAM_UPDATE_LEN
-
-    ; set OAM address
-    stx PPU_OAM_ADDR
+    ; DMA upload
     lda #>OAM_UPDATE
     sta PPU_OAM_DMA
 
@@ -865,10 +937,10 @@ _ppu_add_meta_sprite_full_internal:
 
 @update_nametable:
     ; nametable update
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS
+    cpx NAMETABLE_UPDATE_LEN
     beq @ppu_scroll
 
-    ldx #0
     :
         ; high byte address
         lda NAMETABLE_UPDATE, x
@@ -904,8 +976,7 @@ _ppu_add_meta_sprite_full_internal:
         bcc :---
 
     ; reset nametable update length
-    lda #0
-    sta NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS
 
 @ppu_scroll:
 

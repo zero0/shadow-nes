@@ -387,7 +387,7 @@ static void __fastcall__ player_update_input(void)
     prev_gamepad_state = gamepad_prev_state(0);
     current_gamepad_state = gamepad_state(0);
 
-    if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_A ) )
+    if( GAMEPAD_BTN_DOWN( current_gamepad_state, GAMEPAD_A ) )
     {
         STATE_SET( player_movement_state_next, PLAYER_MOVEMENT_STATE_RUNNING );
     }
@@ -396,7 +396,7 @@ static void __fastcall__ player_update_input(void)
         STATE_CLEAR( player_movement_state_next, PLAYER_MOVEMENT_STATE_RUNNING );
     }
 
-    if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_B ) )
+    if( GAMEPAD_BTN_DOWN( current_gamepad_state, GAMEPAD_B ) )
     {
         //STATE_SET( player_movement_state_next, PLAYER_MOVEMENT_STATE_ATTACKING );
     }
@@ -409,7 +409,7 @@ static void __fastcall__ player_update_input(void)
         }
     }
 
-    if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_R) )
+    if( GAMEPAD_BTN_DOWN( current_gamepad_state, GAMEPAD_R) )
     {
         //STATE_SET( player_movement_state_next, PLAYER_MOVEMENT_STATE_FACING_LEFT );
         if( 1 ) //&& STATE_IS_SET( player_movement_state_next, PLAYER_STATE_GROUNDED ) )
@@ -428,7 +428,7 @@ static void __fastcall__ player_update_input(void)
             subpixel_inc( player_pos_dx, player_air_speed );
         }
     }
-    else if( GAMEPAD_BTN_DONW( current_gamepad_state, GAMEPAD_L))
+    else if( GAMEPAD_BTN_DOWN( current_gamepad_state, GAMEPAD_L))
     {
         STATE_SET( player_movement_state_next, PLAYER_MOVEMENT_STATE_FACING_LEFT );
         if( 1 ) // && STATE_IS_SET( player_movement_state_next, PLAYER_STATE_GROUNDED ) )

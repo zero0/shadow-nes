@@ -13,11 +13,11 @@
 ;  Unique: 78
 ;    Size: 1,248b
 
-.export knight
+.export _knight
 
 .segment "RODATA"
 
-knight:
+_knight:
 
 ; Tile 0 24x8
 knight_24x8:
@@ -1591,17 +1591,17 @@ knight_40x184:
 .segment "RODATA"
 
 ; Meta-Sprite Tile Count: 27
-knight_sprite_0:
+_knight_sprite_0:
 .byte >knight_24x8, <knight_24x8, $36, $19, 0, $21, 1, $1A, 2, $22, 3, $2A, 4, $13, 5, $1B, 6, $23, 7, $2B, 8, $14, 9, $1C, 10, $24, 11, $2C, 12, $15, 13, $1D, 14, $25, 15, $2D, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $0F, 21, $17, 22, $1F, 23, $27, 24, $2F, 25, $37, 26
-.export knight_sprite_0
+.export _knight_sprite_0
 
 ; Meta-Sprite Tile Count: 25
-knight_sprite_1:
+_knight_sprite_1:
 .byte >knight_32x72, <knight_32x72, $32, $21, 0, $1A, 1, $22, 2, $2A, 3, $13, 4, $1B, 5, $23, 6, $2B, 7, $14, 8, $1C, 9, $24, 10, $2C, 11, $15, 12, $1D, 13, $25, 14, $2D, 15, $35, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $36, 21, $0F, 22, $17, 23, $2F, 25
-.export knight_sprite_1
+.export _knight_sprite_1
 
 ; Meta-Sprite Tile Count: 26
-knight_sprite_2:
+_knight_sprite_2:
 .byte >knight_32x136, <knight_32x136, $34, $21, 0, $1A, 1, $22, 2, $2A, 3, $13, 4, $1B, 5, $23, 6, $2B, 7, $14, 8, $1C, 9, $24, 10, $2C, 11, $15, 12, $1D, 13, $25, 14, $2D, 15, $35, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $36, 21, $0F, 22, $17, 23, $1F, 24, $2F, 25
-.export knight_sprite_2
+.export _knight_sprite_2
 

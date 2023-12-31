@@ -20,15 +20,17 @@ uint8_t __fastcall__ gamepad_prev_state( uint8_t pad );
 #define GAMEPAD_R       (uint8_t)0x01
 STATIC_ASSERT( sizeof( GAMEPAD_A ) == sizeof( uint8_t ) );
 
-// true if the button is pressed
+// true if the button is down
 #define GAMEPAD_BTN(v, b)               ( ( (v) & (b) ) == (b) )
-#define GAMEPAD_BTN_DONW(c, b)          ( GAMEPAD_BTN( c, b ) )
+#define GAMEPAD_BTN_DOWN(c, b)          ( GAMEPAD_BTN( c, b ) )
 #define GAMEPAD_BTN_UP(c, b)            ( !GAMEPAD_BTN( c, b ) )
-#define GAMEPAD_BTN_PRESSED(p, c, b)    ( !GAMEPAD_BTN(p, b) && GAMEPAD_BTN(c, b) )
-#define GAMEPAD_BTN_RELEASED(p, c, b)   ( GAMEPAD_BTN(p, b) && !GAMEPAD_BTN(c, b) )
 
-#define GAMEPAD_PRESSED(p, b)           ( GAMEPAD_BTN_PRESSED( gamepad_prev_state(p), gamepad_state(p), (b) ) )
-#define GAMEPAD_RELEASED(p, b)          ( GAMEPAD_BTN_RELEASED( gamepad_prev_state(p), gamepad_state(p), (b) ) )
+#define GAMEPAD_BTN_PRESSED(p, c, b)    ( GAMEPAD_BTN_UP(p, b) && GAMEPAD_BTN_DOWN(c, b) )
+#define GAMEPAD_BTN_RELEASED(p, c, b)   ( GAMEPAD_BTN_DOWN(p, b) && GAMEPAD_BTN_UP(c, b) )
+#define GAMEPAD_BTN_HELD(p, c, b)       ( GAMEPAD_BTN_DOWN(p, b) && GAMEPAD_BTN_DOWN(c, b) )
+
+#define GAMEPAD_PRESSED(pad, b)         ( GAMEPAD_BTN_PRESSED( gamepad_prev_state(pad), gamepad_state(pad), (b) ) )
+#define GAMEPAD_RELEASED(pad, b)        ( GAMEPAD_BTN_RELEASED( gamepad_prev_state(pad), gamepad_state(pad), (b) ) )
 
 
 #endif // GAMEPAD_H

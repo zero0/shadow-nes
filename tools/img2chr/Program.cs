@@ -453,12 +453,12 @@ namespace img2chr
             sb.AppendLine();
 
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
-            sb.AppendLine($".export {exportName}");
+            sb.AppendLine($".export _{exportName}");
             sb.AppendLine();
             //sb.AppendLine(".segment \"CHARS\"");
             sb.AppendLine(".segment \"RODATA\"");
             sb.AppendLine();
-            sb.AppendLine($"{exportName}:");
+            sb.AppendLine($"_{exportName}:");
             sb.AppendLine();
 
             // convert tiles to bytes
@@ -520,7 +520,7 @@ namespace img2chr
                     if (metaSprite.tileCount > 0)
                     {
                         sb.AppendLine($"; Meta-Sprite Tile Count: {metaSprite.tileCount}");
-                        sb.AppendLine($"{exportName}_sprite_{i}:");
+                        sb.AppendLine($"_{exportName}_sprite_{i}:");
                         sb.Append(".byte ");
 
                         int minTileIndex = int.MaxValue;
@@ -558,7 +558,7 @@ namespace img2chr
                         }
 
                         sb.AppendLine();
-                        sb.AppendLine($".export {exportName}_sprite_{i}");
+                        sb.AppendLine($".export _{exportName}_sprite_{i}");
                         sb.AppendLine();
                     }
                 }

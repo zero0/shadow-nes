@@ -38,7 +38,25 @@
 
 #define TILE_TO_PIXEL( x )      (uint8_t)( (x) * 8 )
 
-extern uint8_t PPU_ARGS[6];
+#define TILE_TO_ADDRESS_ARGS(arg, base, x, y)       \
+    (arg)[0] = (uint8_t)(base) | (uint8_t)( (y) );  \
+    (arg)[1] = (uint8_t)( (x) << 4 )
+
+#define TILE_INDEX_TO_ADDRESS_ARGS(arg, base, idx)  \
+    (arg)[0] = (uint8_t)(base) | (uint8_t)( (idx) >> 4 );  \
+    (arg)[1] = 0xFF & (uint8_t)( (idx) << 4 )
+
+#define PTR_TO_ARGS(arg, ptr)                   \
+    (arg)[0] = 0xFF & ((ptr) >> 8);             \
+    (arg)[1] = 0xFF & (ptr)
+
+#define ADDRESS_TO_ARGS(arg, ptr)               \
+    (arg)[0] = 0xFF & ((ptr_t)&(ptr) >> 8);     \
+    (arg)[1] = 0xFF & (ptr_t)&(ptr)
+
+extern ptr_t PPU_DATA;
+
+extern uint8_t PPU_ARGS[8];
 #pragma zpsym("PPU_ARGS");
 
 uint8_t __fastcall__ ppu_frame_index(void);
@@ -82,6 +100,13 @@ void __fastcall__ ppu_begin_tile_batch_internal(void);
     ppu_push_tile_batch_internal()
 
 void __fastcall__ ppu_push_tile_batch_internal(void);
+
+#define ppu_repeat_tile_batch( t, c )   \
+    PPU_ARGS[0] = (t);                  \
+    PPU_ARGS[1] = (c);                  \
+    ppu_repeat_tile_batch_internal()
+
+void __fastcall__ ppu_repeat_tile_batch_internal(void);
 
 #define ppu_end_tile_batch()        \
     ppu_end_tile_batch_internal()
@@ -153,5 +178,54 @@ void __fastcall__ ppu_oam_sprite();
     ppu_add_meta_sprite_full_internal()
 
 void __fastcall__ ppu_add_meta_sprite_full_internal(void);
+
+//
+//
+//
+
+#define ppu_upload_chr_ram( ptr, c, dst )           \
+    PPU_ARGS[0] = 0xFF & (ptr_t)&(ptr);             \
+    PPU_ARGS[1] = 0xFF & ((ptr_t)&(ptr) >> 8);      \
+    PPU_ARGS[2] = (c);                              \
+    PPU_ARGS[3] = (dst);                            \
+    ppu_upload_chr_ram_internal()
+
+void __fastcall__ ppu_upload_chr_ram_internal(void);
+
+#define ppu_begin_write_chr_ram(p, tx, ty)          \
+    TILE_TO_ADDRESS_ARGS(PPU_ARGS, p, tx, ty);      \
+    ppu_begin_write_chr_ram_internal()
+
+#define ppu_begin_write_chr_ram_index(p, idx)       \
+    TILE_INDEX_TO_ADDRESS_ARGS(PPU_ARGS, p, idx);   \
+    ppu_begin_write_chr_ram_internal()
+
+void __fastcall__ ppu_begin_write_chr_ram_internal(void);
+
+
+#define ppu_write_chr_ram(c0, c1, c2, c3, c4, c5, c6, c7)   \
+    __asm__("lda #%b", c0);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c1);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c2);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c3);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c4);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c5);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c6);             \
+    __asm__("sta %v", PPU_DATA);        \
+    __asm__("lda #%b", c7);             \
+    __asm__("sta %v", PPU_DATA)
+
+void __fastcall__ ppu_write_chr_ram_internal(void);
+
+#define ppu_end_write_chr_ram()   \
+    ppu_end_write_chr_ram_internal()
+
+void __fastcall__ ppu_end_write_chr_ram_internal(void);
 
 #endif // PPU_H

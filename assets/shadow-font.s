@@ -13,11 +13,11 @@
 ;  Unique: 77
 ;    Size: 1,232b
 
-.export shadow_font
+.export _shadow_font
 
 .segment "RODATA"
 
-shadow_font:
+_shadow_font:
 
 ; Tile 0 8x0
 shadow_font_8x0:

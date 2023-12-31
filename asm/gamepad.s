@@ -33,11 +33,11 @@ _gamepad_poll:
     tax
 
     ; store previous state
-    ldy GAMEPAD_STATE, x
-    sty GAMEPAD_PREV_STATE, x
+    lda GAMEPAD_STATE, x
+    sta GAMEPAD_PREV_STATE, x
 
     ; clear state (set to 1 so when carry == 1, loop is over)
-    lda #1
+    lda #$01
     sta GAMEPAD_STATE, x
 
     ; strobe game pad
@@ -45,10 +45,14 @@ _gamepad_poll:
     lda #0
     sta CTRL_PORT1
 
-    ; read 8 bytes from controller[x]
+    ; read 8 bits from controller[x]
     :
         lda CTRL_PORT1
+
+        ; rotate bit 0 to C
         lsr a
+
+        ; rotate C bit back on
         rol GAMEPAD_STATE, x
         bcc :-
 

@@ -5,14 +5,24 @@
 #include "text.h"
 #include "ppu.h"
 #include "globals.h"
+#include "game_state.h"
+
+extern ptr_t shadow_font;
+extern ptr_t knight_sprite_0;
 
 void __fastcall__ game_state_title_enter()
 {
-    //ppu_clear_nametable( NAMETABLE_0_ADDR );
+    ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
+    ppu_upload_chr_ram( shadow_font, 5, 0x00 );
 
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
     ppu_clear_oam();
+
+    ppu_begin_write_chr_ram_index( 0x10, 0x33 );
+    ppu_write_chr_ram( 0x55,0x55,0x55,0x55, 0x55,0x55,0x55,0x55);
+    ppu_write_chr_ram( 0,0,0,0, 0,0,0,0);
+    ppu_end_write_chr_ram();
 
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
@@ -42,29 +52,46 @@ void __fastcall__ game_state_title_update()
     switch( t )
     {
         case 0:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 1);
+            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0x33);
             if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
             {
                 t = 1;
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
             {
-
+                set_next_game_state( GAME_STATE_PLAYING );
             }
             break;
 
         case 1:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 1);
+            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 0x33);
             if( GAMEPAD_PRESSED(0, GAMEPAD_U))
             {
                 t = 0;
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
             {
-
+                set_next_game_state( GAME_STATE_PLAYING );
             }
             break;
     }
 
-    ppu_add_meta_sprite( 10, 10, PALETTE_SPRITE_0, 0 );
+
+    if(GAMEPAD_PRESSED(0, GAMEPAD_A)){
+            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(20), PALETTE_SPRITE_0, 0x33);
+    }
+      if(GAMEPAD_PRESSED(0, GAMEPAD_A)){
+            ppu_add_oam_sprite(TILE_TO_PIXEL(11), TILE_TO_PIXEL(20), PALETTE_SPRITE_1, 0x33);
+    }
+      if(GAMEPAD_PRESSED(0, GAMEPAD_START)){
+            ppu_add_oam_sprite(TILE_TO_PIXEL(12), TILE_TO_PIXEL(20), PALETTE_SPRITE_2, 0x33);
+    }
+
+    if(GAMEPAD_PRESSED(0, GAMEPAD_SELECT)){
+            ppu_add_oam_sprite(TILE_TO_PIXEL(13), TILE_TO_PIXEL(20), PALETTE_SPRITE_3, 0x33);
+    }
+
+        if(GAMEPAD_PRESSED(0, GAMEPAD_U)){
+            ppu_add_oam_sprite(TILE_TO_PIXEL(14), TILE_TO_PIXEL(20), PALETTE_SPRITE_3, 0x33);
+    }
 }
