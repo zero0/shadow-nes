@@ -59,7 +59,7 @@ void __fastcall__ game_state_title_update()
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
             {
-                set_next_game_state( GAME_STATE_PLAYING );
+                next_game_state = ( GAME_STATE_PLAYING );
             }
             break;
 
@@ -80,7 +80,7 @@ void __fastcall__ game_state_title_update()
     if(GAMEPAD_PRESSED(0, GAMEPAD_A)){
             ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(20), PALETTE_SPRITE_0, 0x33);
     }
-      if(GAMEPAD_PRESSED(0, GAMEPAD_A)){
+      if(GAMEPAD_PRESSED(0, GAMEPAD_B)){
             ppu_add_oam_sprite(TILE_TO_PIXEL(11), TILE_TO_PIXEL(20), PALETTE_SPRITE_1, 0x33);
     }
       if(GAMEPAD_PRESSED(0, GAMEPAD_START)){

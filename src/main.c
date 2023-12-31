@@ -1,22 +1,16 @@
-//static int d[20];
-//#define i d[0]
-//#define b d[1];
-//static char i, b;
-
 #include <nes.h>
 #include <stdlib.h>
 
+#include "types.h"
 #include "ppu.h"
 
 #include "game_state.h"
 #include "game_state_title.h"
 #include "game_state_playing.h"
 
-
 //
 //
 //
-
 
 void main(void)
 {
