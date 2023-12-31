@@ -5,9 +5,11 @@
 #include "player.h"
 #include "ppu.h"
 #include "game_state.h"
+#include "globals.h"
 
 extern ptr_t knight;
 extern ptr_t knight_sprite_0;
+extern ptr_t progress_bar;
 
 void __fastcall__ game_state_playing_enter()
 {
@@ -15,13 +17,16 @@ void __fastcall__ game_state_playing_enter()
     //ppu_upload_chr_ram( shadow_font, 5, 0x00 );
     ppu_upload_chr_ram( knight, 2, 0x10 );
 
+    ppu_upload_chr_ram( progress_bar, 1, 0x08);
+
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
     ppu_clear_oam();
 
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
-    ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
+    ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white
+    ppu_set_palette( PALETTE_BACKGROUND_2, 0x1A, 0x2A, 0x30 ); // green, light green, white
     ppu_set_palette( PALETTE_SPRITE_0, 0x0A, 0x1A, 0x2A );
 
     // top
@@ -55,8 +60,80 @@ void __fastcall__ game_state_playing_leave()
 
 }
 
+#define PLAYER_HEALTH_PER_TILE_LOG2     (uint8_t)3
+
 void __fastcall__ game_state_playing_update()
 {
-    //update_player();
+    gamepad_poll(0);
+
+    // update health and stamina on alternate frames
+    if( get_player_changed_flags() & PLAYER_CHANGED_HEALTH )
+    {
+        x = get_player_current_health();
+        y = get_player_max_health();
+
+        // player health bar
+        ppu_begin_tile_batch(2,1);
+
+        // full tiles
+        for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        {
+            ppu_push_tile_batch(0x80 + 8);
+        }
+
+        // partial tile
+        if( i < imax )
+        {
+            j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
+            ppu_push_tile_batch(0x80 + ( x - j ) );
+            ++i;
+        }
+
+        // empty tiles
+        for( ; i < imax; ++i )
+        {
+            ppu_push_tile_batch( 0x80 );
+        }
+
+        ppu_end_tile_batch();
+    }
+
+    if( get_player_changed_flags() & PLAYER_CHANGED_STAMINA )
+    {
+        x = get_player_current_stamina();
+        y = get_player_max_stamina();
+
+        // player stamina bar
+        ppu_begin_tile_batch(2,2);
+
+        // full tiles
+        for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        {
+            ppu_push_tile_batch(0x80 + 8);
+        }
+
+        // partial tile
+        if( i < imax )
+        {
+            j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
+            ppu_push_tile_batch(0x80 + ( x - j ) );
+            ++i;
+        }
+
+        // empty tiles
+        for( ; i < imax; ++i )
+        {
+            ppu_push_tile_batch( 0x80 );
+        }
+
+        ppu_end_tile_batch();
+    }
+
+    //ppu_begin_tile_batch(2+(x >> 3),1);
+    //ppu_repeat_tile_batch(0x80+(x & 0x7), 1);
+    //ppu_end_tile_batch();
+
     ppu_add_meta_sprite( TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), PALETTE_SPRITE_0, 0 );
+
+    update_player();
 }

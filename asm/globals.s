@@ -21,6 +21,12 @@ _r:     .res 1
 _t:     .res 1
 _b:     .res 1
 
+_imax:  .res 1
+_jmax:  .res 1
+
+_xmax:  .res 1
+_ymax:  .res 1
+
 .export _c
 
 .export _i
@@ -37,3 +43,9 @@ _b:     .res 1
 .export _r
 .export _t
 .export _b
+
+.export _imax
+.export _jmax
+
+.export _xmax
+.export _ymax

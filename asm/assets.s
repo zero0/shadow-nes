@@ -26,8 +26,6 @@
 
 .segment "RODATA"
 
-BlankCHR 1
-
 ;
 ;blank:
 ;
@@ -60,9 +58,9 @@ BlankCHR 1
 
 include_asset "shadow-font.s"
 
-BlankCHR 177
-
 include_asset "knight.s"
+
+include_asset "progress_bar.s"
 
 ;
 ; Text

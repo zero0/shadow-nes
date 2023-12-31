@@ -35,8 +35,15 @@ static uint8_t player_movement_state_next;
 static uint8_t player_movement_state;
 static uint8_t player_attack_state;
 
+static uint8_t player_changed_flags;
+static uint8_t player_level;
 static uint8_t player_health;
+static uint8_t player_max_health;
 static uint8_t player_stamina;
+static uint8_t player_max_stamina;
+static uint8_t player_stamina_regen_timer;
+static uint8_t player_stamina_delay_timer;
+
 static anim_control_t player_anim_head;
 static anim_control_t player_anim_body;
 
@@ -360,11 +367,61 @@ STATIC_ASSERT( ARRAY_SIZE( anim_keyframes_attr ) == ARRAY_SIZE( anim_keyframes_s
 static uint8_t f0;
 static uint8_t f1;
 
+uint8_t __fastcall__ get_player_changed_flags()
+{
+    return player_changed_flags;
+}
+
+uint8_t __fastcall__ get_player_current_health()
+{
+    return player_health;
+}
+
+uint8_t __fastcall__ get_player_max_health()
+{
+    return player_max_health;
+}
+
+uint8_t __fastcall__ get_player_current_stamina()
+{
+    return player_stamina;
+}
+
+uint8_t __fastcall__ get_player_max_stamina()
+{
+    return player_max_stamina;
+}
+
+#define PLAYER_HEALTH_LIMIT     (uint8_t)224
+#define PLAYER_STAMINA_LIMIT    (uint8_t)112
+
+#define PLAYER_STAMINA_REGEN_TIME   (uint8_t)25
+
+static uint8_t __fastcall__ calculate_player_max_health( uint8_t level )
+{
+    return 64;
+}
+
+static uint8_t __fastcall__ calculate_player_max_stamina( uint8_t level )
+{
+    return 40;
+}
+
 void __fastcall__ init_player(void)
 {
     STATE_RESET( player_movement_state );
-    player_health = 100;
-    player_stamina = 50;
+    player_level = 0;
+
+    player_max_health = calculate_player_max_health(player_level);
+    player_health = 10;
+
+    player_max_stamina = calculate_player_max_stamina(player_level);
+    player_stamina = 10;
+
+    player_stamina_delay_timer = 1; // wait one frame before regen
+    player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+    player_changed_flags = 0xFF;
 
     subpixel_set( player_pos_x, 0, 0 );
     subpixel_set( player_pos_y, 10, 0 );
@@ -784,6 +841,59 @@ void __fastcall__ player_render_debug()
 
 void __fastcall__ update_player()
 {
+    player_changed_flags = 0;
+
+    if( player_stamina_delay_timer > 0 )
+    {
+        --player_stamina_delay_timer;
+    }
+    else if( player_stamina < player_max_stamina )
+    {
+        if( player_stamina_regen_timer > 0 )
+        {
+            --player_stamina_regen_timer;
+
+            if( player_stamina_regen_timer == 0 )
+            {
+                ++player_stamina;
+                player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+                player_changed_flags |= PLAYER_CHANGED_STAMINA;
+            }
+        }
+    }
+
+    if( GAMEPAD_HELD(0, GAMEPAD_A))
+    {
+        player_health++;
+        if( player_health >= player_max_health )
+        {
+            player_health = 0;
+        }
+                player_changed_flags |= PLAYER_CHANGED_HEALTH;
+    }
+
+    if( GAMEPAD_PRESSED(0, GAMEPAD_D))
+    {
+        if( player_stamina < 10 )
+        {
+            player_stamina = 0;
+            player_stamina_delay_timer = 60;
+            player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+                player_changed_flags |= PLAYER_CHANGED_STAMINA;
+        }
+        else
+        {
+            player_stamina -= 10;
+            player_stamina_delay_timer = 20;
+            player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+            player_changed_flags |= PLAYER_CHANGED_STAMINA;
+        }
+    }
+    return;
+
     player_render_debug();
 
     player_update_input();
