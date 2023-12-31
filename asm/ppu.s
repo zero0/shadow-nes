@@ -121,6 +121,7 @@ _PPU_DATA           =PPU_DATA
     NMI_LOCK:               .res 1 ;
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
+    NMI_NAMETABLE_COUNT:    .res 1 ;
     PPU_CTRL_BUFFER:        .res 1 ;
     PPU_MASK_BUFFER:        .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
@@ -943,6 +944,10 @@ _ppu_upload_chr_ram_internal:
     cpx NAMETABLE_UPDATE_LEN
     beq @ppu_scroll
 
+    ; count nametable updates
+    lda #0
+    sta NMI_NAMETABLE_COUNT
+
 @update_nametable_loop:
         ; high byte address
         lda NAMETABLE_UPDATE, x
@@ -959,7 +964,7 @@ _ppu_upload_chr_ram_internal:
         and NAMETABLE_UPDATE, x
         bpl @update_nametable_individual
 
-@update_nametable_sequential:
+@update_nametable_repeat:
 
         ; load tile count
         lda NAMETABLE_UPDATE, x
@@ -968,6 +973,10 @@ _ppu_upload_chr_ram_internal:
         ; mask out bit7 and move to Y
         and #$7F
         tay
+
+        ; add repeat count to nametable count
+        clc
+        adc NMI_NAMETABLE_COUNT
 
         ; tile to repeat
         lda NAMETABLE_UPDATE, x
@@ -980,14 +989,19 @@ _ppu_upload_chr_ram_internal:
             bne :-
 
         ; jump to end
-        jmp @update_nametable_end
+        jmp @update_nametable_loop_compare
 
 @update_nametable_individual:
 
         ; load tile count
-        ldy NAMETABLE_UPDATE, x
+        lda NAMETABLE_UPDATE, x
         inx
 
+        ; add tile count to nametable count
+        clc
+        adc NMI_NAMETABLE_COUNT
+
+        tay
         ; check tile count != 0
         :
             ; tile
@@ -999,11 +1013,19 @@ _ppu_upload_chr_ram_internal:
             dey
             bne :-
 
-@update_nametable_end:
+@update_nametable_loop_compare:
+
+        ; if there have been >64 tiles updated, early out of the loop
+        lda NMI_NAMETABLE_COUNT
+        cmp #64
+        bcc @update_nametable_loop_end
+        ; bmi @update_nametable_loop_end
 
         ; loop while X != length
         cpx NAMETABLE_UPDATE_LEN
-        bcc @update_nametable_loop
+        bne @update_nametable_loop
+
+@update_nametable_loop_end:
 
     ; reset nametable update length
     stx NAMETABLE_UPDATE_POS
