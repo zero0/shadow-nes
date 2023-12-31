@@ -15,6 +15,15 @@ void __fastcall__ game_state_playing_enter()
     ppu_clear_palette();
     ppu_clear_oam();
 
+    ppu_set_palette_background( 0x0F );
+    ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
+    ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
+    ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
+
+    ppu_begin_tile_batch(0,0);
+    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
+    ppu_end_tile_batch();
+
     init_player();
 }
 
@@ -25,5 +34,5 @@ void __fastcall__ game_state_playing_leave()
 
 void __fastcall__ game_state_playing_update()
 {
-    update_player();
+    //update_player();
 }

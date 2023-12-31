@@ -169,6 +169,7 @@ _PPU_DATA           =PPU_DATA
 
 .export _ppu_begin_tile_batch_internal
 .export _ppu_push_tile_batch_internal
+.export _ppu_repeat_tile_batch_internal
 .export _ppu_end_tile_batch_internal
 
 .export _ppu_update_byte
@@ -507,6 +508,7 @@ _ppu_begin_tile_batch_internal:
     lda _PPU_ARGS+1
     clc
     adc NAMETABLE_UPDATE, x
+    ora #$80
     sta NAMETABLE_UPDATE, x
 
     rts
@@ -941,7 +943,7 @@ _ppu_upload_chr_ram_internal:
     cpx NAMETABLE_UPDATE_LEN
     beq @ppu_scroll
 
-    :
+@update_nametable_loop:
         ; high byte address
         lda NAMETABLE_UPDATE, x
         sta PPU_ADDR
@@ -952,15 +954,42 @@ _ppu_upload_chr_ram_internal:
         sta PPU_ADDR
         inx
 
-        ; tile count
+        ; tile count (bit7 0 = individualt, 1 = sequential)
+        lda #$80
+        and NAMETABLE_UPDATE, x
+        bpl @update_nametable_individual
+
+@update_nametable_sequential:
+
+        ; load tile count
+        lda NAMETABLE_UPDATE, x
+        inx
+
+        ; mask out bit7 and move to Y
+        and #$7F
+        tay
+
+        ; tile to repeat
+        lda NAMETABLE_UPDATE, x
+        inx
+
+        ; write tile to PPU_DATA Y times
+        :
+            sta PPU_DATA
+            dey
+            bne :-
+
+        ; jump to end
+        jmp @update_nametable_end
+
+@update_nametable_individual:
+
+        ; load tile count
         ldy NAMETABLE_UPDATE, x
         inx
 
         ; check tile count != 0
-        cpy #0
         :
-            beq :+
-
             ; tile
             lda NAMETABLE_UPDATE, x
             sta PPU_DATA
@@ -968,12 +997,13 @@ _ppu_upload_chr_ram_internal:
 
             ; decrement count
             dey
-            jmp :-
+            bne :-
 
-        :
+@update_nametable_end:
+
         ; loop while X != length
         cpx NAMETABLE_UPDATE_LEN
-        bcc :---
+        bcc @update_nametable_loop
 
     ; reset nametable update length
     stx NAMETABLE_UPDATE_POS

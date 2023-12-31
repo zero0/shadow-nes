@@ -151,6 +151,10 @@ void __fastcall__ ppu_fill_nametable_attr( ptr_t tableAddress );
 
 void __fastcall__ ppu_fill_nametable_attr_only( ptr_t tableAddress, uint8_t attr );
 
+//
+//
+//
+
 #define ppu_add_oam_sprite_full( px, py, pal, bg, fh, fv, spr )                     \
     PPU_ARGS[0] = (py) - 1;                                                         \
     PPU_ARGS[1] = (spr);                                                            \
