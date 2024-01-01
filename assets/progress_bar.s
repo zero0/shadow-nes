@@ -1,12 +1,12 @@
 ;
-; Generated from ..\..\assets\progress_bar.png
+; Generated from progress_bar.png
 ;
 
-; Original Palette
-;  0: [255, 255, 255]
-;  1: [064, 64, 64]
-;  2: [128, 128, 128]
-;  3: [160, 160, 160]
+; Palette 0
+;  0: [255, 255, 255]  #FFFFFF
+;  1: [64 , 64 , 64 ]  #404040
+;  2: [128, 128, 128]  #808080
+;  3: [160, 160, 160]  #A0A0A0
 
 ; Tiles
 ;     All: 9

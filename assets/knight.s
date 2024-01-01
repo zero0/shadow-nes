@@ -1,12 +1,12 @@
 ;
-; Generated from ..\..\assets\knight.png
+; Generated from knight.png
 ;
 
-; Original Palette
-;  0: [255, 255, 255]
-;  1: [000, 0, 0]
-;  2: [085, 85, 85]
-;  3: [170, 170, 170]
+; Palette 0
+;  0: [255, 255, 255]  #FFFFFF
+;  1: [0  , 0  , 0  ]  #000000
+;  2: [85 , 85 , 85 ]  #555555
+;  3: [170, 170, 170]  #AAAAAA
 
 ; Tiles
 ;     All: 81
@@ -1584,9 +1584,10 @@ knight_40x184:
 ;  Dimenstions: 64x64
 ;        Count: 10
 ;         Size: 186b
-;       Format: .byte [tile_base_address hi] [tile_base_address lo] [sprite count] {attr:%HVXXXYYY tile-index:#} ...
-;             : H - flip horizontal V - flip vertical
+;       Format: .byte [tile_base_address hi] [tile_base_address lo] [tile count * 2] {attr:%HVXXXYYY tile-index:%PPIIIIII} ...
+;             : H - flip horizontal; V - flip vertical
 ;             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite
+;             : PP - tile palette to use for the meta-sprite; IIIIII - tile index from [base address]
 
 .segment "RODATA"
 

@@ -1,12 +1,12 @@
 ;
-; Generated from ..\..\assets\shadow-font.png
+; Generated from shadow-font.png
 ;
 
-; Original Palette
-;  0: [000, 0, 1]
-;  1: [099, 99, 99]
-;  2: [173, 173, 173]
-;  3: [255, 255, 255]
+; Palette 0
+;  0: [0  , 0  , 0  ]  #000000
+;  1: [99 , 99 , 99 ]  #636363
+;  2: [173, 173, 173]  #ADADAD
+;  3: [255, 255, 255]  #FFFFFF
 
 ; Tiles
 ;     All: 77
