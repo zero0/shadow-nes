@@ -112,7 +112,7 @@ namespace img2chr
         struct TileEntry
         {
             public TileIndices tileIndices;
-            public TileIndices paletteIndices;
+            public int paletteIndex;
             public int x, y, attr;
         }
 
@@ -393,12 +393,13 @@ namespace img2chr
                     // only add non-all blank tiles
                     if (!tileIndices.IsEmpty)
                     {
+                        int paletteIndex = 0;
                         allTiles.Add(new()
                         {
                             x = x,
                             y = y,
                             tileIndices = tileIndices,
-                            paletteIndices = paletteIndices
+                            paletteIndex = paletteIndex
                         });
                     }
                 }
@@ -573,10 +574,6 @@ namespace img2chr
                     MetaSpriteEntry metaSprite = allMetaSprites[i];
                     if (metaSprite.tileCount > 0)
                     {
-                        sb.AppendLine($"; Meta-Sprite Tile Count: {metaSprite.tileCount}");
-                        sb.AppendLine($"_{exportName}_sprite_{i}:");
-                        sb.Append(".byte ");
-
                         int minTileIndex = int.MaxValue;
                         for (int s = 0; s < metaSprite.tileCount; s++)
                         {
@@ -585,11 +582,13 @@ namespace img2chr
                             minTileIndex = minTileIndex < uniqueTileEntry.index ? minTileIndex : uniqueTileEntry.index;
                         }
 
-                        TileEntry minTile = allTiles[minTileIndex];
-                        sb.Append($">{exportName}_{minTile.x}x{minTile.y}");
-                        sb.Append($", <{exportName}_{minTile.x}x{minTile.y}");
+                        sb.AppendLine($"; Meta-Sprite Tile Count: {metaSprite.tileCount}   Meta-Sprite Min Tile Index: {minTileIndex}");
+                        sb.AppendLine($"_{exportName}_sprite_{i}:");
+                        sb.AppendLine($".export _{exportName}_sprite_{i}");
 
-                        sb.Append($", ${metaSprite.tileCount * 2:X2}"); // include [attr, tile] pairs
+                        TileEntry minTile = allTiles[minTileIndex];
+                        sb.AppendLine($".addr {exportName}_{minTile.x}x{minTile.y}");
+                        sb.AppendLine($".byte {metaSprite.tileCount * 2} ; byte count"); // include [attr, tile] pairs
 
                         for (int s = 0; s < metaSprite.tileCount; s++)
                         {
@@ -607,12 +606,14 @@ namespace img2chr
                             attr |= (0x7 & (ry >> 3)) << 0;
 
                             int idx = uniqueTileEntry.index - minTileIndex;
+                            Assert(idx <= 0x3F, $"Index out of range: {idx}");
 
-                            sb.Append($", ${attr:X2}, {idx}");
+                            int pal = ( 0x03 & tileEntry.paletteIndex ) << 6;
+                            idx &= 0x3F;
+
+                            sb.AppendLine($".byte ${attr:X2}, {pal | idx}");
                         }
 
-                        sb.AppendLine();
-                        sb.AppendLine($".export _{exportName}_sprite_{i}");
                         sb.AppendLine();
                     }
                 }
@@ -904,7 +905,7 @@ namespace img2chr
 
                 foreach (var kv in langToMap.Value)
                 {
-                    sb.AppendLine($".byte    <{kv.Key}, >{kv.Key}");
+                    sb.AppendLine($".addr   {kv.Key}");
                 }
                 sb.AppendLine();
 

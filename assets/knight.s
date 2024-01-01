@@ -1591,18 +1591,99 @@ knight_40x184:
 
 .segment "RODATA"
 
-; Meta-Sprite Tile Count: 27
+; Meta-Sprite Tile Count: 27   Meta-Sprite Min Tile Index: 0
 _knight_sprite_0:
-.byte >knight_24x8, <knight_24x8, $36, $19, 0, $21, 1, $1A, 2, $22, 3, $2A, 4, $13, 5, $1B, 6, $23, 7, $2B, 8, $14, 9, $1C, 10, $24, 11, $2C, 12, $15, 13, $1D, 14, $25, 15, $2D, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $0F, 21, $17, 22, $1F, 23, $27, 24, $2F, 25, $37, 26
 .export _knight_sprite_0
+.addr knight_24x8
+.byte $36
+.byte $19, 0
+.byte $21, 1
+.byte $1A, 2
+.byte $22, 3
+.byte $2A, 4
+.byte $13, 5
+.byte $1B, 6
+.byte $23, 7
+.byte $2B, 8
+.byte $14, 9
+.byte $1C, 10
+.byte $24, 11
+.byte $2C, 12
+.byte $15, 13
+.byte $1D, 14
+.byte $25, 15
+.byte $2D, 16
+.byte $16, 17
+.byte $1E, 18
+.byte $26, 19
+.byte $2E, 20
+.byte $0F, 21
+.byte $17, 22
+.byte $1F, 23
+.byte $27, 24
+.byte $2F, 25
+.byte $37, 26
 
-; Meta-Sprite Tile Count: 25
+; Meta-Sprite Tile Count: 25   Meta-Sprite Min Tile Index: 27
 _knight_sprite_1:
-.byte >knight_32x72, <knight_32x72, $32, $21, 0, $1A, 1, $22, 2, $2A, 3, $13, 4, $1B, 5, $23, 6, $2B, 7, $14, 8, $1C, 9, $24, 10, $2C, 11, $15, 12, $1D, 13, $25, 14, $2D, 15, $35, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $36, 21, $0F, 22, $17, 23, $2F, 25
 .export _knight_sprite_1
+.addr knight_32x72
+.byte $32
+.byte $21, 0
+.byte $1A, 1
+.byte $22, 2
+.byte $2A, 3
+.byte $13, 4
+.byte $1B, 5
+.byte $23, 6
+.byte $2B, 7
+.byte $14, 8
+.byte $1C, 9
+.byte $24, 10
+.byte $2C, 11
+.byte $15, 12
+.byte $1D, 13
+.byte $25, 14
+.byte $2D, 15
+.byte $35, 16
+.byte $16, 17
+.byte $1E, 18
+.byte $26, 19
+.byte $2E, 20
+.byte $36, 21
+.byte $0F, 22
+.byte $17, 23
+.byte $2F, 25
 
-; Meta-Sprite Tile Count: 26
+; Meta-Sprite Tile Count: 26   Meta-Sprite Min Tile Index: 54
 _knight_sprite_2:
-.byte >knight_32x136, <knight_32x136, $34, $21, 0, $1A, 1, $22, 2, $2A, 3, $13, 4, $1B, 5, $23, 6, $2B, 7, $14, 8, $1C, 9, $24, 10, $2C, 11, $15, 12, $1D, 13, $25, 14, $2D, 15, $35, 16, $16, 17, $1E, 18, $26, 19, $2E, 20, $36, 21, $0F, 22, $17, 23, $1F, 24, $2F, 25
 .export _knight_sprite_2
+.addr knight_32x136
+.byte $34
+.byte $21, 0
+.byte $1A, 1
+.byte $22, 2
+.byte $2A, 3
+.byte $13, 4
+.byte $1B, 5
+.byte $23, 6
+.byte $2B, 7
+.byte $14, 8
+.byte $1C, 9
+.byte $24, 10
+.byte $2C, 11
+.byte $15, 12
+.byte $1D, 13
+.byte $25, 14
+.byte $2D, 15
+.byte $35, 16
+.byte $16, 17
+.byte $1E, 18
+.byte $26, 19
+.byte $2E, 20
+.byte $36, 21
+.byte $0F, 22
+.byte $17, 23
+.byte $1F, 24
+.byte $2F, 25
 

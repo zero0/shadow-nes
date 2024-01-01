@@ -10,33 +10,33 @@
 _text_table:
 .export _text_table
 
-.byte    <tr_game_title, >tr_game_title
-.byte    <tr_new_game, >tr_new_game
-.byte    <tr_continue, >tr_continue
-.byte    <tr_version, >tr_version
-.byte    <tr_copyright, >tr_copyright
-.byte    <tr_tower_name, >tr_tower_name
-.byte    <tr_boss_1_location, >tr_boss_1_location
-.byte    <tr_boss_1_name, >tr_boss_1_name
-.byte    <tr_boss_2_location, >tr_boss_2_location
-.byte    <tr_boss_2_name, >tr_boss_2_name
-.byte    <tr_boss_3_location, >tr_boss_3_location
-.byte    <tr_boos_3_name, >tr_boos_3_name
-.byte    <tr_boss_4_location, >tr_boss_4_location
-.byte    <tr_boss_4_name, >tr_boss_4_name
-.byte    <tr_boss_5_location, >tr_boss_5_location
-.byte    <tr_boss_5_name, >tr_boss_5_name
-.byte    <tr_boss_6_location, >tr_boss_6_location
-.byte    <tr_boss_6_name, >tr_boss_6_name
-.byte    <tr_boss_7_location, >tr_boss_7_location
-.byte    <tr_boss_7_name, >tr_boss_7_name
-.byte    <tr_boss_8_location, >tr_boss_8_location
-.byte    <tr_boss_8_name, >tr_boss_8_name
-.byte    <tr_cutscene_intro_0, >tr_cutscene_intro_0
-.byte    <tr_cutscene_intro_1, >tr_cutscene_intro_1
-.byte    <tr_cutscene_intro_2, >tr_cutscene_intro_2
-.byte    <tr_cutscene_intro_3, >tr_cutscene_intro_3
-.byte    <tr_cutscene_intro_4, >tr_cutscene_intro_4
+.addr   tr_game_title
+.addr   tr_new_game
+.addr   tr_continue
+.addr   tr_version
+.addr   tr_copyright
+.addr   tr_tower_name
+.addr   tr_boss_1_location
+.addr   tr_boss_1_name
+.addr   tr_boss_2_location
+.addr   tr_boss_2_name
+.addr   tr_boss_3_location
+.addr   tr_boos_3_name
+.addr   tr_boss_4_location
+.addr   tr_boss_4_name
+.addr   tr_boss_5_location
+.addr   tr_boss_5_name
+.addr   tr_boss_6_location
+.addr   tr_boss_6_name
+.addr   tr_boss_7_location
+.addr   tr_boss_7_name
+.addr   tr_boss_8_location
+.addr   tr_boss_8_name
+.addr   tr_cutscene_intro_0
+.addr   tr_cutscene_intro_1
+.addr   tr_cutscene_intro_2
+.addr   tr_cutscene_intro_3
+.addr   tr_cutscene_intro_4
 
 ;
 ; Text
