@@ -50,7 +50,7 @@ tr_continue:                     TR "Continue"
 tr_version:                      TR .concat("Version ", VERSION)
 tr_copyright:                    TR .concat("(C) ", COPYRIGHT_YEAR)
 tr_tower_name:                   TR "Tower of Luxluma"
-tr_boss_1_location:              TR "${tr_tower_name} Bridge ${tr_title_screen_title}"
+tr_boss_1_location:              TR "Tower of Luxluma Bridge"
 tr_boss_1_name:                  TR "Yrkargarin, Last Knight of Luxluma"
 tr_boss_2_location:              TR "abTower of Luxluma Courtyard"
 tr_boss_2_name:                  TR "Brightbeast"

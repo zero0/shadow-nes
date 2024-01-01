@@ -12,6 +12,42 @@
 //
 //
 
+typedef void (*game_state_func)(void);
+
+static void __fastcall__ game_state_noop(void){}
+
+static const game_state_func game_state_leave_func[] = {
+    game_state_noop,
+    game_state_title_leave,
+    game_state_playing_leave,
+    game_state_noop,
+    game_state_noop,
+    game_state_noop,
+};
+static const game_state_func game_state_enter_func[] = {
+    game_state_noop,
+    game_state_title_enter,
+    game_state_playing_enter,
+    game_state_noop,
+    game_state_noop,
+    game_state_noop,
+};
+static const game_state_func game_state_update_func[] = {
+    game_state_noop,
+    game_state_title_update,
+    game_state_playing_update,
+    game_state_noop,
+    game_state_noop,
+    game_state_noop,
+};
+STATIC_ASSERT( ARRAY_SIZE( game_state_leave_func ) == _GAME_STATE_COUNT );
+STATIC_ASSERT( ARRAY_SIZE( game_state_enter_func ) == _GAME_STATE_COUNT );
+STATIC_ASSERT( ARRAY_SIZE( game_state_update_func ) == _GAME_STATE_COUNT );
+
+//
+//
+//
+
 void main(void)
 {
     game_state = GAME_STATE_INIT;
@@ -19,64 +55,20 @@ void main(void)
 
     while( 1 )
     {
+        // transition states
         if( game_state != next_game_state )
         {
-            // leave current state
-            switch( game_state )
-            {
-            case GAME_STATE_INIT:
-                break;
-
-            case GAME_STATE_TITLE:
-                game_state_title_leave();
-                break;
-
-            case GAME_STATE_PLAYING:
-                game_state_playing_leave();
-                break;
-
-            case GAME_STATE_GAME_OVER:
-                break;
-            }
+            game_state_leave_func[game_state]();
 
             game_state = next_game_state;
 
-            // enter current state
-            switch( game_state )
-            {
-            case GAME_STATE_INIT:
-                break;
-
-            case GAME_STATE_TITLE:
-                game_state_title_enter();
-                break;
-
-            case GAME_STATE_PLAYING:
-                game_state_playing_enter();
-                break;
-
-            case GAME_STATE_GAME_OVER:
-                break;
-            }
+            game_state_enter_func[game_state]();
         }
 
-        switch( game_state )
-        {
-        case GAME_STATE_INIT:
-            break;
+        // call state update
+        game_state_update_func[game_state]();
 
-        case GAME_STATE_TITLE:
-            game_state_title_update();
-            break;
-
-        case GAME_STATE_PLAYING:
-            game_state_playing_update();
-            break;
-
-        case GAME_STATE_GAME_OVER:
-            break;
-        }
-
+        // wait for ppu
         ppu_update();
     }
 }

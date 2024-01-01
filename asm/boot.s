@@ -191,4 +191,4 @@ reset:
     cli
 
     ; run main()
-    jsr _main
+    jmp _main

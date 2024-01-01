@@ -26,32 +26,6 @@
 
 .segment "RODATA"
 
-;
-;blank:
-;
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;.byte   %00000000
-;
-
-.define TEXT_LANGUAGE   "en"
-.define VERSION         "0.1.0"
-.define COPYRIGHT_YEAR  "2024"
-
 .macro include_asset file
 .include .concat("../assets/", file);
 .endmacro
@@ -81,6 +55,10 @@ _temp_text_table:   .res  2 ;
 .pushcharmap
 
 include_asset "shadow-font.font.s"
+
+.define TEXT_LANGUAGE   "en"
+.define VERSION         "0.1.0"
+.define COPYRIGHT_YEAR  "2024"
 
 include_asset .concat("gametext.", TEXT_LANGUAGE, ".s")
 
