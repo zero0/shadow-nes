@@ -58,3 +58,4 @@ obj/
 *.lnk
 *.nes
 *.dbg
+*.library

@@ -112,6 +112,7 @@ namespace img2chr
         struct TileEntry
         {
             public TileIndices tileIndices;
+            public TileIndices paletteIndices;
             public int x, y, attr;
         }
 
@@ -224,12 +225,37 @@ namespace img2chr
             return parameters != null;
         }
 
+        static void WriteParametersToFile(Dictionary<string, string> parameters, string filename)
+        {
+            if (parameters?.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (var p in parameters)
+                {
+                    sb.Append(p.Key).Append('=').AppendLine(p.Value);
+                }
+
+                File.WriteAllText(filename, sb.ToString(), UTF8);
+            }
+        }
+
+        static bool GetBoolParameter(Dictionary<string, string> parameters, string key, bool defaultValue = false)
+        {
+            bool value = parameters?.TryGetValue(key, out string strValue) ?? false ? bool.TryParse(strValue, out bool boolValue) ? boolValue : defaultValue : defaultValue;
+            return value;
+        }
+
         static int GetIntParameter(Dictionary<string, string> parameters, string key, int defaultValue = 0)
         {
             int value = parameters?.TryGetValue(key, out string strValue) ?? false ? int.TryParse(strValue, out int intValue) ? intValue : defaultValue : defaultValue;
             return value;
         }
 
+        static long GetLongParameter(Dictionary<string, string> parameters, string key, long defaultValue = 0)
+        {
+            long value = parameters?.TryGetValue(key, out string strValue) ?? false ? long.TryParse(strValue, out long longValue) ? longValue : defaultValue : defaultValue;
+            return value;
+        }
 
         static char GetCharParameter(Dictionary<string, string> parameters, string key, char defaultValue)
         {
@@ -241,6 +267,15 @@ namespace img2chr
         {
             string value = parameters?.TryGetValue(key, out string strValue) ?? false ? strValue : defaultValue;
             return value;
+        }
+
+        static void SetParameter<T>(Dictionary<string, string> parameters, string key, T value, Func<T, string> convertFunc = null)
+        {
+            static string DefaultFunc(T v) => v.ToString();
+            if (parameters != null)
+            {
+                parameters[key] = (convertFunc ?? DefaultFunc)(value);
+            }
         }
 
         delegate void ConvertFunc(string inputFilename, in ConvertOptions convertOptions);
@@ -286,12 +321,17 @@ namespace img2chr
             //    }
             //}
 
-            // read first 4 pixels as palette
-            SpritePalette[] palettes = new SpritePalette[1];
-            palettes[0].c0 = bitmapImage.GetPixel(0, 0);
-            palettes[0].c1 = bitmapImage.GetPixel(1, 0);
-            palettes[0].c2 = bitmapImage.GetPixel(2, 0);
-            palettes[0].c3 = bitmapImage.GetPixel(3, 0);
+            int spritePaletteCount = Math.Clamp(GetIntParameter(spriteParameters, "sprite.palette-count", 1), 1, 4);
+
+            SpritePalette[] palettes = new SpritePalette[spritePaletteCount];
+            for (int i = 0; i < spritePaletteCount; ++i)
+            {
+                // read first 4 pixels as palette
+                palettes[i].c0 = bitmapImage.GetPixel(0, i);
+                palettes[i].c1 = bitmapImage.GetPixel(1, i);
+                palettes[i].c2 = bitmapImage.GetPixel(2, i);
+                palettes[i].c3 = bitmapImage.GetPixel(3, i);
+            }
 
             static void GetPaletteAndIndex(Color color, SpritePalette[] palettes, out int palette, out int index)
             {
@@ -301,7 +341,7 @@ namespace img2chr
                 for (int p = 0; p < palettes.Length; p++)
                 {
                     SpritePalette spritePalette = palettes[p];
-                    for (int i = 0; i < 4; ++i)
+                    for (int i = 3; i >= 0; --i)
                     {
                         if (spritePalette[i] == color)
                         {
@@ -328,6 +368,7 @@ namespace img2chr
                 for (int x = y == area.Y ? area.X + 8 : area.X, xmax = area.Width; x < xmax; x += 8)
                 {
                     TileIndices tileIndices = default;
+                    TileIndices paletteIndices = default;
 
                     for (int py = 0; py < 8; ++py)
                     {
@@ -340,9 +381,12 @@ namespace img2chr
 
                             Color pixel = bitmapImage.GetPixel(vx, vy);
 
-                            GetPaletteAndIndex(pixel, palettes, out var _, out int pixelIndex);
+                            GetPaletteAndIndex(pixel, palettes, out int paletteIndex, out int pixelIndex);
+
+                            Assert(paletteIndex >= 0, $"Unable to find palette for color {pixel} at [{vx}, {vy}]");
 
                             tileIndices[px, py] = pixelIndex;
+                            paletteIndices[px, py] = paletteIndex;
                         }
                     }
 
@@ -353,53 +397,59 @@ namespace img2chr
                         {
                             x = x,
                             y = y,
-                            tileIndices = tileIndices
+                            tileIndices = tileIndices,
+                            paletteIndices = paletteIndices
                         });
                     }
                 }
             }
 
             // remove duplcate tiles
-            Dictionary<int, int> allTilesToUniqueTiles = new(allTiles.Count);
-            Dictionary<int, int> uniqueTileHashToIndex = new(allTiles.Count);
-            HashSet<int> uniqueTileHashes = new(allTiles.Count);
-            Dictionary<int, UniqueTileEntry> uniqueTiles = new(allTiles.Count);
             List<int> uniqueTileIndices = new(allTiles.Count);
-
-            // bucket each tile hash
-            for (int i = 0; i < allTiles.Count; i++)
-            {
-                TileEntry tileEntry = allTiles[i];
-
-                int tileHash = tileEntry.tileIndices.GetHashCode();
-                int tileHashV = tileEntry.tileIndices.FlipVertical().GetHashCode();
-                int tileHashH = tileEntry.tileIndices.FlipHorizontal().GetHashCode();
-                int tileHashVH = tileEntry.tileIndices.FlipHorizontalVertical().GetHashCode();
-
-                bool added = false;
-                added |= uniqueTiles.TryAdd(tileHash, new() { index = i, attr = 0 });
-                added |= uniqueTiles.TryAdd(tileHashV, new() { index = i, attr = 1 });
-                added |= uniqueTiles.TryAdd(tileHashH, new() { index = i, attr = 2 });
-                added |= uniqueTiles.TryAdd(tileHashVH, new() { index = i, attr = 3 });
-
-                if (added)
-                {
-                    uniqueTileIndices.Add(i);
-                }
-            }
-
-            // get list of all sorted unique tiles
             List<UniqueTileEntry> allUniqueTiles = new(allTiles.Count);
-            for (int i = 0; i < uniqueTileIndices.Count; i++)
+            Dictionary<int, UniqueTileEntry> uniqueTiles = new(allTiles.Count);
+
+            bool removeDuplicateSprites = GetBoolParameter(spriteParameters, "sprite.remove-duplicates", true);
+            if (removeDuplicateSprites)
             {
-                TileEntry t = allTiles[uniqueTileIndices[i]];
-                int tileHash = t.tileIndices.GetHashCode();
-                allUniqueTiles.Add(uniqueTiles[tileHash]);
+                Dictionary<int, int> allTilesToUniqueTiles = new(allTiles.Count);
+                Dictionary<int, int> uniqueTileHashToIndex = new(allTiles.Count);
+                HashSet<int> uniqueTileHashes = new(allTiles.Count);
+
+                // bucket each tile hash
+                for (int i = 0; i < allTiles.Count; i++)
+                {
+                    TileEntry tileEntry = allTiles[i];
+
+                    int tileHash = tileEntry.tileIndices.GetHashCode();
+                    int tileHashV = tileEntry.tileIndices.FlipVertical().GetHashCode();
+                    int tileHashH = tileEntry.tileIndices.FlipHorizontal().GetHashCode();
+                    int tileHashVH = tileEntry.tileIndices.FlipHorizontalVertical().GetHashCode();
+
+                    bool added = false;
+                    added |= uniqueTiles.TryAdd(tileHash, new() { index = i, attr = 0 });
+                    added |= uniqueTiles.TryAdd(tileHashV, new() { index = i, attr = 1 });
+                    added |= uniqueTiles.TryAdd(tileHashH, new() { index = i, attr = 2 });
+                    added |= uniqueTiles.TryAdd(tileHashVH, new() { index = i, attr = 3 });
+
+                    if (added)
+                    {
+                        uniqueTileIndices.Add(i);
+                    }
+                }
+
+                // get list of all sorted unique tiles
+                for (int i = 0; i < uniqueTileIndices.Count; i++)
+                {
+                    TileEntry t = allTiles[uniqueTileIndices[i]];
+                    int tileHash = t.tileIndices.GetHashCode();
+                    allUniqueTiles.Add(uniqueTiles[tileHash]);
+                }
             }
 
             List<MetaSpriteEntry> allMetaSprites = new List<MetaSpriteEntry>();
 
-            // if meta sprite is used, group sprites and de-duplicate
+            // if meta sprite is used, group sprites
             if (metaSpriteWidth > 0 && metaSpriteHeight > 0)
             {
                 // group tiles into sprites
@@ -430,21 +480,25 @@ namespace img2chr
             }
 
             // generate text file
+            const string segment = "RODATA";
             StringBuilder sb = new StringBuilder();
             StringBuilder byte0 = new StringBuilder();
             StringBuilder byte1 = new StringBuilder();
 
             sb.AppendLine(";");
-            sb.AppendLine($"; Generated from {imageFilename}");
+            sb.AppendLine($"; Generated from {Path.GetFileName(imageFilename)}");
             sb.AppendLine(";");
             sb.AppendLine();
 
-            sb.AppendLine("; Original Palette");
-            sb.AppendLine($";  0: [{palettes[0].c0.R:D3}, {palettes[0].c0.G}, {palettes[0].c0.B}]");
-            sb.AppendLine($";  1: [{palettes[0].c1.R:D3}, {palettes[0].c1.G}, {palettes[0].c1.B}]");
-            sb.AppendLine($";  2: [{palettes[0].c2.R:D3}, {palettes[0].c2.G}, {palettes[0].c2.B}]");
-            sb.AppendLine($";  3: [{palettes[0].c3.R:D3}, {palettes[0].c3.G}, {palettes[0].c3.B}]");
-            sb.AppendLine();
+            for (int i = 0; i < palettes.Length; ++i)
+            {
+                sb.AppendLine($"; Palette {i}");
+                sb.AppendLine($";  0: [{palettes[i].c0.R,-3}, {palettes[i].c0.G,-3}, {palettes[i].c0.B,-3}]  #{palettes[i].c0.R:X2}{palettes[i].c0.G:X2}{palettes[i].c0.B:X2}");
+                sb.AppendLine($";  1: [{palettes[i].c1.R,-3}, {palettes[i].c1.G,-3}, {palettes[i].c1.B,-3}]  #{palettes[i].c1.R:X2}{palettes[i].c1.G:X2}{palettes[i].c1.B:X2}");
+                sb.AppendLine($";  2: [{palettes[i].c2.R,-3}, {palettes[i].c2.G,-3}, {palettes[i].c2.B,-3}]  #{palettes[i].c2.R:X2}{palettes[i].c2.G:X2}{palettes[i].c2.B:X2}");
+                sb.AppendLine($";  3: [{palettes[i].c3.R,-3}, {palettes[i].c3.G,-3}, {palettes[i].c3.B,-3}]  #{palettes[i].c3.R:X2}{palettes[i].c3.G:X2}{palettes[i].c3.B:X2}");
+                sb.AppendLine();
+            }
 
             sb.AppendLine("; Tiles");
             sb.AppendLine($";     All: {allTiles.Count}");
@@ -455,8 +509,7 @@ namespace img2chr
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
             sb.AppendLine($".export _{exportName}");
             sb.AppendLine();
-            //sb.AppendLine(".segment \"CHARS\"");
-            sb.AppendLine(".segment \"RODATA\"");
+            sb.AppendLine($".segment \"{segment}\"");
             sb.AppendLine();
             sb.AppendLine($"_{exportName}:");
             sb.AppendLine();
@@ -506,11 +559,12 @@ namespace img2chr
                 sb.AppendLine($";  Dimenstions: {metaSpriteWidth}x{metaSpriteHeight}");
                 sb.AppendLine($";        Count: {allMetaSprites.Count}");
                 sb.AppendLine($";         Size: {(allMetaSprites.Count * 3) + (totalMetaSpriteTiles * 2):N0}b");
-                sb.AppendLine(";       Format: .byte [tile_base_address hi] [tile_base_address lo] [sprite count] {attr:%HVXXXYYY tile-index:#} ...");
-                sb.AppendLine(";             : H - flip horizontal V - flip vertical");
+                sb.AppendLine(";       Format: .byte [tile_base_address hi] [tile_base_address lo] [tile count * 2] {attr:%HVXXXYYY tile-index:%PPIIIIII} ...");
+                sb.AppendLine(";             : H - flip horizontal; V - flip vertical");
                 sb.AppendLine(";             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite");
+                sb.AppendLine(";             : PP - tile palette to use for the meta-sprite; IIIIII - tile index from [base address]");
                 sb.AppendLine();
-                sb.AppendLine(".segment \"RODATA\"");
+                sb.AppendLine($".segment \"{segment}\"");
                 sb.AppendLine();
 
                 // write meta sprite format
@@ -702,7 +756,6 @@ namespace img2chr
                 return ok;
             }
 
-
             FileStreamOptions fileOptions = new()
             {
                 Mode = FileMode.Open,
@@ -765,7 +818,7 @@ namespace img2chr
                             {
                                 if (langToMap.Value.TryGetValue(refKey, out string refValue))
                                 {
-                                    value = $"{value.Substring(0, s)}{refValue}{value.Substring(e + 1)}";
+                                    value = $"{value[..s]}{refValue}{value[(e + 1)..]}";
 
                                     changed = true;
                                 }
@@ -824,6 +877,8 @@ namespace img2chr
 
             string filename = Path.GetFileNameWithoutExtension(textFilename);
 
+            const string segment = "RODATA";
+
             // generate each language text files
             foreach (var langToMap in textMap)
             {
@@ -842,7 +897,7 @@ namespace img2chr
                 sb.AppendLine(";");
                 sb.AppendLine();
 
-                sb.AppendLine($".segment    \"RODATA\"");
+                sb.AppendLine($".segment    \"{segment}\"");
                 sb.AppendLine($"_text_table:");
                 sb.AppendLine($".export _text_table");
                 sb.AppendLine();
@@ -858,7 +913,7 @@ namespace img2chr
                 sb.AppendLine(";");
                 sb.AppendLine();
 
-                sb.AppendLine($".segment    \"RODATA\"");
+                sb.AppendLine($".segment    \"{segment}\"");
                 sb.AppendLine();
 
                 foreach (var kv in langToMap.Value)
@@ -930,6 +985,8 @@ namespace img2chr
                 { ".txt", ConvertTextFile },
             };
 
+            bool forceReimport = false;
+
             for (int i = 0; i < args.Length; i++)
             {
                 string arg = args[i];
@@ -940,28 +997,77 @@ namespace img2chr
                         case "-h":
                         case "--help":
                             return;
+
+                        case "-f":
+                        case "--force-reimport":
+                            forceReimport = true;
+                            break;
                     }
                 }
                 else
                 {
                     if (Directory.Exists(arg))
                     {
+                        if (!TryGetFileParamters(Path.Combine(arg, ""), "library", out var libraryParameters) || forceReimport)
+                        {
+                            libraryParameters = new Dictionary<string, string>();
+                        }
+
+                        bool updateLibrary = false;
+
                         var files = Directory.GetFiles(arg);
                         foreach (var file in files)
                         {
                             var ext = Path.GetExtension(file);
                             if (formatMap.TryGetValue(ext, out var func))
                             {
-                                func(file, options);
+                                string modtimeKey = $"{Path.GetFileName(file)}.modtime";
+                                long modtime = GetLongParameter(libraryParameters, modtimeKey);
+                                long fileModtime = File.GetLastWriteTimeUtc(file).Ticks;
+
+                                if (modtime != fileModtime)
+                                {
+                                    SetParameter(libraryParameters, modtimeKey, fileModtime);
+                                    updateLibrary = true;
+
+                                    func(file, options);
+                                }
                             }
+                        }
+
+                        if (updateLibrary)
+                        {
+                            WriteParametersToFile(libraryParameters, Path.Combine(arg, ".library"));
                         }
                     }
                     else if (File.Exists(arg))
                     {
+                        if (!TryGetFileParamters(Path.Combine(Path.GetDirectoryName(arg), ""), "library", out var libraryParameters) || forceReimport)
+                        {
+                            libraryParameters = new Dictionary<string, string>();
+                        }
+
+                        bool updateLibrary = false;
+
                         var ext = Path.GetExtension(arg);
                         if (formatMap.TryGetValue(ext, out var func))
                         {
-                            func(arg, options);
+                            string modtimeKey = $"{Path.GetFileName(arg)}.modtime";
+                            long modtime = GetLongParameter(libraryParameters, modtimeKey);
+                            long fileModtime = File.GetLastWriteTimeUtc(arg).Ticks;
+
+                            if (modtime != fileModtime)
+                            {
+                                SetParameter(libraryParameters, modtimeKey, fileModtime);
+                                updateLibrary = true;
+
+                                func(arg, options);
+                            }
+                        }
+
+                        if (updateLibrary)
+                        {
+                            WriteParametersToFile(libraryParameters, Path.Combine(Path.GetDirectoryName(arg), ".library"));
                         }
                     }
                 }
