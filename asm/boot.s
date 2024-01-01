@@ -22,7 +22,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __RODATA_LOAD__     ,__RODATA_RUN__ ,__RODATA_SIZE__
 .import __DMC_START__
 .import NES_MAPPER          ,NES_PRG_BANKS  ,NES_CHR_BANKS  ,NES_MIRRORING, NES_BATTERY
-.import _PPU_ARGS
+.importzp _PPU_ARGS
 .import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_upload_chr_ram, nmi
 .import shadow_font
 .import knight_sprite_0
