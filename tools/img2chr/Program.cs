@@ -286,7 +286,7 @@ namespace img2chr
 
             TryGetFileParamters(imageFilename, "sprite", out var spriteParameters);
 
-            if( !GetBoolParameter(spriteParameters, "enable-import", true) )
+            if (!GetBoolParameter(spriteParameters, "enable-import", true))
             {
                 return;
             }
@@ -732,17 +732,30 @@ namespace img2chr
                 StringBuilder sb = new();
 
                 bool inQuote = false;
+                bool inVerbatum = false;
                 for (int i = 0; i < line.Length; i++)
                 {
                     char c = line[i];
                     switch (c)
                     {
+                        case '%':
+                            inVerbatum = !inVerbatum;
+                            sb.Append(c);
+                            break;
+
                         case '"':
                             if (inQuote)
                             {
                                 if ((i + 1) < line.Length && line[i + 1] == '"')
                                 {
-                                    sb.Append('"');
+                                    if (inVerbatum)
+                                    {
+                                        sb.Append('"');
+                                    }
+                                    else
+                                    {
+                                        sb.Append("\\\"");
+                                    }
                                     ++i;
                                 }
                                 else

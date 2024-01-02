@@ -1,5 +1,5 @@
 key,en
-tr_game_title,Shadowborn
+tr_game_title,<Shadowborn>
 tr_new_game,New Game
 tr_continue,Continue
 tr_version,"%.concat(""Version "", VERSION)%"

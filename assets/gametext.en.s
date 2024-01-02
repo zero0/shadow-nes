@@ -44,7 +44,7 @@ _text_table:
 
 .segment    "RODATA"
 
-tr_game_title:                   TR "Shadowborn"
+tr_game_title:                   TR "<Shadowborn>"
 tr_new_game:                     TR "New Game"
 tr_continue:                     TR "Continue"
 tr_version:                      TR .concat("Version ", VERSION)

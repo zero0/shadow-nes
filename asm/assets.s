@@ -56,6 +56,8 @@ _temp_text_table:   .res  2 ;
 
 include_asset "shadow-font.font.s"
 
+.feature string_escapes +
+
 .define TEXT_LANGUAGE   "en"
 .define VERSION         "0.1.0"
 .define COPYRIGHT_YEAR  "2024"
