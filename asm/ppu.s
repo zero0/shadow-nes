@@ -134,6 +134,7 @@ _PPU_DATA           =PPU_DATA
     TILE_BATCH_INDEX:       .res 1 ;
     META_SPRITE_LEN:        .res 1 ;
     META_SPRITE_ATTR:       .res 1 ;
+    META_SPRITE_TILE:       .res 1 ;
     META_SPRITE_ADDR:       .res 2 ;
     CHR_UPLOAD_ADDR:        .res 2 ;
 
@@ -184,7 +185,8 @@ _PPU_DATA           =PPU_DATA
 .export _ppu_clear_oam
 .export _ppu_oam_sprite
 
-.export _ppu_add_meta_sprite_full_internal
+.export _ppu_add_meta_sprite_internal
+.export _ppu_upload_meta_sprite_chr_ram_internal
 
 .export _ppu_upload_chr_ram_internal
 .export _ppu_begin_write_chr_ram_internal
@@ -209,10 +211,13 @@ _PPU_DATA           =PPU_DATA
         .byte $0F,$12,$22,$32 ; sp3 marine
 
 .segment "CODE"
+
 ; ppu_frame_index: returns in A the frame count [0..255]
-_ppu_frame_index:
+.proc _ppu_frame_index
+
     lda NMI_COUNT
     rts
+.endproc
 
 ; ppu_init: initialize PPU ( assumes X == 0)
 ppu_init:
@@ -713,16 +718,150 @@ _ppu_oam_sprite:
 
     rts
 
+; given a meta-sprite, upload it's sprites to CHR RAM
+.proc _ppu_upload_meta_sprite_chr_ram_internal
+
+    ; store metasprite address
+    lda _PPU_ARGS+0
+    sta META_SPRITE_ADDR+0
+    lda _PPU_ARGS+1
+    sta META_SPRITE_ADDR+1
+
+    ; load chr upload address
+    ldy #0
+    lda (META_SPRITE_ADDR), y
+    sta CHR_UPLOAD_ADDR+0
+    iny
+    lda (META_SPRITE_ADDR), y
+    sta CHR_UPLOAD_ADDR+1
+    iny
+
+    ; load count
+    lda (META_SPRITE_ADDR), y
+    sta META_SPRITE_LEN
+    iny
+
+    ; disable rendering
+    lda PPU_MASK_BUFFER
+    and %11101111
+    sta PPU_MASK
+
+    ; set base offset
+    lda _PPU_ARGS+2
+    sta PPU_ADDR
+    lda #0
+    sta PPU_ADDR
+
+    @loop_each_tile:
+        ;; TODO: actually use tile index, for now assume 0..n
+        ; skip attribute
+        iny
+
+        ; load tile index
+        lda (META_SPRITE_ADDR), y
+        iny
+
+        ; mask out palette
+        and #$3F
+
+        ; TODO: do something with index in A?
+
+        ; store Y on the stack
+        tya
+        pha
+
+        ;  load 16 bytes
+        ldy #0
+
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+        lda (CHR_UPLOAD_ADDR), y
+        sta PPU_DATA
+        iny
+
+        ; increment address by 16
+        lda CHR_UPLOAD_ADDR+0
+        ldy CHR_UPLOAD_ADDR+1
+
+        clc
+        adc #$10
+        bcc :+
+            iny
+            :
+        sta CHR_UPLOAD_ADDR+0
+        sty CHR_UPLOAD_ADDR+1
+
+        ; restore Y
+        pla
+        tay
+
+        ; loop for each tile
+        cpy META_SPRITE_LEN
+        bne @loop_each_tile
+
+    ; reenable rendering
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
+    rts
+.endproc
+
 ;
-_ppu_add_meta_sprite_full_internal:
+.proc _ppu_add_meta_sprite_internal
 
     ; load OAM buffer length
     ldx OAM_UPDATE_LEN
 
     ; store metasprite address
-    lda #(<_knight_sprite_0)
+    lda _PPU_ARGS+0
     sta META_SPRITE_ADDR+0
-    lda #(>_knight_sprite_0)
+    lda _PPU_ARGS+1
     sta META_SPRITE_ADDR+1
 
     ; load metasprite length
@@ -732,32 +871,58 @@ _ppu_add_meta_sprite_full_internal:
     iny
 
     :
-        ; load metasprite attributes
+        ; load metasprite attributes and tile
         lda (META_SPRITE_ADDR), y
         sta META_SPRITE_ATTR
+        iny
+
+        lda (META_SPRITE_ADDR), y
+        sta META_SPRITE_TILE
         iny
 
         ; store OAM updates
         ; y
         ; get Y tile offset from metasprite attributes
+        lda META_SPRITE_ATTR
         and #%00000111
         ; go from tiles to pixels (mul 8)
         asl
         asl
         asl
 
-        adc _PPU_ARGS+0
+        clc
+        adc _PPU_ARGS+3
         sta OAM_UPDATE, x
         inx
 
         ; tile
-        lda (META_SPRITE_ADDR), y
+        lda META_SPRITE_TILE
+        and #$3F
         sta OAM_UPDATE, x
         inx
-        iny
 
-        ; attr
-        lda _PPU_ARGS+2
+        ; attr - build from meta sprite attr and tile high bits
+        lda META_SPRITE_ATTR
+        and #%11000000
+
+        ; store in TEMP
+        sta TEMP
+
+        ; load tile to get palette
+        lda META_SPRITE_TILE
+
+        ; rotate top two bits to bottom two
+        rol
+        rol
+        rol
+
+        ; mask palette bits
+        and #$03
+
+        ; OR with other attributes
+        ora TEMP
+
+        ; store attr
         sta OAM_UPDATE, x
         inx
 
@@ -766,7 +931,7 @@ _ppu_add_meta_sprite_full_internal:
         lda META_SPRITE_ATTR
         and #%00111000
 
-        adc _PPU_ARGS+3
+        adc _PPU_ARGS+2
         sta OAM_UPDATE, x
         inx
 
@@ -778,6 +943,7 @@ _ppu_add_meta_sprite_full_internal:
     stx OAM_UPDATE_LEN
 
     rts
+.endproc
 
 ; Upload a row of tiles into CHR RAM
 _ppu_upload_chr_ram_internal:

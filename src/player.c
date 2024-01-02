@@ -395,7 +395,7 @@ uint8_t __fastcall__ get_player_max_stamina()
 #define PLAYER_HEALTH_LIMIT     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT    (uint8_t)112
 
-#define PLAYER_STAMINA_REGEN_TIME   (uint8_t)25
+#define PLAYER_STAMINA_REGEN_TIME   (uint8_t)10
 
 static uint8_t __fastcall__ calculate_player_max_health( uint8_t level )
 {

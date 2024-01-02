@@ -9,13 +9,15 @@
 
 extern ptr_t knight;
 extern ptr_t knight_sprite_0;
+extern ptr_t knight_sprite_1;
+extern ptr_t knight_sprite_2;
 extern ptr_t progress_bar;
 
 void __fastcall__ game_state_playing_enter()
 {
     ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
     //ppu_upload_chr_ram( shadow_font, 5, 0x00 );
-    ppu_upload_chr_ram( knight, 2, 0x10 );
+    //ppu_upload_chr_ram( knight, 2, 0x10 );
 
     ppu_upload_chr_ram( progress_bar, 1, 0x08);
 
@@ -50,6 +52,10 @@ void __fastcall__ game_state_playing_enter()
     ppu_begin_tile_batch(0,SCREEN_HEIGH-3);
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
+
+t = 0;
+b = 0;
+l = 20;
 
     // start player
     init_player();
@@ -133,7 +139,44 @@ void __fastcall__ game_state_playing_update()
     //ppu_repeat_tile_batch(0x80+(x & 0x7), 1);
     //ppu_end_tile_batch();
 
-    ppu_add_meta_sprite( TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), PALETTE_SPRITE_0, 0 );
+    switch(t)
+    {
+        case 0:
+            if(b == 0)
+            {
+                ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
+                b = 1;
+            }
+            ppu_add_meta_sprite( knight_sprite_0, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14) );
+            break;
+
+        case 1:
+          if(b == 0)
+            {
+                ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x10 );
+                b = 1;
+            }
+            ppu_add_meta_sprite( knight_sprite_1, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14) );
+            break;
+
+        case 2:
+          if(b == 0)
+            {
+                ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x10 );
+                b = 1;
+            }
+            ppu_add_meta_sprite( knight_sprite_2, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14) );
+            break;
+    }
+
+--l;
+    if(l ==0 || GAMEPAD_HELD(0, GAMEPAD_B))
+    {
+        l = 20;
+        b = 0;
+        t++;
+        if( t > 2) t = 0;
+    }
 
     update_player();
 }

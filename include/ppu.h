@@ -51,8 +51,8 @@
     (arg)[1] = 0xFF & (ptr)
 
 #define ADDRESS_TO_ARGS(arg, ptr)               \
-    (arg)[0] = 0xFF & ((ptr_t)&(ptr) >> 8);     \
-    (arg)[1] = 0xFF & (ptr_t)&(ptr)
+    (arg)[0] = 0xFF & (ptr_t)&(ptr);            \
+    (arg)[1] = 0xFF & ((ptr_t)&(ptr) >> 8)
 
 extern ptr_t PPU_DATA;
 
@@ -120,8 +120,7 @@ void __fastcall__ ppu_end_tile_batch_internal(void);
 void __fastcall__ ppu_update_byte( uint8_t x, uint8_t y, uint8_t b );
 
 #define ppu_clear_nametable( ptr, c, a )            \
-    PPU_ARGS[0] = 0xFF & ((ptr) >> 8);              \
-    PPU_ARGS[1] = 0xFF & (ptr);                     \
+    PTR_TO_ARGS(PPU_ARGS, ptr);                     \
     PPU_ARGS[2] = (c);                              \
     PPU_ARGS[3] = (a);                              \
     ppu_clear_nametable_internal()
@@ -172,24 +171,27 @@ void __fastcall__ ppu_oam_sprite();
 //
 //
 
-#define ppu_add_meta_sprite( px, py, pal, metaspr ) ppu_add_meta_sprite_full( px, py, pal, 0, 0, 0, metaspr )
+#define ppu_upload_meta_sprite_chr_ram(ptr, base)           \
+    ADDRESS_TO_ARGS(PPU_ARGS, ptr);                         \
+    PPU_ARGS[2] = (base);                                   \
+    ppu_upload_meta_sprite_chr_ram_internal()
 
-#define ppu_add_meta_sprite_full( px, py, pal, bg, fh, fv, metaspr )                \
-    PPU_ARGS[0] = (py) - 1;                                                         \
-    PPU_ARGS[1] = (metaspr);                                                        \
-    PPU_ARGS[2] = ( (fv) << 7 ) | ( (fh) << 6 ) | ( (bg) << 5 ) | ( 0x03 & (pal) ); \
-    PPU_ARGS[3] = (px);                                                             \
-    ppu_add_meta_sprite_full_internal()
+void __fastcall__ ppu_upload_meta_sprite_chr_ram_internal(void);
 
-void __fastcall__ ppu_add_meta_sprite_full_internal(void);
+#define ppu_add_meta_sprite( ptr, px, py )                                          \
+    ADDRESS_TO_ARGS(PPU_ARGS, ptr);                                                 \
+    PPU_ARGS[2] = (px);                                                             \
+    PPU_ARGS[3] = (py) - 1;                                                         \
+    ppu_add_meta_sprite_internal()
+
+void __fastcall__ ppu_add_meta_sprite_internal(void);
 
 //
 //
 //
 
 #define ppu_upload_chr_ram( ptr, c, dst )           \
-    PPU_ARGS[0] = 0xFF & (ptr_t)&(ptr);             \
-    PPU_ARGS[1] = 0xFF & ((ptr_t)&(ptr) >> 8);      \
+    ADDRESS_TO_ARGS(PPU_ARGS, ptr);                 \
     PPU_ARGS[2] = (c);                              \
     PPU_ARGS[3] = (dst);                            \
     ppu_upload_chr_ram_internal()

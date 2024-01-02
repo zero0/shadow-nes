@@ -1585,7 +1585,7 @@ knight_40x184:
 ;        Count: 10
 ;         Size: 186b
 ;       Format: .byte [tile_base_address hi] [tile_base_address lo] [tile count * 2] {attr:%HVXXXYYY tile-index:%PPIIIIII} ...
-;             : H - flip horizontal; V - flip vertical
+;             : V - flip vertical; H - flip horizontal
 ;             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite
 ;             : PP - tile palette to use for the meta-sprite; IIIIII - tile index from [base address]
 
@@ -1595,7 +1595,7 @@ knight_40x184:
 _knight_sprite_0:
 .export _knight_sprite_0
 .addr knight_24x8
-.byte $36
+.byte 57 ; byte count (including 2 byte address and 1 byte size)
 .byte $19, 0
 .byte $21, 1
 .byte $1A, 2
@@ -1628,7 +1628,7 @@ _knight_sprite_0:
 _knight_sprite_1:
 .export _knight_sprite_1
 .addr knight_32x72
-.byte $32
+.byte 53 ; byte count (including 2 byte address and 1 byte size)
 .byte $21, 0
 .byte $1A, 1
 .byte $22, 2
@@ -1659,7 +1659,7 @@ _knight_sprite_1:
 _knight_sprite_2:
 .export _knight_sprite_2
 .addr knight_32x136
-.byte $34
+.byte 55 ; byte count (including 2 byte address and 1 byte size)
 .byte $21, 0
 .byte $1A, 1
 .byte $22, 2

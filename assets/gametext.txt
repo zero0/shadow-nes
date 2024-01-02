@@ -36,27 +36,3 @@ tr_cutscene_intro_1,This corrupted light must be snuffed out. Those born of shad
 tr_cutscene_intro_2,When the light is stained; dim; corrupted. Those born to shadow are bound to act.
 tr_cutscene_intro_3,fa
 tr_cutscene_intro_4,ee
-
-
-
-#
-# game flow:
-# intro
-# enter the tower via the bridge
-# boss 1
-# enter the courtyard
-# boss 2
-# enter the chapel that leads to the tower
-# boss 3
-# walk up stares to top, about halfway up
-# boss 4
-# defeating boss cases the stairs to break, falling down the tower into the sewers below, boss corpse is taken over
-# boss 5
-# exit sewers, go on to ramparts outside the tower, meet another shadowborn (mirror match)
-# boss 6
-# reenter the tower, make it to doors before the throne room
-# boss 7
-# enter the throne room
-# boss 8
-# end (or is it?)
-#

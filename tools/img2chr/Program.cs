@@ -284,14 +284,15 @@ namespace img2chr
         {
             ConvertOptions options = cmdOptions;
 
-            int metaSpriteWidth = 0;
-            int metaSpriteHeight = 0;
+            TryGetFileParamters(imageFilename, "sprite", out var spriteParameters);
 
-            if (TryGetFileParamters(imageFilename, "sprite", out var spriteParameters))
+            if( !GetBoolParameter(spriteParameters, "enable-import", true) )
             {
-                metaSpriteWidth = GetIntParameter(spriteParameters, "meta-sprite.width", metaSpriteWidth);
-                metaSpriteHeight = GetIntParameter(spriteParameters, "meta-sprite.height", metaSpriteHeight);
+                return;
             }
+
+            int metaSpriteWidth = GetIntParameter(spriteParameters, "meta-sprite.width");
+            int metaSpriteHeight = GetIntParameter(spriteParameters, "meta-sprite.height");
 
             string filename = Path.GetFileNameWithoutExtension(imageFilename);
 
@@ -305,21 +306,6 @@ namespace img2chr
 
             Assert(bitmapImage.Width >= 8, $"Image too small, width: {bitmapImage.Width} requried at least 8px");
             Assert(bitmapImage.Height >= 8, $"Image too small, height: {bitmapImage.Height} requried at least 8px");
-            //// read palette from sprite 0,0
-            //SpritePalette[] palette = new SpritePalette[2 * 8];
-            //
-            //for (int y = 0, i = 0; y < 8; ++y)
-            //{
-            //    for (int x = 0; x < 8; x += 4)
-            //    {
-            //        palette[i].c0 = pngImage.GetPixel(x + 0, y);
-            //        palette[i].c1 = pngImage.GetPixel(x + 1, y);
-            //        palette[i].c2 = pngImage.GetPixel(x + 2, y);
-            //        palette[i].c3 = pngImage.GetPixel(x + 3, y);
-            //
-            //        ++i;
-            //    }
-            //}
 
             int spritePaletteCount = Math.Clamp(GetIntParameter(spriteParameters, "sprite.palette-count", 1), 1, 4);
 
@@ -362,6 +348,8 @@ namespace img2chr
             area.Width = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.w", area.Width), 0, bitmapImage.Width);
             area.Height = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.h", area.Height), 0, bitmapImage.Height);
 
+            Span<int> palettesUsed = stackalloc int[4];
+
             // read tiles (starging from 8,0 to leave room for palette info)
             for (int y = area.Y, ymax = area.Height; y < ymax; y += 8)
             {
@@ -394,6 +382,39 @@ namespace img2chr
                     if (!tileIndices.IsEmpty)
                     {
                         int paletteIndex = 0;
+
+                        // clear used palettes
+                        for (int p = 0; p < palettesUsed.Length; ++p)
+                        {
+                            palettesUsed[p] = 0;
+                        }
+
+                        // mark each used palettes
+                        for (int py = 0; py < 8; ++py)
+                        {
+                            for (int px = 0; px < 8; ++px)
+                            {
+                                palettesUsed[paletteIndices[px, py]]++;
+                            }
+                        }
+
+                        // make sure there's only one palette used
+                        int usedCount = 0;
+                        for (int p = 0; p < palettesUsed.Length; ++p)
+                        {
+                            usedCount += palettesUsed[p] != 0 ? 1 : 0;
+                        }
+                        Assert(usedCount == 1, $"More than one palette used at [{x}, {y}]. Palette Count: ({palettesUsed[0]} {palettesUsed[1]} {palettesUsed[2]} {palettesUsed[3]})");
+
+                        // find the most common palette used
+                        for (int p = 0; p < palettesUsed.Length; ++p)
+                        {
+                            if (palettesUsed[p] > palettesUsed[paletteIndex])
+                            {
+                                paletteIndex = p;
+                            }
+                        }
+
                         allTiles.Add(new()
                         {
                             x = x,
@@ -429,8 +450,8 @@ namespace img2chr
 
                     bool added = false;
                     added |= uniqueTiles.TryAdd(tileHash, new() { index = i, attr = 0 });
-                    added |= uniqueTiles.TryAdd(tileHashV, new() { index = i, attr = 1 });
-                    added |= uniqueTiles.TryAdd(tileHashH, new() { index = i, attr = 2 });
+                    added |= uniqueTiles.TryAdd(tileHashV, new() { index = i, attr = 2 });
+                    added |= uniqueTiles.TryAdd(tileHashH, new() { index = i, attr = 1 });
                     added |= uniqueTiles.TryAdd(tileHashVH, new() { index = i, attr = 3 });
 
                     if (added)
@@ -561,7 +582,7 @@ namespace img2chr
                 sb.AppendLine($";        Count: {allMetaSprites.Count}");
                 sb.AppendLine($";         Size: {(allMetaSprites.Count * 3) + (totalMetaSpriteTiles * 2):N0}b");
                 sb.AppendLine(";       Format: .byte [tile_base_address hi] [tile_base_address lo] [tile count * 2] {attr:%HVXXXYYY tile-index:%PPIIIIII} ...");
-                sb.AppendLine(";             : H - flip horizontal; V - flip vertical");
+                sb.AppendLine(";             : V - flip vertical; H - flip horizontal");
                 sb.AppendLine(";             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite");
                 sb.AppendLine(";             : PP - tile palette to use for the meta-sprite; IIIIII - tile index from [base address]");
                 sb.AppendLine();
@@ -588,7 +609,12 @@ namespace img2chr
 
                         TileEntry minTile = allTiles[minTileIndex];
                         sb.AppendLine($".addr {exportName}_{minTile.x}x{minTile.y}");
-                        sb.AppendLine($".byte {metaSprite.tileCount * 2} ; byte count"); // include [attr, tile] pairs
+
+                        int byteCount = (metaSprite.tileCount * 2) + 3;
+                        Assert(byteCount <= 0xFF, $"Meta-sprite size is too large {byteCount}b");
+
+                        // include [attr, tile] pairs + ptr and size bytes so asm code is easier to use
+                        sb.AppendLine($".byte {byteCount} ; byte count (including 2 byte address and 1 byte size)");
 
                         for (int s = 0; s < metaSprite.tileCount; s++)
                         {
@@ -607,9 +633,9 @@ namespace img2chr
 
                             int idx = uniqueTileEntry.index - minTileIndex;
                             Assert(idx <= 0x3F, $"Index out of range: {idx}");
-
-                            int pal = ( 0x03 & tileEntry.paletteIndex ) << 6;
                             idx &= 0x3F;
+
+                            int pal = (0x03 & tileEntry.paletteIndex) << 6;
 
                             sb.AppendLine($".byte ${attr:X2}, {pal | idx}");
                         }
