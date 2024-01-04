@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -658,65 +659,200 @@ namespace img2chr
                 string charMap = GetStringParameter(fontParameters, "charmap");
                 if (!string.IsNullOrEmpty(charMap))
                 {
-                    sb.Clear();
-
-                    sb.AppendLine(";");
-                    sb.AppendLine($"; Generated from {imageFilename}");
-                    sb.AppendLine(";");
-                    sb.AppendLine();
-
-                    sb.AppendLine(".feature string_escapes +");
-                    sb.AppendLine();
-
-                    sb.AppendLine("; Char Map");
-
-                    int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
-
-                    int index = 0;
-                    for (int i = 0; i < charMap.Length; ++i, ++index)
+                    // Gemerate charmap .s file
                     {
-                        char c = charMap[i];
-                        sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {c}");
+                        sb.Clear();
+
+                        sb.AppendLine(";");
+                        sb.AppendLine($"; Generated from {Path.GetFileName(imageFilename)}");
+                        sb.AppendLine(";");
+                        sb.AppendLine();
+
+                        sb.AppendLine(".feature string_escapes +");
+                        sb.AppendLine();
+
+                        sb.AppendLine("; Char Map");
+
+                        int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
+
+                        int index = 0;
+                        for (int i = 0; i < charMap.Length; ++i, ++index)
+                        {
+                            char c = charMap[i];
+                            sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {c}");
+                        }
+
+                        string charMapExtra = GetStringParameter(fontParameters, "charmap.extra");
+                        if (!string.IsNullOrEmpty(charMapExtra))
+                        {
+                            sb.AppendLine();
+                            sb.AppendLine("; Extra Char Map");
+
+                            string str = string.Empty;
+                            for (int i = 0; i < charMapExtra.Length; ++i, ++index)
+                            {
+                                char c = charMapExtra[i];
+                                if (c == '\\')
+                                {
+                                    ++i;
+                                    c = charMapExtra[i];
+                                    switch (c)
+                                    {
+                                        case 'n': c = '\n'; str = "\\n"; break;
+                                        case 'r': c = '\r'; str = "\\r"; break;
+                                        case 't': c = '\t'; str = "\\t"; break;
+                                        case 'b': c = '\b'; str = "\\b"; break;
+                                        case '\\': c = '\\'; str = "\\"; break;
+                                        default: Assert(false, $"Invalid escape character {c}"); break;
+                                    }
+                                }
+                                else if (c == ' ')
+                                {
+                                    str = "<space>";
+                                }
+
+                                sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {str}");
+                            }
+                        }
+
+                        // write font file
+                        string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.s";
+                        File.WriteAllText(sFilename, sb.ToString(), UTF8);
+                        LogInfo($"Converted {imageFilename} -> {sFilename}");
                     }
 
-                    string charMapExtra = GetStringParameter(fontParameters, "charmap.extra");
-                    if (!string.IsNullOrEmpty(charMapExtra))
+                    // Generate charmap header file
                     {
-                        sb.AppendLine();
-                        sb.AppendLine("; Extra Char Map");
+                        sb.Clear();
 
-                        string str = string.Empty;
-                        for (int i = 0; i < charMapExtra.Length; ++i, ++index)
+                        sb.AppendLine("//");
+                        sb.AppendLine($"// Generated from {Path.GetFileName(imageFilename)}");
+                        sb.AppendLine("//");
+                        sb.AppendLine();
+
+                        string defineGuard = $"{filename}_font_h".Replace('-', '_').Replace('.', '_').ToUpperInvariant();
+                        sb.AppendLine($"#ifndef {defineGuard}");
+                        sb.AppendLine($"#define {defineGuard}");
+                        sb.AppendLine();
+
+                        int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
+
+                        int index = 0;
+                        for (int i = 0; i < charMap.Length; ++i, ++index)
                         {
-                            char c = charMapExtra[i];
-                            if (c == '\\')
+                            char c = charMap[i];
+                            string defineName = CharacterToDefineName(c);
+
+                            if (!string.IsNullOrEmpty(defineName))
                             {
-                                ++i;
-                                c = charMapExtra[i];
-                                switch (c)
+                                sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (uint8_t)({charOffset + index})");
+                            }
+                        }
+
+                        string charMapExtra = GetStringParameter(fontParameters, "charmap.extra");
+                        if (!string.IsNullOrEmpty(charMapExtra))
+                        {
+                            for (int i = 0; i < charMapExtra.Length; ++i, ++index)
+                            {
+                                char c = charMapExtra[i];
+                                if (c == '\\')
                                 {
-                                    case 'n': c = '\n'; str = "\\n"; break;
-                                    case 'r': c = '\r'; str = "\\r"; break;
-                                    case 't': c = '\t'; str = "\\t"; break;
-                                    case 'b': c = '\b'; str = "\\b"; break;
-                                    case '\\': c = '\\'; str = "\\"; break;
-                                    default: Assert(false, $"Invalid escape character {c}"); break;
+                                    ++i;
+                                    c = charMapExtra[i];
+                                    switch (c)
+                                    {
+                                        case 'n': c = '\n'; break;
+                                        case 'r': c = '\r'; break;
+                                        case 't': c = '\t'; break;
+                                        case 'b': c = '\b'; break;
+                                        case '\\': c = '\\'; break;
+                                        default: Assert(false, $"Invalid escape character {c}"); break;
+                                    }
+                                }
+
+                                string defineName = CharacterToDefineName(c);
+
+                                if (!string.IsNullOrEmpty(defineName))
+                                {
+                                    sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (uint8_t)({charOffset + index})");
                                 }
                             }
-                            else if (c == ' ')
-                            {
-                                str = "<space>";
-                            }
-
-                            sb.AppendLine($".charmap {(int)c,-3}, {charOffset + index,-2} ; {str}");
                         }
-                    }
 
-                    // write font file
-                    string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.s";
-                    File.WriteAllText(sFilename, sb.ToString(), UTF8);
-                    LogInfo($"Converted {imageFilename} -> {sFilename}");
+                        sb.AppendLine();
+                        sb.AppendLine($"#endif // {defineGuard}");
+
+                        // write font file
+                        string hFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.h";
+                        File.WriteAllText(hFilename, sb.ToString(), UTF8);
+                        LogInfo($"Converted {imageFilename} -> {hFilename}");
+                    }
                 }
+            }
+
+            static string CharacterToDefineName(char c)
+            {
+                string defineName = null;
+                if (char.IsDigit(c))
+                {
+                    defineName = c.ToString();
+                }
+                else if (char.IsLetter(c))
+                {
+                    if(char.IsUpper(c))
+                    {
+                        defineName = $"upper_{c}";
+                    }
+                    else
+                    {
+                        defineName = $"lower_{c}";
+                    }
+                }
+                else
+                {
+                    switch (c)
+                    {
+                        case ' ': defineName = "space"; break;
+                        case '.': defineName = "period"; break;
+                        case ',': defineName = "comma"; break;
+                        case '!': defineName = "exclimation"; break;
+                        case '?': defineName = "question_mark"; break;
+                        case '<': defineName = "less_than"; break;
+                        case '>': defineName = "greater_than"; break;
+                        case ';': defineName = "semicolon"; break;
+                        case ':': defineName = "colon"; break;
+                        case '[': defineName = "left_angle_bracket"; break;
+                        case ']': defineName = "right_angle_bracket"; break;
+                        case '@': defineName = "at"; break;
+                        case '#': defineName = "hash"; break;
+                        case '$': defineName = "dollar"; break;
+                        case '%': defineName = "percent"; break;
+                        case '^': defineName = "carot"; break;
+                        case '&': defineName = "ampersand"; break;
+                        case '*': defineName = "star"; break;
+                        case '(': defineName = "left_parentheses"; break;
+                        case ')': defineName = "right_parentheses"; break;
+                        case '-': defineName = "minus"; break;
+                        case '_': defineName = "underscore"; break;
+                        case '=': defineName = "equals"; break;
+                        case '+': defineName = "plus"; break;
+                        case '~': defineName = "tilde"; break;
+                        case '\'': defineName = "single_quote"; break;
+                        case '`': defineName = "single_back_quote"; break;
+                        case '"': defineName = "double_quote"; break;
+                        case '/': defineName = "forward_slash"; break;
+                        case '\\': defineName = "back_slash"; break;
+                        case '\r': defineName = "carage_return"; break;
+                        case '\n': defineName = "new_line"; break;
+                        case '\t': defineName = "tab"; break;
+                        case '\b': defineName = "break"; break;
+                        default:
+                            Assert(false, $"Unable to find name for character '{c}'");
+                            break;
+                    }
+                }
+
+                return defineName;
             }
         }
 

@@ -1,5 +1,5 @@
 ;
-; Generated from ..\..\assets\shadow-font.png
+; Generated from shadow-font.png
 ;
 
 .feature string_escapes +
