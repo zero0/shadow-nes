@@ -59,7 +59,7 @@ void __fastcall__ game_state_title_update()
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
             {
-                next_game_state = ( GAME_STATE_PLAYING );
+                set_next_game_state( GAME_STATE_PLAYING );
             }
             break;
 
@@ -74,24 +74,5 @@ void __fastcall__ game_state_title_update()
                 set_next_game_state( GAME_STATE_PLAYING );
             }
             break;
-    }
-
-
-    if(GAMEPAD_PRESSED(0, GAMEPAD_A)){
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(20), PALETTE_SPRITE_0, 0x33);
-    }
-      if(GAMEPAD_PRESSED(0, GAMEPAD_B)){
-            ppu_add_oam_sprite(TILE_TO_PIXEL(11), TILE_TO_PIXEL(20), PALETTE_SPRITE_1, 0x33);
-    }
-      if(GAMEPAD_PRESSED(0, GAMEPAD_START)){
-            ppu_add_oam_sprite(TILE_TO_PIXEL(12), TILE_TO_PIXEL(20), PALETTE_SPRITE_2, 0x33);
-    }
-
-    if(GAMEPAD_PRESSED(0, GAMEPAD_SELECT)){
-            ppu_add_oam_sprite(TILE_TO_PIXEL(13), TILE_TO_PIXEL(20), PALETTE_SPRITE_3, 0x33);
-    }
-
-        if(GAMEPAD_PRESSED(0, GAMEPAD_U)){
-            ppu_add_oam_sprite(TILE_TO_PIXEL(14), TILE_TO_PIXEL(20), PALETTE_SPRITE_3, 0x33);
     }
 }
