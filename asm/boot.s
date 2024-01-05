@@ -23,7 +23,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __DMC_START__
 .import NES_MAPPER          ,NES_PRG_BANKS  ,NES_CHR_BANKS  ,NES_MIRRORING, NES_BATTERY
 .importzp _PPU_ARGS
-.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_upload_chr_ram, nmi
+.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_upload_chr_ram, ppu_clear_chr_ram, nmi
 .import shadow_font
 .import knight_sprite_0
 .import knight_sprite_1
@@ -165,6 +165,15 @@ reset:
     lda #0
     sta _PPU_ARGS+3
     jsr ppu_clear_nametable
+
+    ; clear all CHR RAM
+    lda #$00
+    sta _PPU_ARGS+0
+    jsr ppu_clear_chr_ram
+
+    lda #$10
+    sta _PPU_ARGS+0
+    jsr ppu_clear_chr_ram
 
     ; clear ram
     lda #0

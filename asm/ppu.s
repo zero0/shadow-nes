@@ -159,6 +159,7 @@ _PPU_DATA           =PPU_DATA
 
 .export ppu_clear_nametable
 .export ppu_clear_palette
+.export ppu_clear_chr_ram
 
 .export _ppu_set_scroll_internal
 
@@ -188,6 +189,7 @@ _PPU_DATA           =PPU_DATA
 .export _ppu_add_meta_sprite_internal
 .export _ppu_upload_meta_sprite_chr_ram_internal
 
+.export _ppu_clear_chr_ram_internal
 .export _ppu_upload_chr_ram_internal
 .export _ppu_begin_write_chr_ram_internal
 .export _ppu_write_chr_ram_internal
@@ -945,10 +947,48 @@ _ppu_oam_sprite:
     rts
 .endproc
 
-; Upload a row of tiles into CHR RAM
-_ppu_upload_chr_ram_internal:
+; Clear all of the CHR RAM on page PPU_ARGS[0]
+ppu_clear_chr_ram:
 
-.proc ppu_upload_chr_ram
+.proc _ppu_clear_chr_ram_internal
+
+    lda #0
+
+    ; disable rendering
+    sta PPU_MASK
+
+    ; load starting address
+    ldy _PPU_ARGS+0
+    sty PPU_ADDR
+    ldy #0
+    sty PPU_ADDR
+
+    ; clear all pages
+    ldx #16
+
+@loop:
+    ; write 0
+    sta PPU_DATA
+
+    ; inc, loop until wrapped back to 0
+    iny
+    bne @loop
+
+    ; repeate until complete
+    dex
+    bne @loop
+
+    ; reset mask
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
+    rts
+.endproc
+
+; Upload a row of tiles into CHR RAM
+ppu_upload_chr_ram:
+
+.proc _ppu_upload_chr_ram_internal
     ;_PPU_ARGS[0] ; src address
     ;_PPU_ARGS[1]
 ;
@@ -988,9 +1028,9 @@ _ppu_upload_chr_ram_internal:
 
     ; increment to next page
     inc CHR_UPLOAD_ADDR+1
-    dex
 
     ; repeat until complete
+    dex
     bne @loop
 
     ; reset mask
