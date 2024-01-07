@@ -897,9 +897,13 @@ _ppu_oam_sprite:
         sta OAM_UPDATE, x
         inx
 
-        ; tile
+        ; store tile
         lda META_SPRITE_TILE
         and #$3F
+
+        ; add offset
+        clc
+        adc _PPU_ARGS+4
         sta OAM_UPDATE, x
         inx
 

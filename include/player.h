@@ -5,6 +5,8 @@
 
 #define PLAYER_CHANGED_HEALTH   (uint8_t)( 1 << 0 )
 #define PLAYER_CHANGED_STAMINA  (uint8_t)( 1 << 1 )
+#define PLAYER_CHANGED_STATUS   (uint8_t)( 1 << 2 )
+#define PLAYER_CHANGED_FLASKS   (uint8_t)( 1 << 2 )
 
 uint8_t get_player_current_health();
 

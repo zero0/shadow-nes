@@ -5,6 +5,9 @@
 #include "macros.h"
 #include "args.h"
 #include "globals.h"
+#include "flags.h"
+#include "timer.h"
+#include "combat.h"
 
 static uint8_t current_gamepad_state;
 static uint8_t prev_gamepad_state;
@@ -35,14 +38,17 @@ static uint8_t player_movement_state_next;
 static uint8_t player_movement_state;
 static uint8_t player_attack_state;
 
-static uint8_t player_changed_flags;
+static flags8_t player_changed_flags;
 static uint8_t player_level;
 static uint8_t player_health;
-static uint8_t player_max_health;
 static uint8_t player_stamina;
-static uint8_t player_max_stamina;
-static uint8_t player_stamina_regen_timer;
-static uint8_t player_stamina_delay_timer;
+static uint8_t player_flasks;
+static damage_status_t player_damage_status;
+
+static timer_t player_flask_timer;
+static timer_t player_inv_frame_timer;
+static timer_t player_stamina_regen_timer;
+static timer_t player_stamina_delay_timer;
 
 static anim_control_t player_anim_head;
 static anim_control_t player_anim_body;
@@ -58,6 +64,11 @@ static const subpixel_diff_t player_air_speed = { 1, 128 };
 static const subpixel_diff_t player_walking_speed = { 1, 128 };
 static const subpixel_diff_t player_running_speed = { 2, 0 };
 static const subpixel_diff_t player_ground_friction = { 1, 0 };
+
+static damage_t player_damage_queue[4];
+static uint8_t player_damage_queue_legnth;
+
+static damage_t _temp_dmg;
 
 #define ANIM_SET_ATTR_NONE      0x00
 #define ANIM_SET_ATTR_REPEAT    0x01
@@ -367,6 +378,101 @@ STATIC_ASSERT( ARRAY_SIZE( anim_keyframes_attr ) == ARRAY_SIZE( anim_keyframes_s
 static uint8_t f0;
 static uint8_t f1;
 
+#define PLAYER_HEALTH_LIMIT     (uint8_t)224
+#define PLAYER_STAMINA_LIMIT    (uint8_t)112
+
+#define PLAYER_MAX_LEVEL        (uint8_t)4
+
+#define PLAYER_STAMINA_REGEN_TIME   (uint8_t)10
+
+//
+// Per-Level Data
+//
+
+static const uint8_t player_max_health_per_level[] = {
+    64,
+    80,
+    112,
+    176,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_max_health_per_level) == PLAYER_MAX_LEVEL);
+
+static const uint8_t player_max_stamina_per_level[] = {
+    32,
+    48,
+    64,
+    80,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_max_stamina_per_level) == PLAYER_MAX_LEVEL);
+
+static const uint8_t player_max_flasks_per_level[] = {
+    2,
+    3,
+    4,
+    5,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_max_flasks_per_level) == PLAYER_MAX_LEVEL);
+
+static const uint8_t player_flask_heal_per_level[] = {
+    30,
+    35,
+    40,
+    50,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_flask_heal_per_level) == PLAYER_MAX_LEVEL);
+
+//
+// Damage
+//
+
+static const uint8_t player_damage_resistance_modifiers[] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_damage_resistance_modifiers) == _DAMAGE_TYPE_COUNT);
+
+static uint8_t player_damage_status_buildup[] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_damage_status_buildup) == _DAMAGE_STATUS_TYPE_COUNT);
+
+static timer_t player_damage_status_timers[] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+STATIC_ASSERT(ARRAY_SIZE(player_damage_status_timers) == _DAMAGE_STATUS_TYPE_COUNT);
+
+static const uint8_t player_attack_0_combo_base_damage[] = {
+    10, 10, 12, 15
+};
+static const uint8_t player_attack_1_combo_base_damage[] = {
+    14, 16, 20
+};
+
+//
+//
+//
+
 uint8_t __fastcall__ get_player_changed_flags()
 {
     return player_changed_flags;
@@ -379,7 +485,7 @@ uint8_t __fastcall__ get_player_current_health()
 
 uint8_t __fastcall__ get_player_max_health()
 {
-    return player_max_health;
+    return player_max_health_per_level[ player_level ];
 }
 
 uint8_t __fastcall__ get_player_current_stamina()
@@ -389,37 +495,22 @@ uint8_t __fastcall__ get_player_current_stamina()
 
 uint8_t __fastcall__ get_player_max_stamina()
 {
-    return player_max_stamina;
+    return player_max_stamina_per_level[ player_level ];
 }
 
-#define PLAYER_HEALTH_LIMIT     (uint8_t)224
-#define PLAYER_STAMINA_LIMIT    (uint8_t)112
-
-#define PLAYER_STAMINA_REGEN_TIME   (uint8_t)10
-
-static uint8_t __fastcall__ calculate_player_max_health( uint8_t level )
-{
-    return 64;
-}
-
-static uint8_t __fastcall__ calculate_player_max_stamina( uint8_t level )
-{
-    return 40;
-}
 
 void __fastcall__ init_player(void)
 {
     STATE_RESET( player_movement_state );
     player_level = 0;
-
-    player_max_health = calculate_player_max_health(player_level);
     player_health = 10;
+    player_stamina = player_max_stamina_per_level[player_level];
+    player_flasks = player_max_flasks_per_level[ player_level];
+    player_damage_queue_legnth = 0;
 
-    player_max_stamina = calculate_player_max_stamina(player_level);
-    player_stamina = 10;
-
-    player_stamina_delay_timer = 1; // wait one frame before regen
-    player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+    timer_set( player_flask_timer, 60 );
+    timer_set( player_stamina_delay_timer, 1 );
+    timer_set( player_stamina_regen_timer, PLAYER_STAMINA_REGEN_TIME );
 
     player_changed_flags = 0xFF;
 
@@ -839,15 +930,13 @@ void __fastcall__ player_render_debug()
     args_call_3( uint8_to_chr, 15, 1, player_anim_body.frame_index );
 }
 
-void __fastcall__ update_player()
+static void __fastcall__ update_player_stamina(void)
 {
-    player_changed_flags = 0;
-
     if( player_stamina_delay_timer > 0 )
     {
         --player_stamina_delay_timer;
     }
-    else if( player_stamina < player_max_stamina )
+    else if( player_stamina < player_max_stamina_per_level[player_level] )
     {
         if( player_stamina_regen_timer > 0 )
         {
@@ -862,36 +951,259 @@ void __fastcall__ update_player()
             }
         }
     }
+}
 
-    if( GAMEPAD_HELD(0, GAMEPAD_A))
+static void __fastcall__ player_heal(void)
+{
+    // damage type should be flat
+    ASSERT(DAMAGE_TYPE_MASK(_temp_dmg.damage_type) == DAMAGE_TYPE_FLAT);
+    if( DAMAGE_TYPE_MASK(_temp_dmg.damage_type) != DAMAGE_TYPE_FLAT)
     {
-        player_health++;
-        if( player_health >= player_max_health )
-        {
-            player_health = 0;
-        }
-                player_changed_flags |= PLAYER_CHANGED_HEALTH;
+        return;
     }
 
-    if( GAMEPAD_PRESSED(0, GAMEPAD_D))
+    // player already at full health
+    if( player_health == player_max_health_per_level[player_level] )
     {
-        if( player_stamina < 10 )
-        {
-            player_stamina = 0;
-            player_stamina_delay_timer = 60;
-            player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+        return;
+    }
 
-                player_changed_flags |= PLAYER_CHANGED_STAMINA;
+    // modify healing by attributes
+    MOD_INCOMING_HEALING_FROM_ATTR(_temp_dmg);
+
+    // if no healing left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // modify healing by status effects
+    MOD_INCOMING_HEALING_FROM_STATUS(_temp_dmg, player_damage_status);
+
+    // if no healing left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // heal
+    player_changed_flags |= PLAYER_CHANGED_HEALTH;
+
+    // player health + heal would go past max health, just set to max health
+    if( player_health > ( player_max_health_per_level[player_level] - _temp_dmg.damage ) )
+    {
+        player_health = player_max_health_per_level[player_level];
+    }
+    else
+    {
+        player_health += _temp_dmg.damage;
+    }
+}
+
+static void __fastcall__ player_death(void)
+{
+
+}
+
+static void __fastcall__ player_take_damage(void)
+{
+    // if player is in I frames, return
+    if( !timer_is_done( player_inv_frame_timer ) )
+    {
+        return;
+    }
+
+    // modify dmage by attributes
+    MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
+
+    // if no healing left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // modify damage from status effects
+    MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
+
+    // no damage left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // modify damage for resistences
+    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, player_damage_resistance_modifiers);
+
+    // no damage left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // build up damage
+    b = player_damage_status;
+    BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
+    if( b != player_damage_status )
+    {
+        player_changed_flags |= PLAYER_CHANGED_STATUS;
+    }
+
+    // take damage
+    player_changed_flags |= PLAYER_CHANGED_HEALTH;
+
+    if( player_health < _temp_dmg.damage )
+    {
+        player_health = 0;
+    }
+    else
+    {
+        player_health -= _temp_dmg.damage;
+    }
+
+    if( player_health == 0 )
+    {
+        player_death();
+    }
+}
+
+static void __fastcall__ player_process_damage_queue(void)
+{
+    for( i = 0; i < player_damage_queue_legnth; ++i )
+    {
+        _temp_dmg = player_damage_queue[i];
+        if( _temp_dmg.damage_type & DAMAGE_TYPE_ATTR_HEAL )
+        {
+            player_heal();
         }
         else
         {
-            player_stamina -= 10;
-            player_stamina_delay_timer = 20;
-            player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
-
-            player_changed_flags |= PLAYER_CHANGED_STAMINA;
+            player_take_damage();
         }
     }
+
+    // clear damage queue
+    player_damage_queue_legnth = 0;
+}
+
+static void __fastcall__ player_use_stamina(uint8_t stamina)
+{
+    if( player_stamina < stamina )
+    {
+        player_stamina = 0;
+        player_stamina_delay_timer = 60;
+        player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+        player_changed_flags |= PLAYER_CHANGED_STAMINA;
+    }
+    else
+    {
+        player_stamina -= stamina;
+        player_stamina_delay_timer = 20;
+        player_stamina_regen_timer = PLAYER_STAMINA_REGEN_TIME;
+
+        player_changed_flags |= PLAYER_CHANGED_STAMINA;
+    }
+}
+
+static void __fastcall__ perform_attack(uint8_t attack_index)
+{
+
+}
+
+static void __fastcall__ perform_dodge(void)
+{
+
+}
+
+static void __fastcall__ perform_flash(void)
+{
+    // enquque heal
+    player_damage_queue[player_damage_queue_legnth].damage_type = MAKE_DAMAGE_TYPE( DAMAGE_TYPE_ATTR_HEAL, DAMAGE_TYPE_FLAT );
+    player_damage_queue[player_damage_queue_legnth].damage = player_flask_heal_per_level[player_level];
+    ++player_damage_queue_legnth;
+
+    timer_set( player_flask_timer, 180 );
+
+    --player_flasks;
+
+    // mark flash changed
+    player_changed_flags |= PLAYER_CHANGED_FLASKS;
+}
+
+void __fastcall__ update_player(void)
+{
+    player_changed_flags = 0;
+
+    // process damage queue
+    if( player_damage_queue_legnth > 0 )
+    {
+        player_process_damage_queue();
+    }
+
+    // tick build up
+    b = player_damage_status;
+    TICK_BUILDUP(player_damage_status_buildup, player_damage_status, player_damage_resistance_modifiers, 10);
+    if( b != player_damage_status )
+    {
+        player_changed_flags |= PLAYER_CHANGED_STATUS;
+    }
+
+    // regen stamina
+    update_player_stamina();
+
+    // tick timers
+    timer_tick( player_flask_timer );
+
+    // light attack
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+    {
+        if( player_stamina > 0 )
+        {
+            perform_attack( 0 );
+        }
+    }
+
+    // heavy attack
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_B ) )
+    {
+        if( player_stamina > 0 )
+         {
+            perform_attack( 1 );
+        }
+    }
+
+    // heal
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_SELECT ) )
+    {
+        if( player_flasks > 0 && timer_is_done( player_flask_timer ) )
+        {
+            perform_flash();
+        }
+    }
+
+    // move left/right
+    if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
+    {
+
+    }
+    else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
+    {
+
+    }
+
+    // up/dow
+    if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
+    {
+
+    }
+    else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
+    {
+        if( player_stamina > 0 )
+        {
+            perform_dodge();
+        }
+    }
+
     return;
 
     player_render_debug();

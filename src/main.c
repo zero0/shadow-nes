@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "ppu.h"
+#include "timer.h"
 
 #include "game_state.h"
 #include "game_state_title.h"
@@ -53,16 +54,24 @@ void main(void)
     game_state = GAME_STATE_INIT;
     next_game_state = GAME_STATE_TITLE;
 
+    rt_timer_reset( game_rt_timer );
+
     while( 1 )
     {
+        rt_timer_tick( game_rt_timer );
+
         // transition states
         if( game_state != next_game_state )
         {
+            ppu_off();
+
             game_state_leave_func[game_state]();
 
             game_state = next_game_state;
 
             game_state_enter_func[game_state]();
+
+            continue;
         }
 
         // call state update

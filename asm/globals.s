@@ -27,6 +27,16 @@ _jmax:  .res 1
 _xmax:  .res 1
 _ymax:  .res 1
 
+_i16:   .res 2
+_imax16:.res 2
+_j16:   .res 2
+_jmax16:.res 2
+
+_x16:   .res 2
+_y16:   .res 2
+_z16:   .res 2
+_w16:   .res 2
+
 .export _c
 
 .export _i
@@ -49,3 +59,13 @@ _ymax:  .res 1
 
 .export _xmax
 .export _ymax
+
+.export _i16
+.export _imax16
+.export _j16
+.export _jmax16
+
+.export _x16
+.export _y16
+.export _z16
+.export _w16

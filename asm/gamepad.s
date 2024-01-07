@@ -22,11 +22,12 @@ CTRL_PORT1          =$4016
 .export _gamepad_poll
 .export _gamepad_state
 .export _gamepad_prev_state
+.export _gamepad_clear_states
 
 .segment "CODE"
 
 ; poll game pad at index A
-_gamepad_poll:
+.proc _gamepad_poll
 
     ; fix gamepad index to [0,3] and move to x
     and #$3
@@ -57,9 +58,10 @@ _gamepad_poll:
         bcc :-
 
     rts
+.endproc
 
 ; return game pad state at index A into register A
-_gamepad_state:
+.proc _gamepad_state
 
     ; fix gamepad index to [0,3] and move to x
     and #$3
@@ -69,9 +71,10 @@ _gamepad_state:
     lda GAMEPAD_STATE, x
 
     rts
+.endproc
 
 ; return game pad state at index A into register A
-_gamepad_prev_state:
+.proc _gamepad_prev_state
 
     ; fix gamepad index to [0,3] and move to x
     and #$3
@@ -81,3 +84,19 @@ _gamepad_prev_state:
     lda GAMEPAD_PREV_STATE, x
 
     rts
+.endproc
+
+; clear states for pad at index A
+.proc _gamepad_clear_states
+
+    ; fix gamepad index to [0,3] and move to x
+    and #$3
+    tax
+
+    ; clear pad states
+    lda #0
+    sta GAMEPAD_STATE, x
+    sta GAMEPAD_PREV_STATE, x
+
+    rts
+.endproc

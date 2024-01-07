@@ -178,10 +178,11 @@ void __fastcall__ ppu_oam_sprite();
 
 void __fastcall__ ppu_upload_meta_sprite_chr_ram_internal(void);
 
-#define ppu_add_meta_sprite( ptr, px, py )                                          \
+#define ppu_add_meta_sprite( ptr, px, py, off )                                     \
     ADDRESS_TO_ARGS(PPU_ARGS, ptr);                                                 \
     PPU_ARGS[2] = (px);                                                             \
     PPU_ARGS[3] = (py) - 1;                                                         \
+    PPU_ARGS[4] = (off);                                                            \
     ppu_add_meta_sprite_internal()
 
 void __fastcall__ ppu_add_meta_sprite_internal(void);

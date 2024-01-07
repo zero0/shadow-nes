@@ -1,6 +1,8 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#define USE_ASSERTS
+
 #define CONCAT_(x, y)       x ## y
 #define CONCAT(x, y)        CONCAT_(x, y)
 
@@ -8,6 +10,12 @@
 #define T(x)                T_(x)
 
 #define STATIC_ASSERT(t)    static void CONCAT(sa, __LINE__)( char [ (t) ? 1 : -1 ] )
+
+#ifdef USE_ASSERTS
+#define ASSERT(t)           do { if( (t) ) {} else { __asm__("brk"); } } while( 0 )
+#else
+#define ASSERT(t)           (void)0
+#endif
 
 #define STATE_RESET( s )     (s) = 0
 #define STATE_SET( s, f )    (s) |= (f)
