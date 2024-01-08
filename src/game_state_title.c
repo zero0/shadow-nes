@@ -12,7 +12,7 @@ extern ptr_t knight_sprite_0;
 
 void __fastcall__ game_state_title_enter()
 {
-    ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     ppu_upload_chr_ram( shadow_font, 5, 0x00 );
 
     ppu_set_scroll( 0, 0 );
@@ -42,7 +42,7 @@ void __fastcall__ game_state_title_enter()
 
 void __fastcall__ game_state_title_leave()
 {
-    ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
 }
 
 void __fastcall__ game_state_title_update()

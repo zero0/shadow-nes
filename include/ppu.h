@@ -36,7 +36,20 @@
 #define SCREEN_WIDTH            (uint8_t)( NAMETABLE_COLS )
 #define SCREEN_HEIGH            (uint8_t)( NAMETABLE_ROWS )
 
+#define NAMETABLE_SIZE_BYTES    (ptrdiff_t)( NAMETABLE_ROWS * NAMETABLE_COLS )
+
+#define NAMETABLE_0_ATTR_ADDR   (ptr_t)( NAMETABLE_0_ADDR + NAMETABLE_SIZE_BYTES )
+
 #define TILE_TO_PIXEL( x )      (uint8_t)( (x) * 8 )
+
+extern ptr_t NAMETABLE_A;
+extern ptr_t NAMETABLE_A_ATTR;
+extern ptr_t NAMETABLE_B;
+extern ptr_t NAMETABLE_B_ATTR;
+extern ptr_t NAMETABLE_C;
+extern ptr_t NAMETABLE_C_ATTR;
+extern ptr_t NAMETABLE_D;
+extern ptr_t NAMETABLE_D_ATTR;
 
 #define TILE_TO_ADDRESS_ARGS(arg, base, x, y)       \
     (arg)[0] = (uint8_t)(base) | (uint8_t)( (y) );  \
@@ -51,8 +64,8 @@
     (arg)[1] = 0xFF & (ptr)
 
 #define ADDRESS_TO_ARGS(arg, ptr)               \
-    (arg)[0] = 0xFF & (ptr_t)&(ptr);            \
-    (arg)[1] = 0xFF & ((ptr_t)&(ptr) >> 8)
+    (arg)[0] = 0xFF & ((ptr_t)&(ptr) >> 8);     \
+    (arg)[1] = 0xFF & (ptr_t)&(ptr)
 
 extern ptr_t PPU_DATA;
 
@@ -120,7 +133,7 @@ void __fastcall__ ppu_end_tile_batch_internal(void);
 void __fastcall__ ppu_update_byte( uint8_t x, uint8_t y, uint8_t b );
 
 #define ppu_clear_nametable( ptr, c, a )            \
-    PTR_TO_ARGS(PPU_ARGS, ptr);                     \
+    ADDRESS_TO_ARGS(PPU_ARGS, ptr);                 \
     PPU_ARGS[2] = (c);                              \
     PPU_ARGS[3] = (a);                              \
     ppu_clear_nametable_internal()
@@ -149,6 +162,15 @@ void __fastcall__ ppu_fill_nametable( ptr_t tableAddress, uint8_t tile );
 void __fastcall__ ppu_fill_nametable_attr( ptr_t tableAddress );
 
 void __fastcall__ ppu_fill_nametable_attr_only( ptr_t tableAddress, uint8_t attr );
+
+#define ppu_set_nametable_attr( attr_ptr, tx, ty, ptl, ptr, pbl, pbr, c )   \
+    ADDRESS_TO_ARGS(PPU_ARGS, attr_ptr);                                    \
+    PPU_ARGS[1] += ( ( (ty) >> 1 ) << 3 ) + ( (tx) >> 1 );                  \
+    PPU_ARGS[2] = ( ( 0x03 & (pbr) ) << 6 ) | ( ( 0x03 & (pbl) ) << 4 ) | ( ( 0x03 & (ptr) ) << 2 ) | ( ( 0x03 & (ptl) ) << 0 ); \
+    PPU_ARGS[3] = (c);                                                      \
+    ppu_set_nametable_attr_internal()
+
+void __fastcall__ ppu_set_nametable_attr_internal(void);
 
 //
 //

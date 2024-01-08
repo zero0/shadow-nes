@@ -16,11 +16,6 @@ PPU_ADDR            =$2006
 PPU_DATA            =$2007
 PPU_OAM_DMA         =$4014
 
-NAMETABLE_A         =$2000
-NAMETABLE_B         =$2400
-NAMETABLE_C         =$2800
-NAMETABLE_D         =$2C00
-
 _PPU_DATA           =PPU_DATA
 .export _PPU_DATA
 
@@ -50,6 +45,34 @@ _PPU_DATA           =PPU_DATA
 .define PALETTE_SPRITE_2_ADDR           PALETTE_SPRITE_BASE_ADDR + $8
 .define PALETTE_SPRITE_3_ADDR           PALETTE_SPRITE_BASE_ADDR + $C
 .define PALETTE_SPRITE_BYTE_COUNT       #16
+
+NAMETABLE_A         =$2000
+NAMETABLE_B         =$2400
+NAMETABLE_C         =$2800
+NAMETABLE_D         =$2C00
+
+NAMETABLE_A_ATTR    =$23C0
+NAMETABLE_B_ATTR    =$27C0
+NAMETABLE_C_ATTR    =$2BC0
+NAMETABLE_D_ATTR    =$2FC0
+
+_NAMETABLE_A         =NAMETABLE_A
+_NAMETABLE_B         =NAMETABLE_B
+_NAMETABLE_C         =NAMETABLE_C
+_NAMETABLE_D         =NAMETABLE_D
+_NAMETABLE_A_ATTR    =NAMETABLE_A_ATTR
+_NAMETABLE_B_ATTR    =NAMETABLE_B_ATTR
+_NAMETABLE_C_ATTR    =NAMETABLE_C_ATTR
+_NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
+
+.export _NAMETABLE_A
+.export _NAMETABLE_A_ATTR
+.export _NAMETABLE_B
+.export _NAMETABLE_B_ATTR
+.export _NAMETABLE_C
+.export _NAMETABLE_C_ATTR
+.export _NAMETABLE_D
+.export _NAMETABLE_D_ATTR
 
 .macro popa
     lda (sp), y
@@ -178,6 +201,7 @@ _PPU_DATA           =PPU_DATA
 .export _ppu_update_byte
 .export _ppu_clear_nametable_internal
 .export _ppu_fill_nametable_attr
+.export _ppu_set_nametable_attr_internal
 
 .export _ppu_clear_palette
 .export _ppu_set_palette_internal
@@ -194,23 +218,6 @@ _PPU_DATA           =PPU_DATA
 .export _ppu_begin_write_chr_ram_internal
 .export _ppu_write_chr_ram_internal
 .export _ppu_end_write_chr_ram_internal
-
-.import _knight_sprite_0
-.import _knight_sprite_1
-.import _knight_sprite_2
-
-.segment "RODATA"
-
-    example_palette:
-        .byte $0F,$15,$26,$37 ; bg0 purple/pink
-        .byte $0F,$09,$19,$29 ; bg1 green
-        .byte $0F,$01,$11,$21 ; bg2 blue
-        .byte $0F,$00,$10,$30 ; bg3 greyscale
-
-        .byte $0F,$18,$28,$38 ; sp0 yellow
-        .byte $0F,$14,$24,$34 ; sp1 purple
-        .byte $0F,$1B,$2B,$3B ; sp2 teal
-        .byte $0F,$12,$22,$32 ; sp3 marine
 
 .segment "CODE"
 
@@ -672,6 +679,39 @@ ppu_fill_nametable_attr:
 
     rts
 
+; fill attr byte in range
+.proc _ppu_set_nametable_attr_internal
+
+    ; load length
+    ldx NAMETABLE_UPDATE_LEN
+
+    ; store high byte
+    lda _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store low byte
+    lda _PPU_ARGS+1
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store repeat count
+    lda _PPU_ARGS+3
+    ora #$80
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store byte
+    lda _PPU_ARGS+2
+    sta NAMETABLE_UPDATE, x
+    inx
+
+    ; store new length
+    stx NAMETABLE_UPDATE_LEN
+
+    rts
+.endproc
+
 ; _ppu_clear_oam: clear oam buffer
 _ppu_clear_oam:
 
@@ -723,11 +763,12 @@ _ppu_oam_sprite:
 ; given a meta-sprite, upload it's sprites to CHR RAM
 .proc _ppu_upload_meta_sprite_chr_ram_internal
 
+    ; NOTE: needs to be reversed as offset expects [low, high] in bytes [0, 1]
     ; store metasprite address
     lda _PPU_ARGS+0
-    sta META_SPRITE_ADDR+0
-    lda _PPU_ARGS+1
     sta META_SPRITE_ADDR+1
+    lda _PPU_ARGS+1
+    sta META_SPRITE_ADDR+0
 
     ; load chr upload address
     ldy #0
@@ -860,11 +901,12 @@ _ppu_oam_sprite:
     ; load OAM buffer length
     ldx OAM_UPDATE_LEN
 
+    ; NOTE: needs to be reversed as offset expects [low, high] in bytes [0, 1]
     ; store metasprite address
     lda _PPU_ARGS+0
-    sta META_SPRITE_ADDR+0
-    lda _PPU_ARGS+1
     sta META_SPRITE_ADDR+1
+    lda _PPU_ARGS+1
+    sta META_SPRITE_ADDR+0
 
     ; load metasprite length
     ldy #2
@@ -1001,11 +1043,12 @@ ppu_upload_chr_ram:
     ;_PPU_ARGS[3] ; dst address (row, 0x00, 0x01, 0x02, ...)
     ;_PPU_ARGS[0] ; dst address (col, 0x00, 0x10, ...)
 
+    ; NOTE: needs to be reversed as offset expects [low, high] in bytes [0, 1]
     ; store address
     lda _PPU_ARGS+0 ;
-    sta CHR_UPLOAD_ADDR+0
-    lda _PPU_ARGS+1 ;
     sta CHR_UPLOAD_ADDR+1
+    lda _PPU_ARGS+1 ;
+    sta CHR_UPLOAD_ADDR+0
 
     lda #0
 
@@ -1169,7 +1212,7 @@ ppu_upload_chr_ram:
         sta PPU_ADDR
         inx
 
-        ; tile count (bit7 0 = individualt, 1 = sequential)
+        ; tile count (bit7 0 = individualt, 1 = repeat)
         lda #$80
         and NAMETABLE_UPDATE, x
         bpl @update_nametable_individual

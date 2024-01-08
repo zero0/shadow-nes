@@ -15,7 +15,7 @@ extern ptr_t progress_bar;
 
 void __fastcall__ game_state_playing_enter()
 {
-    ppu_clear_nametable( NAMETABLE_0_ADDR, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     //ppu_upload_chr_ram( shadow_font, 5, 0x00 );
     //ppu_upload_chr_ram( knight, 2, 0x10 );
 
@@ -37,11 +37,11 @@ void __fastcall__ game_state_playing_enter()
     ppu_end_tile_batch();
 
     ppu_begin_tile_batch(0,2);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 2);
+    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
 
     // bottom
-    ppu_begin_tile_batch(0,SCREEN_HEIGH-8);
+    ppu_begin_tile_batch(0,SCREEN_HEIGH-7);
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 2);
     ppu_end_tile_batch();
 
@@ -57,6 +57,9 @@ void __fastcall__ game_state_playing_enter()
     ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
     ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x12 );
     ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x14 );
+
+    // health and stamina colors
+    ppu_set_nametable_attr( NAMETABLE_A_ATTR, 0, 0,  0, 0, 2, 2,  4 );
 
 t = 0;
 b = 1;
@@ -144,7 +147,8 @@ void __fastcall__ game_state_playing_update()
         ppu_end_tile_batch();
     }
 
-    if( get_boss_changed_flags() & 1 )
+    // boss health changed
+    if( get_boss_changed_flags() & BOSS_CHANGED_HEALTH )
     {
         x16 = get_boss_current_health();
         y16 = get_boss_max_health();
