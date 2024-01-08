@@ -124,6 +124,12 @@ do                                                          \
     }                                                       \
 } while( 0 )
 
+#define MOD_STAMINA_REGEN_TIME(t, st)                       \
+do                                                          \
+{                                                           \
+    if( (st) & ( DAMAGE_STATUS_FROZEN | DAMAGE_STATUS_TYPE_EXHAUSTION ) ) (t) <<= 1;    \
+} while( 0 )
+
 #define BUILDUP_MAX     (uint8_t)127
 
 // build up starts at 0 and goes to BUILDUP_MAX, >=BUILDUP_MAX == trigger effect, dec by res + base value
@@ -175,5 +181,70 @@ do                                                          \
 //
 //
 //
+
+/*
+  front r
+l 0 1 2 i
+e 3 4 5 g
+f 6 7 8 h
+t  back t
+*/
+#define DAMAGE_LOCATION_COLUMN_LEFT     (uint8_t)( 1 << 0 )
+#define DAMAGE_LOCATION_COLUMN_CENTER   (uint8_t)( 1 << 1 )
+#define DAMAGE_LOCATION_COLUMN_RIGHT    (uint8_t)( 1 << 2 )
+#define DAMAGE_LOCATION_ROW_FRONT       (uint8_t)( 1 << 3 )
+#define DAMAGE_LOCATION_ROW_MIDDLE      (uint8_t)( 1 << 4 )
+#define DAMAGE_LOCATION_ROW_BACK        (uint8_t)( 1 << 5 )
+#define DAMAGE_LOCATION_FORWARD_SLASH   (uint8_t)( 1 << 6 )  // "/" shape, lower left to upper right
+#define DAMAGE_LOCATION_BACK_SLASH      (uint8_t)( 1 << 7 )  // "\" shape, top left to lower right
+
+#define MAKE_COMBAT_POSITION(x,y)       ( ( 0x03 & (y) ) << 3 ) | ( 0x03 & (x) )
+#define COMBAT_POSITION_X(p)            ( 0x03 & ( (p) >> 0 ) )
+#define COMBAT_POSITION_Y(p)            ( 0x03 & ( (p) >> 3 ) )
+
+#define COMBAT_POSITION_0x0     MAKE_COMBAT_POSITION( 0, 0 )
+#define COMBAT_POSITION_1x0     MAKE_COMBAT_POSITION( 1, 0 )
+#define COMBAT_POSITION_2x0     MAKE_COMBAT_POSITION( 2, 0 )
+
+#define COMBAT_POSITION_0x1     MAKE_COMBAT_POSITION( 0, 1 )
+#define COMBAT_POSITION_1x1     MAKE_COMBAT_POSITION( 1, 1 )
+#define COMBAT_POSITION_2x1     MAKE_COMBAT_POSITION( 2, 1 )
+
+#define COMBAT_POSITION_0x2     MAKE_COMBAT_POSITION( 0, 2 )
+#define COMBAT_POSITION_1x2     MAKE_COMBAT_POSITION( 1, 2 )
+#define COMBAT_POSITION_2x2     MAKE_COMBAT_POSITION( 2, 2 )
+
+#define TEST_COMBAT_POSITION(pos, atk)          \
+do                                              \
+{                                               \
+    switch( pos )                               \
+    {                                           \
+        case COMBAT_POSITION_0x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_BACK_SLASH) );                                      \
+        case COMBAT_POSITION_1x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_FRONT) );                                                                 \
+        case COMBAT_POSITION_2x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_FORWARD_SLASH) );                                  \
+        case COMBAT_POSITION_0x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                 \
+        case COMBAT_POSITION_1x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_MIDDLE | DAMAGE_LOCATION_BACK_SLASH | DAMAGE_LOCATION_FORWARD_SLASH ) );  \
+        case COMBAT_POSITION_2x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                \
+        case COMBAT_POSITION_0x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_FORWARD_SLASH) );                                    \
+        case COMBAT_POSITION_1x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_BACK ) );                                                                 \
+        case COMBAT_POSITION_2x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_BACK_SLASH) );                                      \
+    }                                           \
+} while( 0 )
+
+//
+// Defined in player.c
+//
+
+uint8_t test_attack_hits_player( uint8_t attack_position );
+
+void queue_damage_player( uint8_t damage_type, uint8_t damage );
+
+//
+// Defined in boss.c
+//
+
+uint8_t test_attack_hits_boss( uint8_t attack_position );
+
+void queue_damage_boss( uint8_t damage_type, uint8_t damage );
 
 #endif // COMBAT_H

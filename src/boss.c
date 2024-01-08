@@ -1,4 +1,8 @@
+#include "macros.h"
 #include "boss.h"
+#include "timer.h"
+#include "combat.h"
+#include "globals.h"
 
 static const uint8_t all_boss_health_per_block_log2[] = {
     7,
@@ -31,90 +35,184 @@ static const uint8_t all_boss_music[] = {
 #define BOSS_STATE_UNDEF_5          (uint8_t)(1 << 6)
 #define BOSS_STATE_INV_FRAMES       (uint8_t)(1 << 7)
 
-static uint8_t current_boss_state;
-static uint8_t current_boss_changed_flags;
-static uint8_t current_boss_index;
-static uint16_t current_boss_health;
+static uint8_t boss_state;
+static uint8_t boss_changed_flags;
+static uint8_t boss_index;
+static uint16_t boss_health;
+static timer_t boss_inv_frame_timer;
+static damage_status_t boss_damage_status;
+static uint8_t boss_combat_position;
+
+static damage_t boss_damage_queue[4];
+static uint8_t boss_damage_queue_length;
+
+static damage_t _temp_dmg;
 
 uint8_t __fastcall__ get_boss_health_per_block_log2(void)
 {
-    return all_boss_health_per_block_log2[ current_boss_index ];
+    return all_boss_health_per_block_log2[ boss_index ];
 }
 
 uint16_t __fastcall__ get_boss_current_health(void)
 {
-    return current_boss_health;
+    return boss_health;
 }
 
 uint16_t __fastcall__ get_boss_max_health(void)
 {
-    return all_boss_max_healths[ current_boss_index ];
+    return all_boss_max_healths[ boss_index ];
 }
 
 str_t __fastcall__ get_boss_name(void)
 {
-    return all_boss_names[ current_boss_index ];
+    return all_boss_names[ boss_index ];
 }
 
 str_t __fastcall__ get_boss_location(void)
 {
-    return all_boss_location_names[ current_boss_index ];
+    return all_boss_location_names[ boss_index ];
 }
 
 uint8_t __fastcall__ get_boss_changed_flags(void)
 {
-    return current_boss_changed_flags;
+    return boss_changed_flags;
 }
 
-void __fastcall__ boss_take_damage(uint8_t dmg)
+static void __fastcall__ boss_heal(void)
 {
-    // if the boss is in I frames, don't take damage
-    if( current_boss_state & BOSS_STATE_INV_FRAMES )
+}
+
+static void __fastcall__ boss_take_damage(void)
+{
+    x16 = _temp_dmg.damage;
+    boss_health -= x16;
+
+    boss_changed_flags |= BOSS_CHANGED_HEALTH;
+
+    #if 0
+    // if boss is in I frames, return
+    if( !timer_is_done( boss_inv_frame_timer ) )
     {
         return;
     }
 
-    // adjust incoming damage based on armor
-    if( dmg < all_boss_armors[ current_boss_index ] )
+    // modify dmage by attributes
+    MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
+
+    // if no healing left, return
+    if( _temp_dmg.damage == 0 )
     {
-        dmg = 0;
+        return;
     }
-    else
+
+    // modify damage from status effects
+    MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, boss_damage_status);
+
+    // no damage left, return
+    if( _temp_dmg.damage == 0 )
     {
-        dmg -= all_boss_armors[ current_boss_index ];
+        return;
+    }
+
+    // modify damage for resistences
+    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, boss_damage_resistance_modifiers);
+
+    // no damage left, return
+    if( _temp_dmg.damage == 0 )
+    {
+        return;
+    }
+
+    // build up damage
+    b = boss_damage_status;
+    BUILDUP_DAMAGE(_temp_dmg, boss_damage_status_buildup, boss_damage_status);
+    if( b != boss_damage_status )
+    {
+        boss_changed_flags |= PLAYER_CHANGED_STATUS;
     }
 
     // take damage
-    if( dmg > 0 )
-    {
-        current_boss_changed_flags |= BOSS_CHANGED_HEALTH;
+    boss_changed_flags |= BOSS_CHANGED_HEALTH;
 
-        if( dmg >= current_boss_health )
+    if( boss_health < _temp_dmg.damage )
+    {
+        boss_health = 0;
+    }
+    else
+    {
+        boss_health -= _temp_dmg.damage;
+    }
+
+    if( boss_health == 0 )
+    {
+        boss_death();
+    }
+    #endif
+}
+
+static void __fastcall__ boss_process_damage_queue(void)
+{
+    for( i = 0; i < boss_damage_queue_length; ++i )
+    {
+        _temp_dmg = boss_damage_queue[i];
+        if( _temp_dmg.damage_type & DAMAGE_TYPE_ATTR_HEAL )
         {
-            current_boss_health -= dmg;
+            boss_heal();
         }
         else
         {
-            current_boss_health = 0;
-        }
-
-        if( current_boss_health == 0 )
-        {
-            current_boss_state |= BOSS_STATE_DEAD;
+            boss_take_damage();
         }
     }
+
+    // clear damage queue
+    boss_damage_queue_length = 0;
 }
 
 void __fastcall__ init_boss(uint8_t bossIndex)
 {
-    current_boss_index = 0;
-    current_boss_state = 0;
-    current_boss_changed_flags = 0xFF;
+    boss_index = bossIndex;
+    boss_state = 0;
+    boss_changed_flags = 0xFF;
+    boss_damage_queue_length = 0;
 
-    current_boss_health = 1000;//all_boss_max_healths[ current_boss_index ];
+    boss_health = 1000;//all_boss_max_healths[ current_boss_index ];
 }
 
 void __fastcall__ update_boss(void)
 {
-    current_boss_changed_flags = 0;
+    boss_changed_flags = 0;
+
+    // process damage queue
+    if( boss_damage_queue_length > 0 )
+    {
+        boss_process_damage_queue();
+    }
+}
+
+
+//
+// Combat interface
+//
+
+uint8_t __fastcall__ test_attack_hits_boss( uint8_t attack_location )
+{
+    // if the boss is in Iframes, return no hit
+    if( boss_inv_frame_timer > 0 ) return 0;
+
+    // test combat position against attack location
+    TEST_COMBAT_POSITION( boss_combat_position, attack_location );
+
+    // positino not found, this should not happen
+    INVALID_CODE_PATH;
+
+    return 0;
+}
+
+void __fastcall__ queue_damage_boss( uint8_t damage_type, uint8_t damage )
+{
+    ASSERT(boss_damage_queue_length < ARRAY_SIZE(boss_damage_queue));
+    boss_damage_queue[boss_damage_queue_length].damage_type = damage_type;
+    boss_damage_queue[boss_damage_queue_length].damage = damage;
+    ++boss_damage_queue_length;
 }

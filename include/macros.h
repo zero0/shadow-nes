@@ -15,9 +15,12 @@
 
 #ifdef USE_ASSERTS
 #define ASSERT(t)           do { if( (t) ) {} else { __asm__("brk"); } } while( 0 )
+#define INVALID_CODE_PATH   do { __asm__("brk"); } while( 0 )
 #else
 #define ASSERT(t)           (void)0
+#define INVALID_CODE_PATH   (void)0
 #endif
+
 
 #define STATE_RESET( s )     (s) = 0
 #define STATE_SET( s, f )    (s) |= (f)
