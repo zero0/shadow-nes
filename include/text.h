@@ -8,9 +8,11 @@ typedef uint8_t str_t;
 
 #include "../assets/gametext.en.h"
 
-uint8_t __fastcall__ text_strlen(str_t str);
+uint8_t __fastcall__ text_strlen_str(str_t str);
 
 void __fastcall__ text_begin_str_at(str_t str);
+
+uint8_t __fastcall__ text_strlen();
 
 char __fastcall__ text_str_at(uint8_t index);
 

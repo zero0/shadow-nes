@@ -2,7 +2,7 @@ key,en
 tr_game_title,<Shadowborn>
 tr_new_game,New Game
 tr_continue,Continue
-tr_version,"%.concat(""Version "", VERSION)%"
+tr_version,"%.concat(""Version "", VERSION, BUILD_TYPE)%"
 tr_copyright,"%.concat(""(C) "", COPYRIGHT_YEAR)%"
 
 tr_tower_name,Tower of Luxluma
@@ -10,7 +10,7 @@ tr_tower_name,Tower of Luxluma
 tr_boss_1_location,${tr_tower_name} Bridge
 tr_boss_1_name,"Yrkargarin, Last Knight of Luxluma"
 
-tr_boss_2_location,ab${tr_tower_name} Courtyard
+tr_boss_2_location,${tr_tower_name} Courtyard
 tr_boss_2_name,Brightbeast
 
 tr_boss_3_location,${tr_tower_name} Upper Chapel

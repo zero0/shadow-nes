@@ -4,6 +4,8 @@ setlocal
 rem Get ESC character
 for /F %%a in ('"prompt $E$S & echo on & for %%b in (1) do rem"') do set "ESC=%%a"
 
+set "BUILD_TYPE=DEBUG"
+
 set "CC65_HOME=C:\cc65"
 set "CC65_BIN=%CC65_HOME%\bin"
 set "CC65_LIB=%CC65_HOME%\lib"
@@ -14,11 +16,24 @@ set "CC65_CC=%CC65_BIN%\cc65.exe"
 set "CC65_LD=%CC65_BIN%\ld65.exe"
 
 set "GAME_NAME=%1"
-rem set "CPU_TYPE=--cpu 6502"
 set "CPU_TYPE=-t nes"
 
-set "CA_DBG=-g"
-set "CC_DBG=-g"
+set "CA_FLAGS="
+set "CC_FLAGS="
+
+if %BUILD_TYPE%==DEBUG (
+    set "CA_FLAGS=-g -D DEBUG_BUILD"
+    set "CC_FLAGS=-g -D DEBUG_BUILD"
+) else if %BUILD_TYPE%==RELEASE (
+    set "CA_FLAGS=-g -D RELEASE_BUILD"
+    set "CC_FLAGS=-g -O -D RELEASE_BUILD"
+) else if %BUILD_TYPE%==DISTRO (
+    set "CA_FLAGS=-D DISTRO_BUILD"
+    set "CC_FLAGS=-O -Oi -D DISTRO_BUILD"
+) else (
+    echo %ESC%[91mNo build type defined. DEBUG, RELEASE, or DISTRO required.%ESC%[0m
+    goto :end
+)
 
 rem Create bin directory for final .nes file
 if not exist bin md bin
@@ -33,13 +48,13 @@ dotnet run ..\..\assets\
 popd
 
 rem Compile source assemblie files
-for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
+for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
 
 rem Compile C files
-for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_DBG% -Oisr -o tmp\c_%%~nC.s %%C
+for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_FLAGS% -Oisr -o tmp\c_%%~nC.s %%C
 
 rem Compile temp assemblie files
-for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_DBG% -o obj\%%~nS.o %%S
+for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
 
 rem Build .o file list
 set "OBJ_FILES="

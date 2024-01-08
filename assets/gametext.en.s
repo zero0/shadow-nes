@@ -47,12 +47,12 @@ _text_table:
 tr_game_title:                   TR "<Shadowborn>"
 tr_new_game:                     TR "New Game"
 tr_continue:                     TR "Continue"
-tr_version:                      TR .concat("Version ", VERSION)
+tr_version:                      TR .concat("Version ", VERSION, BUILD_TYPE)
 tr_copyright:                    TR .concat("(C) ", COPYRIGHT_YEAR)
 tr_tower_name:                   TR "Tower of Luxluma"
 tr_boss_1_location:              TR "Tower of Luxluma Bridge"
 tr_boss_1_name:                  TR "Yrkargarin, Last Knight of Luxluma"
-tr_boss_2_location:              TR "abTower of Luxluma Courtyard"
+tr_boss_2_location:              TR "Tower of Luxluma Courtyard"
 tr_boss_2_name:                  TR "Brightbeast"
 tr_boss_3_location:              TR "Tower of Luxluma Upper Chapel"
 tr_boos_3_name:                  TR "Corrupted High Radiance Auhmn"

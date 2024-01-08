@@ -47,8 +47,8 @@ _temp_text_table:   .res  2 ;
 
 ; Translate macro
 .macro TR arg
-    ;.byte   .strlen(arg), arg
-    .asciiz arg
+    .byte   .strlen(arg), arg
+    ;.asciiz arg
 .endmacro
 
 ; Map characters to sprite sheet ordering
@@ -56,10 +56,19 @@ _temp_text_table:   .res  2 ;
 
 include_asset "shadow-font.font.s"
 
-.feature string_escapes +
+.feature string_escapes -
 
 .define TEXT_LANGUAGE   "en"
 .define VERSION         "0.1.0"
+.if .defined(DEBUG_BUILD)
+.define BUILD_TYPE      "d"
+.elseif .defined(RELEASE_BUILD)
+.define BUILD_TYPE      "r"
+.elseif .defined(DISTRO_BUILD)
+.define BUILD_TYPE      "s"
+.else
+.define BUILD_TYPE      "?"
+.endif
 .define COPYRIGHT_YEAR  "2024"
 
 include_asset .concat("gametext.", TEXT_LANGUAGE, ".s")

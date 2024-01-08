@@ -18,11 +18,9 @@ void __fastcall__ text_draw_string_impl(void)
     y = ARGS[1];
     ppu_begin_tile_batch( x, y );
 
-    i = 0;
-    for( ; ; ++i )
+    for( i = 0, imax = text_strlen() ; i < imax ; ++i )
     {
         c = text_str_at( i );
-        if( c == '\0' ) break;
         if( c == CHAR_SPACE )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile

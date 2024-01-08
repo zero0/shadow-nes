@@ -1,7 +1,9 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#ifndef DISTRO_BUILD
 #define USE_ASSERTS
+#endif // DISTRO_BUILD
 
 #define CONCAT_(x, y)       x ## y
 #define CONCAT(x, y)        CONCAT_(x, y)

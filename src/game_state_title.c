@@ -8,7 +8,6 @@
 #include "game_state.h"
 
 extern ptr_t shadow_font;
-extern ptr_t knight_sprite_0;
 
 void __fastcall__ game_state_title_enter()
 {
@@ -34,8 +33,9 @@ void __fastcall__ game_state_title_enter()
     text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 13, PALETTE_BACKGROUND_0, tr_new_game );
     text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 16, PALETTE_BACKGROUND_0, tr_continue );
 
-    //text_draw_string( (SCREEN_WIDTH/2) - ( 12 / 2 ), (SCREEN_HEIGH - 3), PALETTE_BACKGROUND_1, tr_version );
-    //text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), (SCREEN_HEIGH - 1), PALETTE_BACKGROUND_1, tr_copyright );
+    text_draw_string( (SCREEN_WIDTH/2) - ( 12 / 2 ), (SCREEN_HEIGH - 3), PALETTE_BACKGROUND_1, tr_version );
+
+    text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), (SCREEN_HEIGH - 1), PALETTE_BACKGROUND_1, tr_copyright );
 
     t = 0;
 }
