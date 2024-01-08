@@ -20,16 +20,20 @@ set "CPU_TYPE=-t nes"
 
 set "CA_FLAGS="
 set "CC_FLAGS="
+set "LD_FLAGS="
 
 if %BUILD_TYPE%==DEBUG (
     set "CA_FLAGS=-g -D DEBUG_BUILD"
     set "CC_FLAGS=-g -D DEBUG_BUILD"
+    set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
 ) else if %BUILD_TYPE%==RELEASE (
     set "CA_FLAGS=-g -D RELEASE_BUILD"
     set "CC_FLAGS=-g -O -D RELEASE_BUILD"
+    set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
 ) else if %BUILD_TYPE%==DISTRO (
     set "CA_FLAGS=-D DISTRO_BUILD"
     set "CC_FLAGS=-O -Oi -D DISTRO_BUILD"
+    set "LD_FLAGS="
 ) else (
     echo %ESC%[91mNo build type defined. DEBUG, RELEASE, or DISTRO required.%ESC%[0m
     goto :end
@@ -63,11 +67,11 @@ for %%F in (obj\*.o) do call set "OBJ_FILES=%%F %%OBJ_FILES%%"
 rem set "LD_CONFIG=-t nes"
 rem set "LD_CONFIG=-C config\nrom_256_horz.cfg"
 set "LD_CONFIG=-C config\nes.cfg"
-set "LD_DBG=--dbgfile bin\%GAME_NAME%.dbg"
+
 rem set "LD_DBG="
 
 rem Link all .o files into .nes file
-%CC65_LD% %LD_CONFIG% %LD_DBG% --lib-path lib --lib-path %CC65_LIB% -o bin\%GAME_NAME%.nes %OBJ_FILES% nes.lib || goto :fail
+%CC65_LD% %LD_CONFIG% %LD_FLAGS% --lib-path lib --lib-path %CC65_LIB% -o bin\%GAME_NAME%.nes %OBJ_FILES% nes.lib || goto :fail
 
 :success
 echo %ESC%[92mCompile bin\%GAME_NAME%.nes success.%ESC%[0m
