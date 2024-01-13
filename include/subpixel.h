@@ -15,24 +15,13 @@ typedef union
 } subpixel_t;
 STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
 
-typedef union
-{
-    struct
-    {
-        int8_t pix;
-        uint8_t sub;
-    };
-    int16_t v;
-} subpixel_diff_t;
-STATIC_ASSERT( sizeof( subpixel_diff_t ) == sizeof( int16_t ) );
-
 // convert subpixel to pixel
 #define subpixel_to_pixel( s )          (pixel_t)( (s).pix )
 
 // increases pixel if sub >= 8
 #define subpixel_round_to_pixel( s )    ( (s).pix + ( (s).sub & 0x80 ? 1 : 0 ) )
 
-#define subpixel_make( p, pp )          (uint16_t)( ( (uint16_t)(p) << 8) | (uint16_t)(pp) )
+#define subpixel_make( p, pp )          (subpixel_t)( ( (uint16_t)(p) << 8) | (uint16_t)(pp) )
 
 // set pixel and subpixel
 #define subpixel_set( s, p, pp )         (s).pix = (p); (s).sub = (pp)
@@ -124,5 +113,26 @@ STATIC_ASSERT( sizeof( subpixel_diff_t ) == sizeof( int16_t ) );
 #define subpixel_dec( rh, lh )          subpixel_sub( rh, rh, lh )
 
 #define subpixel_dec_pixel( rh, p )     subpixel_sub_pixel( rh, rh, p )
+
+//
+// Subpixel diff
+//
+
+typedef union
+{
+    struct
+    {
+        int8_t pix;
+        uint8_t sub;
+    };
+    int16_t v;
+} subpixel_diff_t;
+STATIC_ASSERT( sizeof( subpixel_diff_t ) == sizeof( int16_t ) );
+
+#define subpixel_diff_make( p, pp )     { p, pp }
+
+#define subpixel_diff_set_zero( s )     (s).v = 0
+
+#define subpixel_diff_neg( s )          (s).pix = -(s).pix
 
 #endif // SUBPIXEL_H

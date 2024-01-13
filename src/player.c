@@ -13,15 +13,30 @@
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
 
 #define PLAYER_FLASK_REFRESH_TIMER              (uint8_t)180
-
+#define PLAYER_DODGE_INV_TIMER                  (uint8_t)40
 #define PLAYER_STAMINA_DELAY_TIMER_NORMAL       (uint8_t)20
 #define PLAYER_STAMINA_DELAY_TIMER_OVERDRAW     (uint8_t)60
 
 #define PLAYER_MAX_LEVEL                        (uint8_t)4
 
-static uint8_t player_movement_state_next;
-static uint8_t player_movement_state;
-static uint8_t player_attack_state;
+#define PLAYER_MOVE_DIRECTION_NONE              (uint8_t)0
+#define PLAYER_MOVE_DIRECTION_WEST              (uint8_t)( 1 << 0 )
+#define PLAYER_MOVE_DIRECTION_EAST              (uint8_t)( 1 << 1 )
+#define PLAYER_MOVE_DIRECTION_NORTH             (uint8_t)( 1 << 2 )
+#define PLAYER_MOVE_DIRECTION_SOUTH             (uint8_t)( 1 << 3 )
+
+#define PLAYER_STATE_IDLE                       (uint8_t)0
+#define PLAYER_STATE_ATTACKING                  (uint8_t)1
+#define PLAYER_STATE_DODGING                    (uint8_t)2
+#define PLAYER_STATE_USING_FLASH                (uint8_t)3
+#define PLAYER_STATE_HIT                        (uint8_t)4
+#define PLAYER_STATE_DEAD                       (uint8_t)5
+
+#define PLAYER_DAMAGE_QUEUE_LENGTH              (uint8_t)4
+#define PLAYER_INPUT_QUEUE_LENGTH               (uint8_t)4
+
+static uint8_t player_state;
+static uint8_t player_next_state;
 
 static flags8_t player_changed_flags;
 static uint8_t player_level;
@@ -33,6 +48,7 @@ static uint8_t player_combat_position;
 
 static timer_t player_flask_timer;
 static timer_t player_inv_frame_timer;
+static timer_t player_animation_frame_timer;
 static timer_t player_stamina_regen_timer;
 static timer_t player_stamina_delay_timer;
 
@@ -41,17 +57,12 @@ static subpixel_t player_pos_y;
 static subpixel_diff_t player_pos_dx;
 static subpixel_diff_t player_pos_dy;
 
-static const subpixel_diff_t player_gravity = { 1, 0 };
-static const subpixel_diff_t player_jump = { 5, 0 };
-static const subpixel_diff_t player_air_speed = { 1, 128 };
-static const subpixel_diff_t player_walking_speed = { 1, 128 };
-static const subpixel_diff_t player_running_speed = { 2, 0 };
-static const subpixel_diff_t player_ground_friction = { 1, 0 };
-
-static damage_t player_damage_queue[4];
+static damage_t player_damage_queue[PLAYER_DAMAGE_QUEUE_LENGTH];
+STATIC_ASSERT(ARRAY_SIZE(player_damage_queue) == PLAYER_DAMAGE_QUEUE_LENGTH);
 static uint8_t player_damage_queue_length;
 
-static uint8_t player_input_queue[4];
+static uint8_t player_input_queue[PLAYER_INPUT_QUEUE_LENGTH];
+STATIC_ASSERT(ARRAY_SIZE(player_input_queue) == PLAYER_INPUT_QUEUE_LENGTH);
 static uint8_t player_input_queue_length;
 
 static damage_t _temp_dmg;
@@ -112,41 +123,13 @@ STATIC_ASSERT(ARRAY_SIZE(player_stamina_regen_amount_per_level) == PLAYER_MAX_LE
 // Damage
 //
 
-static const uint8_t player_damage_resistance_modifiers[] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-};
+static const uint8_t player_damage_resistance_modifiers[_DAMAGE_TYPE_COUNT];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_resistance_modifiers) == _DAMAGE_TYPE_COUNT);
 
-static uint8_t player_damage_status_buildup[] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-};
+static uint8_t player_damage_status_buildup[_DAMAGE_STATUS_TYPE_COUNT];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_status_buildup) == _DAMAGE_STATUS_TYPE_COUNT);
 
-static timer_t player_damage_status_timers[] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-};
+static timer_t player_damage_status_timers[ _DAMAGE_STATUS_TYPE_COUNT ];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_status_timers) == _DAMAGE_STATUS_TYPE_COUNT);
 
 static const uint8_t player_attack_0_combo_base_damage[] = {
@@ -160,7 +143,7 @@ static const uint8_t player_attack_1_combo_base_damage[] = {
 //
 //
 
-uint8_t __fastcall__ get_player_changed_flags()
+flags8_t __fastcall__ get_player_changed_flags()
 {
     return player_changed_flags;
 }
@@ -185,26 +168,27 @@ uint8_t __fastcall__ get_player_max_stamina()
     return player_max_stamina_per_level[ player_level ];
 }
 
-
 void __fastcall__ init_player(void)
 {
-    STATE_RESET( player_movement_state );
     player_level = 0;
     player_health = 10;
     player_stamina = player_max_stamina_per_level[player_level];
     player_flasks = player_max_flasks_per_level[player_level];
     player_damage_queue_length = 0;
     player_input_queue_length = 0;
+    player_state = PLAYER_STATE_IDLE;
+    player_next_state = PLAYER_STATE_IDLE;
 
     timer_set( player_inv_frame_timer, 0 );
     timer_set( player_flask_timer, 60 );
     timer_set( player_stamina_delay_timer, 1 );
     timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
 
-    player_changed_flags = 0xFF;
+    flags_set( player_changed_flags, PLAYER_CHANGED_ALL );
 
-    subpixel_set( player_pos_x, 0, 0 );
-    subpixel_set( player_pos_y, 10, 0 );
+    // start in the center of the play space
+    subpixel_set( player_pos_x, COMBAT_PLAYFIELD_WIDTH.pix >> 1, 0 );
+    subpixel_set( player_pos_y, COMBAT_PLAYFIELD_HEIGHT.pix >> 1, 0 );
     subpixel_set_zero( player_pos_dx );
     subpixel_set_zero( player_pos_dy );
 }
@@ -240,7 +224,7 @@ static void __fastcall__ update_player_stamina(void)
 
                 MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
-                player_changed_flags |= PLAYER_CHANGED_STAMINA;
+                flags_set( player_changed_flags, PLAYER_CHANGED_STAMINA );
             }
         }
     }
@@ -280,7 +264,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // heal
-    player_changed_flags |= PLAYER_CHANGED_HEALTH;
+    flags_set( player_changed_flags, PLAYER_CHANGED_HEALTH );
 
     // player health + heal would go past max health, just set to max health
     if( player_health > ( player_max_health_per_level[player_level] - _temp_dmg.damage ) )
@@ -338,11 +322,11 @@ static void __fastcall__ player_take_damage(void)
     BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
     if( b != player_damage_status )
     {
-        player_changed_flags |= PLAYER_CHANGED_STATUS;
+        flags_set( player_changed_flags, PLAYER_CHANGED_STATUS );
     }
 
     // take damage
-    player_changed_flags |= PLAYER_CHANGED_HEALTH;
+    flags_set( player_changed_flags, PLAYER_CHANGED_HEALTH );
 
     if( player_health < _temp_dmg.damage )
     {
@@ -351,11 +335,6 @@ static void __fastcall__ player_take_damage(void)
     else
     {
         player_health -= _temp_dmg.damage;
-    }
-
-    if( player_health == 0 )
-    {
-        player_death();
     }
 }
 
@@ -376,6 +355,12 @@ static void __fastcall__ player_process_damage_queue(void)
 
     // clear damage queue
     player_damage_queue_length = 0;
+
+    // if the player has no more health once all damage/healing is processed, player is dead
+    if( player_health == 0 )
+    {
+        player_death();
+    }
 }
 
 static void __fastcall__ player_use_stamina(uint8_t stamina)
@@ -384,22 +369,18 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
     {
         player_stamina = 0;
         timer_set( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_OVERDRAW );
-        timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
-
-        MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
-
-        player_changed_flags |= PLAYER_CHANGED_STAMINA;
     }
     else
     {
         player_stamina -= stamina;
         timer_set( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_NORMAL );
-        timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
-
-        MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
-
-        player_changed_flags |= PLAYER_CHANGED_STAMINA;
     }
+
+    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
+
+    MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
+
+    flags_set( player_changed_flags, PLAYER_CHANGED_STAMINA );
 }
 
 #define can_perform_attack(atk) ( player_stamina > 0 && timer_is_done( player_inv_frame_timer ) )
@@ -420,13 +401,140 @@ static void __fastcall__ perform_attack(uint8_t attack_index)
     }
 }
 
+// test if dodge can be performed
 #define can_perform_dodge()     ( player_stamina > 0 && timer_is_done( player_inv_frame_timer ) )
 
-static void __fastcall__ perform_dodge(void)
-{
+const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_P = {  2, 192 };    // 2.75
+const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_N = { -2, 192 };    // 2.75
+const static subpixel_diff_t PLAYER_DODGE_SPEED_DIAGNAL_P  = {  1, 241 };    // 1.94
+const static subpixel_diff_t PLAYER_DODGE_SPEED_DIAGNAL_N  = { -1, 241 };    // 1.94
 
+static void __fastcall__ perform_dodge(uint8_t dir)
+{
+    if( flags_set( dir, PLAYER_MOVE_DIRECTION_NORTH ) )
+    {
+        // nw
+        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_P );
+        }
+        // ne
+        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_P );
+        }
+        // pure north
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_CARDINAL_P );
+        }
+    }
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_SOUTH ) )
+    {
+        // sw
+        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_N );
+        }
+        // se
+        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_N );
+        }
+        // pure south
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_CARDINAL_N );
+        }
+    }
+    // pure east
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_CARDINAL_P );
+    }
+    // pure west
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_CARDINAL_N );
+    }
+
+    // player moved positions
+    flags_set( player_changed_flags, PLAYER_CHANGED_POSITION );
+
+    // set dodging
+    timer_set( player_inv_frame_timer, PLAYER_DODGE_INV_TIMER );
 }
 
+const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_P  = {  1, 128 };    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_N  = { -1, 128 };    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_P   = {  1,  15 };    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_N   = { -1,  15 };    // 1.06
+
+// test if move can be performed
+#define can_perform_move()      ( 1 )
+
+static void __fastcall__ perform_move(uint8_t dir)
+{
+    if( flags_set( dir, PLAYER_MOVE_DIRECTION_NORTH ) )
+    {
+        // nw
+        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_P );
+        }
+        // ne
+        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_P );
+        }
+        // pure north
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_CARDINAL_P );
+        }
+    }
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_SOUTH ) )
+    {
+        // sw
+        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_N );
+        }
+        // se
+        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_N );
+        }
+        // pure south
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_CARDINAL_N );
+        }
+    }
+    // pure east
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_CARDINAL_P );
+    }
+    // pure west
+    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_CARDINAL_N );
+    }
+
+    // player moved positions
+    flags_set( player_changed_flags, PLAYER_CHANGED_POSITION );
+}
+
+// test if flask can be used
 #define can_perform_flask()     ( player_flasks > 0 && timer_is_done( player_flask_timer ) )
 
 static void __fastcall__ perform_flask(void)
@@ -437,12 +545,119 @@ static void __fastcall__ perform_flask(void)
     player_damage_queue[player_damage_queue_length].damage = player_flask_heal_per_level[player_level];
     ++player_damage_queue_length;
 
+    // reset timer
     timer_set( player_flask_timer, PLAYER_FLASK_REFRESH_TIMER );
 
+    // use flask
     --player_flasks;
 
     // mark flask changed
     player_changed_flags |= PLAYER_CHANGED_FLASKS;
+}
+
+// update player input
+static void __fastcall__ update_player_input()
+{
+    // heal
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_SELECT ) )
+    {
+        if( can_perform_flask() )
+        {
+            perform_flask();
+        }
+    }
+
+    // pause menu
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+    {
+
+    }
+
+    // B down, modify input
+    if( GAMEPAD_DOWN( 0, GAMEPAD_B ) )
+    {
+        // heavy attack
+        if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+        {
+            if( can_perform_attack( 1 ) )
+            {
+                perform_attack( 1 );
+            }
+        }
+
+        // dodge in a direction
+        if( can_perform_dodge() )
+        {
+            v = 0;
+
+            // dodge left/right
+            if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_WEST;
+            }
+            else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_EAST;
+            }
+
+            // dodge up/dow
+            if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_NORTH;
+            }
+            else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_SOUTH;
+            }
+
+            // if a direction was pressed, dodge
+            if( v )
+            {
+                perform_dodge( v );
+            }
+        }
+    }
+    else
+    {
+        // light attack
+        if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+        {
+            if( can_perform_attack( 0 ) )
+            {
+                perform_attack( 0 );
+            }
+        }
+
+        if( can_perform_move() )
+        {
+            v = 0;
+
+            // dodge left/right
+            if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_WEST;
+            }
+            else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_EAST;
+            }
+
+            // up/dow
+            if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_NORTH;
+            }
+            else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
+            {
+                v |= PLAYER_MOVE_DIRECTION_SOUTH;
+            }
+
+            if( v )
+            {
+                perform_move( v );
+            }
+        }
+    }
 }
 
 void __fastcall__ update_player(void)
@@ -460,7 +675,7 @@ void __fastcall__ update_player(void)
     TICK_BUILDUP(player_damage_status_buildup, player_damage_status, player_damage_resistance_modifiers, 10);
     if( b != player_damage_status )
     {
-        player_changed_flags |= PLAYER_CHANGED_STATUS;
+        flags_set( player_changed_flags, PLAYER_CHANGED_STATUS );
     }
 
     // regen stamina
@@ -469,55 +684,40 @@ void __fastcall__ update_player(void)
     // tick timers
     timer_tick( player_flask_timer );
     timer_tick( player_inv_frame_timer );
+    timer_tick( player_animation_frame_timer );
 
-    // light attack
-    if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+    // update input
+    update_player_input();
+
+    // move player
+    subpixel_inc( player_pos_x, player_pos_dx );
+    subpixel_inc( player_pos_y, player_pos_dy );
+
+    subpixel_diff_set_zero( player_pos_dx );
+    subpixel_diff_set_zero( player_pos_dy );
+
+    // perform state transitions
+    if( player_state != player_next_state )
     {
-        if( can_perform_attack( 0 ) )
+        // leave current state
+        switch( player_state )
         {
-            perform_attack( 0 );
+
+        }
+
+        player_state = player_next_state;
+
+        // enter new state
+        switch( player_state )
+        {
+
         }
     }
 
-    // heavy attack
-    if( GAMEPAD_PRESSED( 0, GAMEPAD_B ) )
-    {
-        if( can_perform_attack( 1 ) )
-        {
-            perform_attack( 1 );
-        }
-    }
-
-    // heal
-    if( GAMEPAD_PRESSED( 0, GAMEPAD_SELECT ) )
-    {
-        if( can_perform_flask() )
-        {
-            perform_flask();
-        }
-    }
-
-    // move left/right
-    if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
+    // state update
+    switch( player_state )
     {
 
-    }
-    else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
-    {
-
-    }
-
-    // up/dow
-    if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
-    {
-
-    }
-    else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
-    {
-        if( can_perform_dodge() )
-        {
-            perform_dodge();
-        }
     }
 }
 
@@ -529,6 +729,12 @@ uint8_t __fastcall__ test_attack_hits_player( uint8_t attack_location )
 {
     // if the player is in Iframes, return no hit
     if( player_inv_frame_timer > 0 ) return 0;
+
+    // update player combat position
+    if( flags_is_set( player_changed_flags, PLAYER_CHANGED_POSITION ) )
+    {
+        player_combat_position = convert_subpixel_to_combat_position( player_pos_x, player_pos_y );
+    }
 
     // test combat position against attack location
     TEST_COMBAT_POSITION( player_combat_position, attack_location );

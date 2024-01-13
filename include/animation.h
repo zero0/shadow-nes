@@ -36,4 +36,9 @@ typedef struct
     uint8_t attr;       // include flip, maybe pallete override too
 } anim_keyframe_t;
 
+#define lerp_template_uint8( v, t, tmax )  v lerp_uint8_##t( uint8_t a, uint8_t b ) { return ( (tamx) - (t) )}
+typedef uint8_t (*lerp_uint8_func)( uint8_t a, uint8_t b );
+
+
+
 #endif // ANIMATION_H

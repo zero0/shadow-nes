@@ -32,6 +32,7 @@ STATIC_ASSERT( sizeof( GAMEPAD_A ) == sizeof( uint8_t ) );
 #define GAMEPAD_BTN_HELD(p, c, b)       ( GAMEPAD_BTN_DOWN(p, b) && GAMEPAD_BTN_DOWN(c, b) )
 
 #define GAMEPAD_DOWN(pad, b)            ( GAMEPAD_BTN_DOWN( gamepad_state(pad), (b) ) )
+#define GAMEPAD_UP(pad, b)              ( GAMEPAD_BTN_UP( gamepad_state(pad), (b) ) )
 #define GAMEPAD_PRESSED(pad, b)         ( GAMEPAD_BTN_PRESSED( gamepad_prev_state(pad), gamepad_state(pad), (b) ) )
 #define GAMEPAD_RELEASED(pad, b)        ( GAMEPAD_BTN_RELEASED( gamepad_prev_state(pad), gamepad_state(pad), (b) ) )
 #define GAMEPAD_HELD(pad, b)            ( GAMEPAD_BTN_HELD( gamepad_prev_state(pad), gamepad_state(pad), (b) ) )

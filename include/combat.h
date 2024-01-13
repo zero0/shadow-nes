@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "flags.h"
+#include "subpixel.h"
 
 //
 //
@@ -202,34 +203,74 @@ t  back t
 #define COMBAT_POSITION_X(p)            ( 0x03 & ( (p) >> 0 ) )
 #define COMBAT_POSITION_Y(p)            ( 0x03 & ( (p) >> 3 ) )
 
-#define COMBAT_POSITION_0x0     MAKE_COMBAT_POSITION( 0, 0 )
-#define COMBAT_POSITION_1x0     MAKE_COMBAT_POSITION( 1, 0 )
-#define COMBAT_POSITION_2x0     MAKE_COMBAT_POSITION( 2, 0 )
+#define COMBAT_POSITION_0x0             MAKE_COMBAT_POSITION( 0, 0 )
+#define COMBAT_POSITION_1x0             MAKE_COMBAT_POSITION( 1, 0 )
+#define COMBAT_POSITION_2x0             MAKE_COMBAT_POSITION( 2, 0 )
 
-#define COMBAT_POSITION_0x1     MAKE_COMBAT_POSITION( 0, 1 )
-#define COMBAT_POSITION_1x1     MAKE_COMBAT_POSITION( 1, 1 )
-#define COMBAT_POSITION_2x1     MAKE_COMBAT_POSITION( 2, 1 )
+#define COMBAT_POSITION_0x1             MAKE_COMBAT_POSITION( 0, 1 )
+#define COMBAT_POSITION_1x1             MAKE_COMBAT_POSITION( 1, 1 )
+#define COMBAT_POSITION_2x1             MAKE_COMBAT_POSITION( 2, 1 )
 
-#define COMBAT_POSITION_0x2     MAKE_COMBAT_POSITION( 0, 2 )
-#define COMBAT_POSITION_1x2     MAKE_COMBAT_POSITION( 1, 2 )
-#define COMBAT_POSITION_2x2     MAKE_COMBAT_POSITION( 2, 2 )
+#define COMBAT_POSITION_0x2             MAKE_COMBAT_POSITION( 0, 2 )
+#define COMBAT_POSITION_1x2             MAKE_COMBAT_POSITION( 1, 2 )
+#define COMBAT_POSITION_2x2             MAKE_COMBAT_POSITION( 2, 2 )
 
 #define TEST_COMBAT_POSITION(pos, atk)          \
 do                                              \
 {                                               \
     switch( pos )                               \
     {                                           \
-        case COMBAT_POSITION_0x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_BACK_SLASH) );                                      \
-        case COMBAT_POSITION_1x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_FRONT) );                                                                 \
-        case COMBAT_POSITION_2x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_FORWARD_SLASH) );                                  \
-        case COMBAT_POSITION_0x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                 \
-        case COMBAT_POSITION_1x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_MIDDLE | DAMAGE_LOCATION_BACK_SLASH | DAMAGE_LOCATION_FORWARD_SLASH ) );  \
-        case COMBAT_POSITION_2x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                \
-        case COMBAT_POSITION_0x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_FORWARD_SLASH) );                                    \
-        case COMBAT_POSITION_1x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_BACK ) );                                                                 \
-        case COMBAT_POSITION_2x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_BACK_SLASH) );                                      \
+        case COMBAT_POSITION_0x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_BACK_SLASH) );                                     \
+        case COMBAT_POSITION_1x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_FRONT) );                                                                \
+        case COMBAT_POSITION_2x0: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_FORWARD_SLASH) );                                 \
+        case COMBAT_POSITION_0x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                \
+        case COMBAT_POSITION_1x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_MIDDLE | DAMAGE_LOCATION_BACK_SLASH | DAMAGE_LOCATION_FORWARD_SLASH ) ); \
+        case COMBAT_POSITION_2x1: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                               \
+        case COMBAT_POSITION_0x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_FORWARD_SLASH) );                                   \
+        case COMBAT_POSITION_1x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_BACK ) );                                                                \
+        case COMBAT_POSITION_2x2: return ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_BACK_SLASH) );                                     \
     }                                           \
 } while( 0 )
+
+#define TEST_COMBAT_POSITION_VALUE(r, pos, atk) \
+do                                              \
+{                                               \
+    switch( pos )                               \
+    {                                           \
+        case COMBAT_POSITION_0x0: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_BACK_SLASH) );                                      break; \
+        case COMBAT_POSITION_1x0: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_FRONT) );                                                                 break; \
+        case COMBAT_POSITION_2x0: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_FRONT | DAMAGE_LOCATION_FORWARD_SLASH) );                                  break; \
+        case COMBAT_POSITION_0x1: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                 break; \
+        case COMBAT_POSITION_1x1: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_MIDDLE | DAMAGE_LOCATION_BACK_SLASH | DAMAGE_LOCATION_FORWARD_SLASH ) );  break; \
+        case COMBAT_POSITION_2x1: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_MIDDLE ) );                                                                break; \
+        case COMBAT_POSITION_0x2: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_LEFT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_FORWARD_SLASH) );                                    break; \
+        case COMBAT_POSITION_1x2: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_CENTER | DAMAGE_LOCATION_ROW_BACK ) );                                                                 break; \
+        case COMBAT_POSITION_2x2: (r) = ( (atk) & (DAMAGE_LOCATION_COLUMN_RIGHT | DAMAGE_LOCATION_ROW_BACK | DAMAGE_LOCATION_BACK_SLASH) );                                      break; \
+    }                                           \
+} while( 0 )
+
+//
+//
+//
+
+static const subpixel_t COMBAT_PLAYFIELD_WIDTH = { 12, 0 };
+static const subpixel_t COMBAT_PLAYFIELD_HEIGHT = { 12, 0 };
+
+#define clamp_subpixel_to_combat_playfield( sx, sy )    \
+do                                                      \
+{                                                       \
+    if( sx.v >= COMBAT_PLAYFIELD_WIDTH.v )              \
+    {                                                   \
+        sx.v = COMBAT_PLAYFIELD_WIDTH.v;                \
+    }                                                   \
+    if( sy.v >= COMBAT_PLAYFIELD_HEIGHT.v )             \
+    {                                                   \
+        sy.v = COMBAT_PLAYFIELD_HEIGHT.v;               \
+    }                                                   \
+}                                                       \
+while( 0 )
+
+#define convert_subpixel_to_combat_position( sx, sy )   MAKE_COMBAT_POSITION( subpixel_to_pixel( sx ) >> 2, subpixel_to_pixel( sy ) >> 2 );
 
 //
 // Defined in player.c

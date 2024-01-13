@@ -3,6 +3,7 @@
 #include "timer.h"
 #include "combat.h"
 #include "globals.h"
+#include "subpixel.h"
 
 static const uint8_t all_boss_health_per_block_log2[] = {
     7,
@@ -36,12 +37,15 @@ static const uint8_t all_boss_music[] = {
 #define BOSS_STATE_INV_FRAMES       (uint8_t)(1 << 7)
 
 static uint8_t boss_state;
-static uint8_t boss_changed_flags;
+static flags8_t boss_changed_flags;
 static uint8_t boss_index;
 static uint16_t boss_health;
 static timer_t boss_inv_frame_timer;
 static damage_status_t boss_damage_status;
 static uint8_t boss_combat_position;
+
+static subpixel_t boss_position_x;
+static subpixel_t boss_position_y;
 
 static damage_t boss_damage_queue[4];
 static uint8_t boss_damage_queue_length;
@@ -73,7 +77,7 @@ str_t __fastcall__ get_boss_location(void)
     return all_boss_location_names[ boss_index ];
 }
 
-uint8_t __fastcall__ get_boss_changed_flags(void)
+flags8_t __fastcall__ get_boss_changed_flags(void)
 {
     return boss_changed_flags;
 }
@@ -87,7 +91,7 @@ static void __fastcall__ boss_take_damage(void)
     x16 = _temp_dmg.damage;
     boss_health -= x16;
 
-    boss_changed_flags |= BOSS_CHANGED_HEALTH;
+    flags_set( boss_changed_flags, BOSS_CHANGED_HEALTH );
 
     #if 0
     // if boss is in I frames, return
@@ -150,6 +154,23 @@ static void __fastcall__ boss_take_damage(void)
     #endif
 }
 
+#define boss_move_direct( sx, sy )                          \
+do {                                                        \
+    boss_position_x = sx;                                   \
+    boss_position_y = sy;                                   \
+    flags_set( boss_changed_flags, BOSS_CHANGED_POSITION ); \
+}                                                           \
+while( 0 )
+
+#define boss_move_offset( dx, dy )                                          \
+do {                                                                        \
+    subpixel_inc( boss_position_x, dx );                                    \
+    subpixel_inc( boss_position_y, dy );                                    \
+    clamp_subpixel_to_combat_playfield( boss_position_x, boss_position_y ); \
+    flags_set( boss_changed_flags, BOSS_CHANGED_POSITION );                 \
+}                                                                           \
+while( 0 )
+
 static void __fastcall__ boss_process_damage_queue(void)
 {
     for( i = 0; i < boss_damage_queue_length; ++i )
@@ -173,7 +194,7 @@ void __fastcall__ init_boss(uint8_t bossIndex)
 {
     boss_index = bossIndex;
     boss_state = 0;
-    boss_changed_flags = 0xFF;
+    flags_set( boss_changed_flags, 0xFF );
     boss_damage_queue_length = 0;
 
     boss_health = 1000;//all_boss_max_healths[ current_boss_index ];
@@ -181,7 +202,7 @@ void __fastcall__ init_boss(uint8_t bossIndex)
 
 void __fastcall__ update_boss(void)
 {
-    boss_changed_flags = 0;
+    flags_reset( boss_changed_flags );
 
     // process damage queue
     if( boss_damage_queue_length > 0 )
@@ -199,6 +220,12 @@ uint8_t __fastcall__ test_attack_hits_boss( uint8_t attack_location )
 {
     // if the boss is in Iframes, return no hit
     if( boss_inv_frame_timer > 0 ) return 0;
+
+    // if the boss position changed, update combat position
+    if( flags_is_set( boss_changed_flags, BOSS_CHANGED_POSITION ) )
+    {
+        boss_combat_position = convert_subpixel_to_combat_position( boss_position_x, boss_position_y );
+    }
 
     // test combat position against attack location
     TEST_COMBAT_POSITION( boss_combat_position, attack_location );
