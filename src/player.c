@@ -12,7 +12,9 @@
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
 
-#define PLAYER_FLASK_REFRESH_TIMER              (uint8_t)180
+#define PLAYER_FLASK_COOLDOWN_TIME              (uint8_t)180
+#define PLAYER_DODGE_COOLDOWN_TIME              (uint8_t)15
+
 #define PLAYER_DODGE_INV_TIMER                  (uint8_t)40
 #define PLAYER_STAMINA_DELAY_TIMER_NORMAL       (uint8_t)20
 #define PLAYER_STAMINA_DELAY_TIMER_OVERDRAW     (uint8_t)60
@@ -35,8 +37,20 @@
 #define PLAYER_DAMAGE_QUEUE_LENGTH              (uint8_t)4
 #define PLAYER_INPUT_QUEUE_LENGTH               (uint8_t)4
 
+#define PLAYER_ANIMATION_NONE                   (uint8_t)0xFF
+
+#define PLAYER_CAN_PERFORM_ACTION_MOVE          (uint8_t)( 1 << 0 )
+#define PLAYER_CAN_PERFORM_ACTION_DODGE         (uint8_t)( 1 << 1 )
+#define PLAYER_CAN_PERFORM_ACTION_FLASK         (uint8_t)( 1 << 2 )
+#define PLAYER_CAN_PERFORM_ACTION_ATTACK0       (uint8_t)( 1 << 3 )
+#define PLAYER_CAN_PERFORM_ACTION_ATTACK1       (uint8_t)( 1 << 4 )
+#define PLAYER_CAN_PERFORM_ACTION_KNOCKBACK     (uint8_t)( 1 << 5 )
+#define PLAYER_CAN_PERFORM_ACTION_ALL           (uint8_t)~0
+
 static uint8_t player_state;
 static uint8_t player_next_state;
+
+static flags8_t player_can_perform_action_flags;
 
 static flags8_t player_changed_flags;
 static uint8_t player_level;
@@ -46,11 +60,15 @@ static uint8_t player_flasks;
 static damage_status_t player_damage_status;
 static uint8_t player_combat_position;
 
-static timer_t player_flask_timer;
+static timer_t player_flash_cooldown_timer;
+static timer_t player_dodge_cooldown_timer;
+
 static timer_t player_inv_frame_timer;
 static timer_t player_animation_frame_timer;
 static timer_t player_stamina_regen_timer;
 static timer_t player_stamina_delay_timer;
+
+static uint8_t player_playing_animation;
 
 static subpixel_t player_pos_x;
 static subpixel_t player_pos_y;
@@ -168,7 +186,7 @@ uint8_t __fastcall__ get_player_max_stamina()
     return player_max_stamina_per_level[ player_level ];
 }
 
-void __fastcall__ init_player(void)
+void __fastcall__ player_init(void)
 {
     player_level = 0;
     player_health = 10;
@@ -180,11 +198,12 @@ void __fastcall__ init_player(void)
     player_next_state = PLAYER_STATE_IDLE;
 
     timer_set( player_inv_frame_timer, 0 );
-    timer_set( player_flask_timer, 60 );
+    timer_set( player_flash_cooldown_timer, 0 );
+    timer_set( player_dodge_cooldown_timer, 0 );
     timer_set( player_stamina_delay_timer, 1 );
     timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
 
-    flags_set( player_changed_flags, PLAYER_CHANGED_ALL );
+    flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
     // start in the center of the play space
     subpixel_set( player_pos_x, COMBAT_PLAYFIELD_WIDTH.pix >> 1, 0 );
@@ -205,7 +224,7 @@ void __fastcall__ player_render_debug()
 {
 }
 
-static void __fastcall__ update_player_stamina(void)
+static void __fastcall__ player_update_stamina(void)
 {
     if( player_stamina_delay_timer > 0 )
     {
@@ -224,7 +243,7 @@ static void __fastcall__ update_player_stamina(void)
 
                 MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
-                flags_set( player_changed_flags, PLAYER_CHANGED_STAMINA );
+                flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
             }
         }
     }
@@ -264,7 +283,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // heal
-    flags_set( player_changed_flags, PLAYER_CHANGED_HEALTH );
+    flags_mark( player_changed_flags, PLAYER_CHANGED_HEALTH );
 
     // player health + heal would go past max health, just set to max health
     if( player_health > ( player_max_health_per_level[player_level] - _temp_dmg.damage ) )
@@ -322,11 +341,11 @@ static void __fastcall__ player_take_damage(void)
     BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
     if( b != player_damage_status )
     {
-        flags_set( player_changed_flags, PLAYER_CHANGED_STATUS );
+        flags_mark( player_changed_flags, PLAYER_CHANGED_STATUS );
     }
 
     // take damage
-    flags_set( player_changed_flags, PLAYER_CHANGED_HEALTH );
+    flags_mark( player_changed_flags, PLAYER_CHANGED_HEALTH );
 
     if( player_health < _temp_dmg.damage )
     {
@@ -380,7 +399,7 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
 
     MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
-    flags_set( player_changed_flags, PLAYER_CHANGED_STAMINA );
+    flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
 }
 
 #define can_perform_attack(atk) ( player_stamina > 0 && timer_is_done( player_inv_frame_timer ) )
@@ -401,162 +420,13 @@ static void __fastcall__ perform_attack(uint8_t attack_index)
     }
 }
 
-// test if dodge can be performed
-#define can_perform_dodge()     ( player_stamina > 0 && timer_is_done( player_inv_frame_timer ) )
-
-const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_P = {  2, 192 };    // 2.75
-const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_N = { -2, 192 };    // 2.75
-const static subpixel_diff_t PLAYER_DODGE_SPEED_DIAGNAL_P  = {  1, 241 };    // 1.94
-const static subpixel_diff_t PLAYER_DODGE_SPEED_DIAGNAL_N  = { -1, 241 };    // 1.94
-
-static void __fastcall__ perform_dodge(uint8_t dir)
-{
-    if( flags_set( dir, PLAYER_MOVE_DIRECTION_NORTH ) )
-    {
-        // nw
-        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_N );
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_P );
-        }
-        // ne
-        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_P );
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_P );
-        }
-        // pure north
-        else
-        {
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_CARDINAL_P );
-        }
-    }
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_SOUTH ) )
-    {
-        // sw
-        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_N );
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_N );
-        }
-        // se
-        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_DIAGNAL_P );
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_DIAGNAL_N );
-        }
-        // pure south
-        else
-        {
-            subpixel_inc( player_pos_dy, PLAYER_DODGE_SPEED_CARDINAL_N );
-        }
-    }
-    // pure east
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-    {
-        subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_CARDINAL_P );
-    }
-    // pure west
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-    {
-        subpixel_inc( player_pos_dx, PLAYER_DODGE_SPEED_CARDINAL_N );
-    }
-
-    // player moved positions
-    flags_set( player_changed_flags, PLAYER_CHANGED_POSITION );
-
-    // set dodging
-    timer_set( player_inv_frame_timer, PLAYER_DODGE_INV_TIMER );
-}
-
-const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_P  = {  1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_N  = { -1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_P   = {  1,  15 };    // 1.06
-const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_N   = { -1,  15 };    // 1.06
-
-// test if move can be performed
-#define can_perform_move()      ( 1 )
-
-static void __fastcall__ perform_move(uint8_t dir)
-{
-    if( flags_set( dir, PLAYER_MOVE_DIRECTION_NORTH ) )
-    {
-        // nw
-        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_N );
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_P );
-        }
-        // ne
-        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_P );
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_P );
-        }
-        // pure north
-        else
-        {
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_CARDINAL_P );
-        }
-    }
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_SOUTH ) )
-    {
-        // sw
-        if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_N );
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_N );
-        }
-        // se
-        else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-        {
-            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_DIAGNAL_P );
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_DIAGNAL_N );
-        }
-        // pure south
-        else
-        {
-            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_CARDINAL_N );
-        }
-    }
-    // pure east
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_EAST ) )
-    {
-        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_CARDINAL_P );
-    }
-    // pure west
-    else if( flags_set( dir, PLAYER_MOVE_DIRECTION_WEST ) )
-    {
-        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_CARDINAL_N );
-    }
-
-    // player moved positions
-    flags_set( player_changed_flags, PLAYER_CHANGED_POSITION );
-}
-
-// test if flask can be used
-#define can_perform_flask()     ( player_flasks > 0 && timer_is_done( player_flask_timer ) )
-
-static void __fastcall__ perform_flask(void)
-{
-    // enquque heal
-    ASSERT(player_damage_queue_length < ARRAY_SIZE(player_damage_queue));
-    player_damage_queue[player_damage_queue_length].damage_type = MAKE_DAMAGE_TYPE( DAMAGE_TYPE_ATTR_HEAL, DAMAGE_TYPE_FLAT );
-    player_damage_queue[player_damage_queue_length].damage = player_flask_heal_per_level[player_level];
-    ++player_damage_queue_length;
-
-    // reset timer
-    timer_set( player_flask_timer, PLAYER_FLASK_REFRESH_TIMER );
-
-    // use flask
-    --player_flasks;
-
-    // mark flask changed
-    player_changed_flags |= PLAYER_CHANGED_FLASKS;
-}
+#include "player_state_idle.inl"
+#include "player_state_dodge.inl"
+#include "player_state_move.inl"
+#include "player_state_flask.inl"
 
 // update player input
-static void __fastcall__ update_player_input()
+static void __fastcall__ player_update_input()
 {
     // heal
     if( GAMEPAD_PRESSED( 0, GAMEPAD_SELECT ) )
@@ -660,7 +530,7 @@ static void __fastcall__ update_player_input()
     }
 }
 
-void __fastcall__ update_player(void)
+void __fastcall__ player_update(void)
 {
     player_changed_flags = 0;
 
@@ -675,19 +545,20 @@ void __fastcall__ update_player(void)
     TICK_BUILDUP(player_damage_status_buildup, player_damage_status, player_damage_resistance_modifiers, 10);
     if( b != player_damage_status )
     {
-        flags_set( player_changed_flags, PLAYER_CHANGED_STATUS );
+        flags_mark( player_changed_flags, PLAYER_CHANGED_STATUS );
     }
 
     // regen stamina
-    update_player_stamina();
+    player_update_stamina();
 
     // tick timers
-    timer_tick( player_flask_timer );
+    timer_tick( player_flash_cooldown_timer );
+    timer_tick( player_dodge_cooldown_timer );
     timer_tick( player_inv_frame_timer );
     timer_tick( player_animation_frame_timer );
 
     // update input
-    update_player_input();
+    player_update_input();
 
     // move player
     subpixel_inc( player_pos_x, player_pos_dx );
@@ -702,7 +573,13 @@ void __fastcall__ update_player(void)
         // leave current state
         switch( player_state )
         {
+            case PLAYER_STATE_DODGING:
+                player_state_dodge_leave();
+                break;
 
+            case PLAYER_STATE_USING_FLASH:
+                player_state_flash_leave();
+                break;
         }
 
         player_state = player_next_state;
@@ -710,14 +587,30 @@ void __fastcall__ update_player(void)
         // enter new state
         switch( player_state )
         {
+            case PLAYER_STATE_IDLE:
+                player_state_idle_enter();
+                break;
 
+            case PLAYER_STATE_DODGING:
+                player_state_dodge_enter();
+                break;
+
+            case PLAYER_STATE_USING_FLASH:
+                player_state_flash_enter();
+                break;
         }
     }
 
     // state update
     switch( player_state )
     {
+        case PLAYER_STATE_DODGING:
+            player_state_dodge_update();
+            break;
 
+        case PLAYER_STATE_USING_FLASH:
+            player_state_flash_update();
+            break;
     }
 }
 

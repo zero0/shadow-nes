@@ -50,6 +50,7 @@ do                                  \
 {                                   \
     if( (t) > 0 ) --(t);  \
 } while( 0 )
+#define timer_tick_unchecked( t )   --(t)
 #define timer_is_done( t )      ( (t) == 0 )
 
 #endif // TIMER_H

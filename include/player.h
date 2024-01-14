@@ -22,8 +22,8 @@ uint8_t get_player_max_stamina();
 
 flags8_t get_player_changed_flags();
 
-void init_player();
+void player_init();
 
-void update_player();
+void player_update();
 
 #endif // PLAYER_H

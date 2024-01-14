@@ -66,7 +66,7 @@ b = 1;
 l = 20;
 
     // start player
-    init_player();
+    player_init();
 
     // start boss
     init_boss(BOSS_0);
@@ -223,7 +223,7 @@ void __fastcall__ game_state_playing_update()
         if( t > 2) t = 0;
     }
 
-    update_player();
+    player_update();
 
     update_boss();
 }
