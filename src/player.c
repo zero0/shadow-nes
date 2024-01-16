@@ -8,12 +8,15 @@
 #include "flags.h"
 #include "timer.h"
 #include "combat.h"
+#include "game_state.h"
 
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
 
 #define PLAYER_FLASK_COOLDOWN_TIME              (uint8_t)180
 #define PLAYER_DODGE_COOLDOWN_TIME              (uint8_t)15
+#define PLAYER_ATTACK0_COOLDOWN_TIME            (uint8_t)15
+#define PLAYER_ATTACK1_COOLDOWN_TIME            (uint8_t)20
 
 #define PLAYER_DODGE_INV_TIMER                  (uint8_t)40
 #define PLAYER_STAMINA_DELAY_TIMER_NORMAL       (uint8_t)20
@@ -47,6 +50,12 @@
 #define PLAYER_CAN_PERFORM_ACTION_KNOCKBACK     (uint8_t)( 1 << 5 )
 #define PLAYER_CAN_PERFORM_ACTION_ALL           (uint8_t)~0
 
+extern ptr_t knight_sprite_0;
+extern ptr_t knight_sprite_1;
+extern ptr_t knight_sprite_2;
+
+extern ptr_t progress_bar;
+
 static uint8_t player_state;
 static uint8_t player_next_state;
 
@@ -62,6 +71,7 @@ static uint8_t player_combat_position;
 
 static timer_t player_flash_cooldown_timer;
 static timer_t player_dodge_cooldown_timer;
+static timer_t player_attack_cooldown_timer;
 
 static timer_t player_inv_frame_timer;
 static timer_t player_animation_frame_timer;
@@ -84,6 +94,10 @@ STATIC_ASSERT(ARRAY_SIZE(player_input_queue) == PLAYER_INPUT_QUEUE_LENGTH);
 static uint8_t player_input_queue_length;
 
 static damage_t _temp_dmg;
+
+#ifdef DEBUG
+static uint8_t debug_player_draw_debug;
+#endif
 
 //
 // Per-Level Data
@@ -186,10 +200,10 @@ uint8_t __fastcall__ get_player_max_stamina()
     return player_max_stamina_per_level[ player_level ];
 }
 
-void __fastcall__ player_init(void)
+void __fastcall__ player_init(uint8_t level)
 {
-    player_level = 0;
-    player_health = 10;
+    player_level = level;
+    player_health = player_max_health_per_level[player_level];
     player_stamina = player_max_stamina_per_level[player_level];
     player_flasks = player_max_flasks_per_level[player_level];
     player_damage_queue_length = 0;
@@ -210,19 +224,113 @@ void __fastcall__ player_init(void)
     subpixel_set( player_pos_y, COMBAT_PLAYFIELD_HEIGHT.pix >> 1, 0 );
     subpixel_set_zero( player_pos_dx );
     subpixel_set_zero( player_pos_dy );
+
+    // knite sprite
+    ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
+    ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x12 );
+    ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x14 );
+
+#ifdef DEBUG
+    debug_player_draw_debug = 1;
+#endif
 }
 
 static void __fastcall__ player_update_physics(void)
 {
 }
 
-void __fastcall__ player_render()
+#define PLAYER_HEALTH_PER_TILE_LOG2     (uint8_t)3
+
+static void __fastcall__ player_render_status_bars(void)
 {
+    // update health when changed
+    if( get_player_changed_flags() & PLAYER_CHANGED_HEALTH )
+    {
+        x = get_player_current_health();
+        y = get_player_max_health();
+
+        // player health bar
+        ppu_begin_tile_batch(2,1);
+
+        // full tiles
+        for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        {
+            ppu_push_tile_batch(0x80 + 8);
+        }
+
+        // partial tile
+        if( i < imax )
+        {
+            j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
+            ppu_push_tile_batch(0x80 + ( x - j ) );
+            ++i;
+        }
+
+        // empty tiles
+        for( ; i < imax; ++i )
+        {
+            ppu_push_tile_batch( 0x80 );
+        }
+
+        ppu_end_tile_batch();
+    }
+
+    // update stamina when changed
+    if( get_player_changed_flags() & PLAYER_CHANGED_STAMINA )
+    {
+        x = get_player_current_stamina();
+        y = get_player_max_stamina();
+
+        // player stamina bar
+        ppu_begin_tile_batch(2,2);
+
+        // full tiles
+        for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = (1 << PLAYER_HEALTH_PER_TILE_LOG2); i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        {
+            ppu_push_tile_batch(0x80 + 8);
+        }
+
+        // partial tile
+        if( i < imax )
+        {
+            j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
+            ppu_push_tile_batch(0x80 + ( x - j ) );
+            ++i;
+        }
+
+        // empty tiles
+        for( ; i < imax; ++i )
+        {
+            ppu_push_tile_batch( 0x80 );
+        }
+
+        ppu_end_tile_batch();
+    }
 }
 
-void __fastcall__ player_render_debug()
+static void __fastcall__ player_render_character(void)
+{
+    switch(t)
+    {
+        case 0:
+            ppu_add_meta_sprite( knight_sprite_0, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x00 );
+            break;
+
+        case 1:
+            ppu_add_meta_sprite( knight_sprite_1, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x20 );
+            break;
+
+        case 2:
+            ppu_add_meta_sprite( knight_sprite_2, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x40 );
+            break;
+    }
+}
+
+#ifdef DEBUG
+static void __fastcall__ player_render_debug(void)
 {
 }
+#endif
 
 static void __fastcall__ player_update_stamina(void)
 {
@@ -402,28 +510,11 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
     flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
 }
 
-#define can_perform_attack(atk) ( player_stamina > 0 && timer_is_done( player_inv_frame_timer ) )
-
-static void __fastcall__ perform_attack(uint8_t attack_index)
-{
-    //if( test_attack_hits_boss( DAMAGE_LOCATION_COLUMN_CENTER ) )
-    {
-        // build damange
-        _temp_dmg.damage_type = MAKE_DAMAGE_TYPE(0, DAMAGE_TYPE_PHYSICAL);
-        _temp_dmg.damage = 10;
-
-        // modify damage based on stats
-        MOD_OUTGOING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
-
-        // queue boss damage
-        queue_damage_boss( _temp_dmg.damage_type, _temp_dmg.damage );
-    }
-}
-
 #include "player_state_idle.inl"
 #include "player_state_dodge.inl"
 #include "player_state_move.inl"
 #include "player_state_flask.inl"
+#include "player_state_attack.inl"
 
 // update player input
 static void __fastcall__ player_update_input()
@@ -440,7 +531,7 @@ static void __fastcall__ player_update_input()
     // pause menu
     if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
     {
-
+set_next_game_state( GAME_STATE_TITLE );
     }
 
     // B down, modify input
@@ -449,9 +540,9 @@ static void __fastcall__ player_update_input()
         // heavy attack
         if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
         {
-            if( can_perform_attack( 1 ) )
+            if( can_perform_attack1() )
             {
-                perform_attack( 1 );
+                perform_attack1();
             }
         }
 
@@ -492,9 +583,9 @@ static void __fastcall__ player_update_input()
         // light attack
         if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
         {
-            if( can_perform_attack( 0 ) )
+            if( can_perform_attack0() )
             {
-                perform_attack( 0 );
+                perform_attack0();
             }
         }
 
@@ -554,6 +645,7 @@ void __fastcall__ player_update(void)
     // tick timers
     timer_tick( player_flash_cooldown_timer );
     timer_tick( player_dodge_cooldown_timer );
+    timer_tick( player_attack_cooldown_timer );
     timer_tick( player_inv_frame_timer );
     timer_tick( player_animation_frame_timer );
 
@@ -612,6 +704,19 @@ void __fastcall__ player_update(void)
             player_state_flash_update();
             break;
     }
+
+    // draw status bars
+    player_render_status_bars();
+
+    // draw character
+    //player_render_character();
+
+#ifdef DEBUG
+    if( debug_player_draw_debug )
+    {
+        player_render_debug();
+    }
+#endif
 }
 
 //

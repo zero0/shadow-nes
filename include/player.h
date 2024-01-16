@@ -22,7 +22,7 @@ uint8_t get_player_max_stamina();
 
 flags8_t get_player_changed_flags();
 
-void player_init();
+void player_init(uint8_t level);
 
 void player_update();
 

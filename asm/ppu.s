@@ -177,7 +177,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_frame_index
 
 .export ppu_init
-.export ppu_wait_vblank
+.export ppu_wait_vblank, _ppu_wait_vblank
 .export ppu_enable_default
 
 .export ppu_clear_nametable
@@ -187,7 +187,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_set_scroll_internal
 
 .export _ppu_update
-.export _ppu_off
+.export _ppu_off, _ppu_on
 .export _ppu_skip
 
 .export _ppu_address_tile
@@ -245,11 +245,14 @@ ppu_init:
 
 ; ppu_wait_vblank: waits for the next vblank
 ppu_wait_vblank:
+
+.proc _ppu_wait_vblank
     bit PPU_STATUS
     :
         bit PPU_STATUS
         bpl :-
     rts
+.endproc
 
 ppu_enable_default:
     lda SCROLL_X
@@ -262,7 +265,7 @@ ppu_enable_default:
     sta PPU_CTRL
     sta PPU_CTRL_BUFFER
 
-    lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW)
+    lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
     sta PPU_MASK
     sta PPU_MASK_BUFFER
     rts
@@ -299,13 +302,34 @@ _ppu_skip:
     rts
 
 ; ppu_off: waits until next NMI, turns rendering off (now safe to write PPU directly via $2007)
-_ppu_off:
+.proc _ppu_off
+
     lda #2
     sta NMI_READY
     :
         lda NMI_READY
         bne :-
+
     rts
+.endproc
+
+; ppu_on: waits until next NMI, turns rendering back on
+.proc _ppu_on
+
+    ; upload palette updates
+    jsr _ppu_upload_palette
+
+    ; upload nametable updates
+    jsr _ppu_upload_nametable
+
+    lda #3
+    sta NMI_READY
+    :
+        lda NMI_READY
+        bne :-
+
+    rts
+.endproc
 
 ; ppu_set_scroll: sets the (x,y) scroll position from PPU_ARGS 0 & 1
 _ppu_set_scroll_internal:
@@ -539,15 +563,16 @@ _ppu_end_tile_batch_internal:
     rts
 
 ; clears specific nametable at PPU_ARGS[0..1] to PPU_ARGS[2] with attr PPU_ARS[3]
-_ppu_clear_nametable_internal:
+ppu_clear_nametable:
 
-.proc ppu_clear_nametable
+.proc _ppu_clear_nametable_internal
+
+    ;; disable rendering
+    ;lda #0
+    ;sta PPU_MASK
+
     ; reset latch
     bit PPU_STATUS
-
-    ; disable rendering
-    lda #0
-    sta PPU_MASK
 
     ; store address
     lda _PPU_ARGS+0
@@ -578,9 +603,9 @@ _ppu_clear_nametable_internal:
         dex
         bne :-
 
-    ; reset ppu mask
-    lda PPU_MASK_BUFFER
-    sta PPU_MASK
+    ;; reset ppu mask
+    ;lda PPU_MASK_BUFFER
+    ;sta PPU_MASK
 
     rts
 .endproc
@@ -588,7 +613,7 @@ _ppu_clear_nametable_internal:
 ; ppu_clear_palette: clear all palettes
 _ppu_clear_palette:
 
-ppu_clear_palette:
+.proc ppu_clear_palette
     lda #0
     ldx PALETTE_BYTE_COUNT
     :
@@ -599,6 +624,7 @@ ppu_clear_palette:
     stx PALETTE_UPDATE_LEN
 
     rts
+.endproc
 
 ; Updates
 _ppu_set_palette_internal:
@@ -713,7 +739,7 @@ ppu_fill_nametable_attr:
 .endproc
 
 ; _ppu_clear_oam: clear oam buffer
-_ppu_clear_oam:
+.proc _ppu_clear_oam
 
     ; clear OAM buffer
     ldx #0
@@ -731,9 +757,10 @@ _ppu_clear_oam:
     sta OAM_UPDATE_LEN
 
     rts
+.endproc
 
 ; ppu_oam_sprite: add a sprite from _OAM_ARGS to OAM_UPDATE
-_ppu_oam_sprite:
+.proc _ppu_oam_sprite
 
     ; load OAM buffer length
     ldx OAM_UPDATE_LEN
@@ -759,6 +786,7 @@ _ppu_oam_sprite:
     stx OAM_UPDATE_LEN
 
     rts
+.endproc
 
 ; given a meta-sprite, upload it's sprites to CHR RAM
 .proc _ppu_upload_meta_sprite_chr_ram_internal
@@ -784,10 +812,10 @@ _ppu_oam_sprite:
     sta META_SPRITE_LEN
     iny
 
-    ; disable rendering
-    lda PPU_MASK_BUFFER
-    and %11101111
-    sta PPU_MASK
+    ;; disable rendering
+    ;lda PPU_MASK_BUFFER
+    ;and %11101111
+    ;sta PPU_MASK
 
     ; set base offset
     lda _PPU_ARGS+2
@@ -816,57 +844,11 @@ _ppu_oam_sprite:
         ;  load 16 bytes
         ldy #0
 
+        .repeat 16
         lda (CHR_UPLOAD_ADDR), y
         sta PPU_DATA
         iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
-        lda (CHR_UPLOAD_ADDR), y
-        sta PPU_DATA
-        iny
+        .endrepeat
 
         ; increment address by 16
         lda CHR_UPLOAD_ADDR+0
@@ -888,9 +870,9 @@ _ppu_oam_sprite:
         cpy META_SPRITE_LEN
         bne @loop_each_tile
 
-    ; reenable rendering
-    lda PPU_MASK_BUFFER
-    sta PPU_MASK
+    ;; reenable rendering
+    ;lda PPU_MASK_BUFFER
+    ;sta PPU_MASK
 
     rts
 .endproc
@@ -998,16 +980,15 @@ ppu_clear_chr_ram:
 
 .proc _ppu_clear_chr_ram_internal
 
-    lda #0
-
-    ; disable rendering
-    sta PPU_MASK
+    ;; disable rendering
+    ;lda #0
+    ;sta PPU_MASK
 
     ; load starting address
-    ldy _PPU_ARGS+0
-    sty PPU_ADDR
-    ldy #0
-    sty PPU_ADDR
+    lda _PPU_ARGS+0
+    sta PPU_ADDR
+    lda #0
+    sta PPU_ADDR
 
     ; clear all pages
     ldx #16
@@ -1024,24 +1005,20 @@ ppu_clear_chr_ram:
     dex
     bne @loop
 
-    ; reset mask
-    lda PPU_MASK_BUFFER
-    sta PPU_MASK
+    ;; reset mask
+    ;lda PPU_MASK_BUFFER
+    ;sta PPU_MASK
 
     rts
 .endproc
 
 ; Upload a row of tiles into CHR RAM
-ppu_upload_chr_ram:
-
 .proc _ppu_upload_chr_ram_internal
     ;_PPU_ARGS[0] ; src address
     ;_PPU_ARGS[1]
-;
-    ;_PPU_ARGS[2] ; row count
-;
-    ;_PPU_ARGS[3] ; dst address (row, 0x00, 0x01, 0x02, ...)
-    ;_PPU_ARGS[0] ; dst address (col, 0x00, 0x10, ...)
+    ;_PPU_ARGS[2] ; dst address
+    ;_PPU_ARGS[3]
+    ;_PPU_ARGS[4] ; tile count
 
     ; NOTE: needs to be reversed as offset expects [low, high] in bytes [0, 1]
     ; store address
@@ -1050,39 +1027,44 @@ ppu_upload_chr_ram:
     lda _PPU_ARGS+1 ;
     sta CHR_UPLOAD_ADDR+0
 
-    lda #0
+    ;; disable rendering
+    ;lda #0
+    ;sta PPU_MASK
 
-    ; disable rendering
-    sta PPU_MASK
+    ; reset latch
+    bit PPU_STATUS
 
     ; load starting address
-    ldy _PPU_ARGS+3
-    sty PPU_ADDR
-    ldy #0
-    sty PPU_ADDR
+    lda _PPU_ARGS+2
+    sta PPU_ADDR
+    lda _PPU_ARGS+3
+    sta PPU_ADDR
 
-    ; number of 256-byte pages to load
-    ldx _PPU_ARGS+2
+    ; number of tiles to load
+    ldx _PPU_ARGS+4
+
+    ldy #0
 
 @loop:
-    ; load byte from address
+    ; load 16 bytes from address
+    .repeat 16
     lda (CHR_UPLOAD_ADDR), y
     sta PPU_DATA
-
-    ; inc, loop until wrapped back to 0
     iny
-    bne @loop
+    .endrepeat
 
-    ; increment to next page
-    inc CHR_UPLOAD_ADDR+1
+    ; increment page when read 256 bytes
+    bne :+
+        inc CHR_UPLOAD_ADDR+1
+        :
 
     ; repeat until complete
     dex
     bne @loop
 
-    ; reset mask
-    lda PPU_MASK_BUFFER
-    sta PPU_MASK
+    ;; reset mask
+    ;lda PPU_MASK_BUFFER
+    ;sta PPU_MASK
 
     rts
 .endproc
@@ -1090,9 +1072,9 @@ ppu_upload_chr_ram:
 ;
 .proc _ppu_begin_write_chr_ram_internal
 
-    ; disable rendering
-    lda #0
-    sta PPU_MASK
+    ;; disable rendering
+    ;lda #0
+    ;sta PPU_MASK
 
     ; store address
     lda _PPU_ARGS+0
@@ -1112,10 +1094,139 @@ ppu_upload_chr_ram:
 ;
 .proc _ppu_end_write_chr_ram_internal
 
-    ; reenable rendering
-    lda PPU_MASK_BUFFER
-    sta PPU_MASK
+    ;; reenable rendering
+    ;lda PPU_MASK_BUFFER
+    ;sta PPU_MASK
 
+    rts
+.endproc
+
+; ppu_upload_palette: uploads palette while PPU is off
+.proc _ppu_upload_palette
+
+    ; palette update
+    ldx PALETTE_UPDATE_LEN
+    beq @end
+
+    ; reset latch
+    bit PPU_STATUS
+
+    ; set PPU palette address
+    lda #(>PALETTE_BASE_ADDR)
+    sta PPU_ADDR
+    lda #(<PALETTE_BASE_ADDR)
+    sta PPU_ADDR
+
+    ldx #0
+    :
+        lda PALETTE_UPDATE, x
+        sta PPU_DATA
+        inx
+
+        ; fill all palette data
+        cpx PALETTE_BYTE_COUNT
+        bcc :-
+
+    lda #0
+    sta PALETTE_UPDATE_LEN
+
+@end:
+    rts
+.endproc
+
+; _ppu_upload_nametable: uploads nametable updates while PPU is off
+.proc _ppu_upload_nametable
+
+    ; nametable update
+    ldx NAMETABLE_UPDATE_POS
+    cpx NAMETABLE_UPDATE_LEN
+    beq @end
+
+    ; count nametable updates
+    lda #0
+    sta NMI_NAMETABLE_COUNT
+
+    ; reset latch
+    bit PPU_STATUS
+
+@update_nametable_loop:
+    ; high byte address
+    lda NAMETABLE_UPDATE, x
+    sta PPU_ADDR
+    inx
+
+    ; low byte address
+    lda NAMETABLE_UPDATE, x
+    sta PPU_ADDR
+    inx
+
+    ; tile count (bit7 0 = individualt, 1 = repeat)
+    lda NAMETABLE_UPDATE, x
+    bpl @update_nametable_individual
+
+@update_nametable_repeat:
+
+    ; load tile count
+    inx
+
+    ; mask out bit7 and move to Y
+    and #$7F
+    tay
+
+    ; tile to repeat
+    lda NAMETABLE_UPDATE, x
+    inx
+
+    ; write tile to PPU_DATA Y times
+    :
+        ; add repeat count to nametable count
+        inc NMI_NAMETABLE_COUNT
+
+        sta PPU_DATA
+        dey
+        bne :-
+
+    ; jump to end
+    jmp @update_nametable_loop_compare
+
+@update_nametable_individual:
+
+    ; load tile count
+    inx
+
+    tay
+    ; check tile count != 0
+    :
+        ; add tile count to nametable count
+        inc NMI_NAMETABLE_COUNT
+
+        ; tile
+        lda NAMETABLE_UPDATE, x
+        sta PPU_DATA
+        inx
+
+        ; decrement count
+        dey
+        bne :-
+
+@update_nametable_loop_compare:
+
+    ;; if there have been >64 tiles updated, early out of the loop
+    ;lda NMI_NAMETABLE_COUNT
+    ;cmp #64
+    ;bcc @update_nametable_loop_end
+    ; bmi @update_nametable_loop_end
+
+    ; loop while X != length
+    cpx NAMETABLE_UPDATE_LEN
+    bne @update_nametable_loop
+
+@update_nametable_loop_end:
+
+    ; reset nametable update length
+    stx NAMETABLE_UPDATE_POS
+
+@end:
     rts
 .endproc
 
@@ -1159,18 +1270,27 @@ ppu_upload_chr_ram:
         jmp @nmi_ready
     :
 
+    ; nmi ready == 3, turn on rendering
+    cmp #3
+    bne :+
+
+        lda PPU_MASK_BUFFER
+        sta PPU_MASK
+        jmp @nmi_ready
+    :
+
 @update_oam:
     ; DMA upload
     lda #>OAM_UPDATE
     sta PPU_OAM_DMA
 
 @update_palette:
-    ; reset latch
-    bit PPU_STATUS
-
     ; palette update
     ldx PALETTE_UPDATE_LEN
     beq @update_nametable
+
+    ; reset latch
+    bit PPU_STATUS
 
     ; set PPU palette address
     lda #(>PALETTE_BASE_ADDR)
@@ -1191,6 +1311,9 @@ ppu_upload_chr_ram:
     lda #0
     sta PALETTE_UPDATE_LEN
 
+    ; if there has been a palette update, skip nametable updates this frame
+    jmp @ppu_scroll
+
 @update_nametable:
     ; nametable update
     ldx NAMETABLE_UPDATE_POS
@@ -1202,81 +1325,85 @@ ppu_upload_chr_ram:
     sta NMI_NAMETABLE_COUNT
 
 @update_nametable_loop:
-        ; high byte address
-        lda NAMETABLE_UPDATE, x
-        sta PPU_ADDR
-        inx
+    ; high byte address
+    lda NAMETABLE_UPDATE, x
+    sta PPU_ADDR
+    inx
 
-        ; low byte address
-        lda NAMETABLE_UPDATE, x
-        sta PPU_ADDR
-        inx
+    ; low byte address
+    lda NAMETABLE_UPDATE, x
+    sta PPU_ADDR
+    inx
 
-        ; tile count (bit7 0 = individualt, 1 = repeat)
-        lda #$80
-        and NAMETABLE_UPDATE, x
-        bpl @update_nametable_individual
+    ; tile count (bit7 0 = individualt, 1 = repeat)
+    lda NAMETABLE_UPDATE, x
+    beq @update_nametable_loop_compare
+    bpl @update_nametable_individual
 
 @update_nametable_repeat:
 
-        ; load tile count
-        lda NAMETABLE_UPDATE, x
-        inx
+    ; load tile count
+    inx
 
-        ; mask out bit7 and move to Y
-        and #$7F
-        tay
+    ; mask out bit7 and move to Y
+    and #$7F
+    tay
 
+    clc
+    adc NMI_NAMETABLE_COUNT
+    sta NMI_NAMETABLE_COUNT
+
+    ; tile to repeat
+    lda NAMETABLE_UPDATE, x
+    inx
+
+    ; write tile to PPU_DATA Y times
+    :
         ; add repeat count to nametable count
-        clc
-        adc NMI_NAMETABLE_COUNT
 
-        ; tile to repeat
-        lda NAMETABLE_UPDATE, x
-        inx
+        sta PPU_DATA
+        dey
+        bne :-
 
-        ; write tile to PPU_DATA Y times
-        :
-            sta PPU_DATA
-            dey
-            bne :-
-
-        ; jump to end
-        jmp @update_nametable_loop_compare
+    ; jump to end
+    jmp @update_nametable_loop_compare
 
 @update_nametable_individual:
 
-        ; load tile count
+    ; load tile count
+    inx
+    tay
+
+    clc
+    adc NMI_NAMETABLE_COUNT
+    sta NMI_NAMETABLE_COUNT
+
+    ; check tile count != 0
+    beq @update_nametable_loop_compare
+
+    :
+        ; add tile count to nametable count
+
+        ; tile
         lda NAMETABLE_UPDATE, x
+        sta PPU_DATA
         inx
 
-        ; add tile count to nametable count
-        clc
-        adc NMI_NAMETABLE_COUNT
-
-        tay
-        ; check tile count != 0
-        :
-            ; tile
-            lda NAMETABLE_UPDATE, x
-            sta PPU_DATA
-            inx
-
-            ; decrement count
-            dey
-            bne :-
+        ; decrement count
+        dey
+        bne :-
 
 @update_nametable_loop_compare:
 
-        ; if there have been >64 tiles updated, early out of the loop
-        lda NMI_NAMETABLE_COUNT
-        cmp #64
-        bcc @update_nametable_loop_end
-        ; bmi @update_nametable_loop_end
-
-        ; loop while X != length
-        cpx NAMETABLE_UPDATE_LEN
-        bne @update_nametable_loop
+    ;; if there have been >64 tiles updated, early out of the loop
+    ;lda NMI_NAMETABLE_COUNT
+    ;cmp #64
+    ;bcc @update_nametable_loop_end
+    ;; bmi @update_nametable_loop_end
+;
+    ;; loop while X != length
+    ;cpx NAMETABLE_UPDATE_LEN
+    ;bne @update_nametable_loop
 
 @update_nametable_loop_end:
 
@@ -1285,6 +1412,24 @@ ppu_upload_chr_ram:
 
 @ppu_scroll:
 
+    ;; enable
+    ;ora #%10001000
+    ;lda #0 ; scroll_nmt
+    ;and #%00000011 ;
+    ;ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
+    ;sta PPU_CTRL
+    ;sta PPU_CTRL_BUFFER
+    lda PPU_CTRL_BUFFER
+    sta PPU_CTRL
+
+    ;; enable rendering
+    ;lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
+    ;sta PPU_MASK
+    ;sta PPU_MASK_BUFFER
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
+
+@nmi_ready:
     ; set scroll x, y
     lda SCROLL_X
     sta PPU_SCROLL
@@ -1292,23 +1437,9 @@ ppu_upload_chr_ram:
     lda SCROLL_Y
     sta PPU_SCROLL
 
-    ; enable
-    ;ora #%10001000
-    lda #0 ; scroll_nmt
-    and #%00000011 ;
-    ora #(PPU_CTRL_GENERATE_NMI_ON | PPU_CTRL_SPRITE_PATTERN_TABLE_ADDR_1000 | PPU_CTRL_BASE_NAMETABLE_ADDR_2000 | PPU_CTRL_BACKGROUND_PATTERN_TABLE_ADDR_0000)
-    sta PPU_CTRL
-    sta PPU_CTRL_BUFFER
-
-    ; enable rendering
-    lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
-    sta PPU_MASK
-    sta PPU_MASK_BUFFER
-
-@nmi_ready:
     ; NMI ready
-    ldx #0
-    stx NMI_READY
+    lda #0
+    sta NMI_READY
 
 @ppu_update_end:
     ; TODO: play sound/music

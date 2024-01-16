@@ -15,7 +15,7 @@
 
 .export _knight
 
-.segment "RODATA"
+.segment "CHR_01"
 
 _knight:
 

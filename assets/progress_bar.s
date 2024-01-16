@@ -15,7 +15,7 @@
 
 .export _progress_bar
 
-.segment "RODATA"
+.segment "CHR_00"
 
 _progress_bar:
 

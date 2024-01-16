@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -135,6 +134,8 @@ namespace img2chr
         [StructLayout(LayoutKind.Sequential)]
         struct ConvertOptions
         {
+            public string defaultAssetLayoutFileName;
+            public string defaultAssetLayoutFileExt;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -281,13 +282,18 @@ namespace img2chr
 
         delegate void ConvertFunc(string inputFilename, in ConvertOptions convertOptions);
 
+        const string uint8Type = "uint8_t";
+
         static void ConvertImageFile(string imageFilename, in ConvertOptions cmdOptions)
         {
             ConvertOptions options = cmdOptions;
 
-            TryGetFileParamters(imageFilename, "sprite", out var spriteParameters);
+            TryGetFileParamters(options.defaultAssetLayoutFileName, options.defaultAssetLayoutFileExt, out var assetLayoutParameters);
 
-            if (!GetBoolParameter(spriteParameters, "enable-import", true))
+            bool isSprite = TryGetFileParamters(imageFilename, "sprite", out var spriteParameters);
+            bool isFont = TryGetFileParamters(imageFilename, "font", out var fontParameters);
+
+            if (!GetBoolParameter(spriteParameters, "enable-import", true) || !GetBoolParameter(fontParameters, "enable-import", true))
             {
                 return;
             }
@@ -502,8 +508,15 @@ namespace img2chr
                 }
             }
 
+            string assetLayoutSpriteKey = $"{imageFilename}.sprite";
+            string defaultChrSegment = GetStringParameter(assetLayoutParameters, $"{assetLayoutSpriteKey}.chr-rom", ChrRomSegments[0]);
+
             // generate text file
-            const string segment = "RODATA";
+            const string rodataSegment = "RODATA";
+            string chrRomSegment = GetStringParameter(spriteParameters, "chr-rom", defaultChrSegment);
+            int chrRomSegmentIndex = Array.IndexOf(ChrRomSegments, chrRomSegment);
+            Assert(chrRomSegmentIndex >= 0, $"Invalid CHR ROM Segment: {chrRomSegment}");
+
             StringBuilder sb = new StringBuilder();
             StringBuilder byte0 = new StringBuilder();
             StringBuilder byte1 = new StringBuilder();
@@ -532,7 +545,7 @@ namespace img2chr
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
             sb.AppendLine($".export _{exportName}");
             sb.AppendLine();
-            sb.AppendLine($".segment \"{segment}\"");
+            sb.AppendLine($".segment \"{chrRomSegment}\"");
             sb.AppendLine();
             sb.AppendLine($"_{exportName}:");
             sb.AppendLine();
@@ -587,7 +600,7 @@ namespace img2chr
                 sb.AppendLine(";             : XXX - tile offset X from 0,0 of meta-sprite; YYY - tile offset Y from 0,0 of meta-sprite");
                 sb.AppendLine(";             : PP - tile palette to use for the meta-sprite; IIIIII - tile index from [base address]");
                 sb.AppendLine();
-                sb.AppendLine($".segment \"{segment}\"");
+                sb.AppendLine($".segment \"{rodataSegment}\"");
                 sb.AppendLine();
 
                 // write meta sprite format
@@ -653,8 +666,43 @@ namespace img2chr
                 LogInfo($"Converted {imageFilename} -> {sFilename}");
             }
 
+            // Generate sprite header file
+            {
+                sb.Clear();
+
+                sb.AppendLine("//");
+                sb.AppendLine($"// Generated from {Path.GetFileName(imageFilename)}");
+                sb.AppendLine("//");
+                sb.AppendLine();
+
+                string defineGuard = $"{filename}_sprite_h".Replace('-', '_').Replace('.', '_').ToUpperInvariant();
+                sb.AppendLine($"#ifndef {defineGuard}");
+                sb.AppendLine($"#define {defineGuard}");
+                sb.AppendLine();
+
+                sb.AppendLine($"#define {$"{exportName.ToUpper()}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
+
+                for (int i = 0; i < allUniqueTiles.Count; i++)
+                {
+                    UniqueTileEntry uniqueTileEntry = allUniqueTiles[i];
+                    TileEntry tileEntry = allTiles[uniqueTileEntry.index];
+
+                    sb.AppendLine($"#define {$"{exportName.ToUpper()}_{tileEntry.x}x{tileEntry.y}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
+                }
+
+                // TODO: support meta sprites being on different CHR ROM segments
+
+                sb.AppendLine();
+                sb.AppendLine($"#endif // {defineGuard}");
+
+                // write font file
+                string hFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".sprite.h";
+                File.WriteAllText(hFilename, sb.ToString(), UTF8);
+                LogInfo($"Converted {imageFilename} -> {hFilename}");
+            }
+
             // if the image is also a font, do some extra processing
-            if (TryGetFileParamters(imageFilename, "font", out var fontParameters))
+            if (isFont)
             {
                 string charMap = GetStringParameter(fontParameters, "charmap");
                 if (!string.IsNullOrEmpty(charMap))
@@ -745,7 +793,7 @@ namespace img2chr
 
                             if (!string.IsNullOrEmpty(defineName))
                             {
-                                sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (uint8_t)({charOffset + index})");
+                                sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (${uint8Type})({charOffset + index})");
                             }
                         }
 
@@ -774,7 +822,7 @@ namespace img2chr
 
                                 if (!string.IsNullOrEmpty(defineName))
                                 {
-                                    sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (uint8_t)({charOffset + index})");
+                                    sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (${uint8Type})({charOffset + index})");
                                 }
                             }
                         }
@@ -799,7 +847,7 @@ namespace img2chr
                 }
                 else if (char.IsLetter(c))
                 {
-                    if(char.IsUpper(c))
+                    if (char.IsUpper(c))
                     {
                         defineName = $"upper_{c}";
                     }
@@ -1115,7 +1163,7 @@ namespace img2chr
                 string lang = langToMap.Key;
                 string hFilename = $"{Path.Combine(Path.GetDirectoryName(textFilename), filename)}.{lang}.h";
 
-                string define = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
+                string defineGuard = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
 
                 sb.Clear();
                 sb.AppendLine("// ");
@@ -1123,8 +1171,8 @@ namespace img2chr
                 sb.AppendLine("// ");
                 sb.AppendLine();
 
-                sb.AppendLine($"#ifndef {define}");
-                sb.AppendLine($"#define {define}");
+                sb.AppendLine($"#ifndef {defineGuard}");
+                sb.AppendLine($"#define {defineGuard}");
                 sb.AppendLine();
 
                 sb.AppendLine($"#define LANGUAGE \"{lang}\"");
@@ -1137,7 +1185,7 @@ namespace img2chr
                 }
 
                 sb.AppendLine();
-                sb.AppendLine($"#endif // {define}");
+                sb.AppendLine($"#endif // {defineGuard}");
 
                 File.WriteAllText(hFilename, sb.ToString(), UTF8);
                 LogInfo($"Converted {textFilename} -> {hFilename}");
@@ -1146,9 +1194,48 @@ namespace img2chr
 
         static UTF8Encoding UTF8 = new UTF8Encoding(false);
 
+        static string[] ChrRomSegments = {
+            "CHR_00",
+            "CHR_01",
+            "CHR_02",
+            "CHR_03",
+            "CHR_04",
+            "CHR_05",
+            "CHR_06",
+            "CHR_07",
+            "CHR_08",
+            "CHR_09",
+            "CHR_0A",
+            "CHR_0B",
+            "CHR_0C",
+            "CHR_0D",
+            "CHR_0E",
+            "CHR_0F",
+            "CHR_10",
+            "CHR_11",
+            "CHR_12",
+            "CHR_13",
+            "CHR_14",
+            "CHR_15",
+            "CHR_16",
+            "CHR_17",
+            "CHR_18",
+            "CHR_19",
+            "CHR_1A",
+            "CHR_1B",
+            "CHR_1C",
+            "CHR_1D",
+            "CHR_1E",
+            "CHR_1F",
+        };
+
         static void Main(string[] args)
         {
-            ConvertOptions options = default;
+            ConvertOptions options = new()
+            {
+                defaultAssetLayoutFileName = "assets",
+                defaultAssetLayoutFileExt = "layout"
+            };
 
             Dictionary<string, ConvertFunc> formatMap = new() {
                 { ".png", ConvertImageFile },

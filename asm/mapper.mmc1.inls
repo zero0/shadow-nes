@@ -1,0 +1,122 @@
+;
+; MMC1 Mapper
+;
+
+MMC1_CTRL   =$8000
+MMC1_CHR0   =$A000
+MMC1_CHR1   =$C000
+MMC1_PRG    =$E000
+
+.import nmi, reset, irq
+
+.define MMC1_MIRRORING_ONE_SCREEN_LOW   #0
+.define MMC1_MIRRORING_ONE_SCREEN_HIGH  #1
+.define MMC1_MIRRORING_VERTICAL         #2
+.define MMC1_MIRRORING_HORIZONTAL       #3
+
+.define MMC1_PRG_COUNT      8
+.define MMC1_CHR_COUNT      16
+
+;
+.macro define_reset_in_segment seg
+    .segment seg
+        jmp reset
+.endmacro
+
+.repeat (MMC1_PRG_COUNT-1), I
+    define_reset_in_segment .concat("ROM_", .sprintf("%02X", I))
+.endrepeat
+
+;
+.macro define_vectors_in_segment seg, i
+    .segment seg
+    .scope
+        .proc entry_prg
+            sei
+            ldx #$FF
+            txs
+            stx MMC1_CTRL  ; Writing $80-$FF anywhere in $8000-$FFFF resets MMC1
+            jmp reset
+
+            .addr nmi       ;$fffa vblank nmi
+            .addr entry_prg ;$fffc reset
+            .addr $0000     ;$fffe irq / brk
+        .endproc
+    .endscope
+.endmacro
+
+.repeat (MMC1_PRG_COUNT-1), I
+    define_vectors_in_segment .concat("VECTORS_", .sprintf("%02X", I)), I
+.endrepeat
+
+;
+; Internal Macros
+;
+
+; Resets MMC1 register
+.macro mmc1_reset
+    ldx #$80
+    stx MMC1_CTRL
+.endmacro
+
+; Write A to ADDR 5 times to push value to MMC1 register
+.macro mmc1_write_register addr
+    sta addr
+    lsr a
+    sta addr
+    lsr a
+    sta addr
+    lsr a
+    sta addr
+    lsr a
+    sta addr
+.endmacro
+
+;
+; Mapper Interface
+;
+
+;
+.macro mapper_reset_impl
+    mmc1_reset
+.endmacro
+
+
+;
+.macro mapper_set_mirroring_impl
+    mmc1_reset
+    mmc1_write_register MMC1_CTRL
+.endmacro
+
+;
+.macro mapper_set_chr_bank_0_impl
+    mmc1_reset
+    mmc1_write_register MMC1_CHR0
+.endmacro
+
+;
+.macro mapper_set_chr_bank_1_impl
+    mmc1_reset
+    mmc1_write_register MMC1_CHR1
+.endmacro
+
+;
+.macro mapper_set_prg_bank_impl
+    mmc1_reset
+    mmc1_write_register MMC1_PRG
+.endmacro
+
+;
+.macro mapper_init_impl
+    lda #%11100 ;MMC1_MIRRORING_VERTICAL
+    mapper_set_mirroring_impl
+
+    lda #0  ; chr bank 0
+    mapper_set_chr_bank_0_impl
+
+    lda #1  ; chr bank 1
+    mapper_set_chr_bank_1_impl
+
+    lda #0  ; prg bank 0
+    mapper_set_prg_bank_impl
+.endmacro

@@ -15,7 +15,7 @@
 
 .export _shadow_font
 
-.segment "RODATA"
+.segment "CHR_00"
 
 _shadow_font:
 

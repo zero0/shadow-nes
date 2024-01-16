@@ -63,6 +63,8 @@ void main(void)
         // transition states
         if( game_state != next_game_state )
         {
+            ppu_wait_vblank();
+
             ppu_off();
 
             game_state_leave_func[game_state]();
@@ -70,6 +72,10 @@ void main(void)
             game_state = next_game_state;
 
             game_state_enter_func[game_state]();
+
+ppu_wait_vblank();
+
+            ppu_on();
 
             continue;
         }

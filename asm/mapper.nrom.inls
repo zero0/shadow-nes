@@ -1,0 +1,27 @@
+;
+; NROM Mapper
+;
+
+; no op
+.macro mapper_reset_impl
+.endmacro
+
+; no op
+.macro mapper_init_impl
+.endmacro
+
+; no op
+.macro mapper_set_mirroring_impl
+.endmacro
+
+; no op
+.macro mapper_set_chr_bank_0_impl
+.endmacro
+
+; no op
+.macro mapper_set_chr_bank_1_impl
+.endmacro
+
+; no op
+.macro mapper_set_prg_bank_impl
+.endmacro

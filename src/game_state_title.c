@@ -12,7 +12,7 @@ extern ptr_t shadow_font;
 void __fastcall__ game_state_title_enter()
 {
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
-    ppu_upload_chr_ram( shadow_font, 5, 0x00 );
+    ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
@@ -26,28 +26,54 @@ void __fastcall__ game_state_title_enter()
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
+    ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
 
-    text_draw_string( (SCREEN_WIDTH/2) - ( 12 / 2 ), 5, PALETTE_BACKGROUND_0, tr_game_title );
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(12), 5, PALETTE_BACKGROUND_2, tr_game_title );
 
-    text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 13, PALETTE_BACKGROUND_0, tr_new_game );
-    text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), 16, PALETTE_BACKGROUND_0, tr_continue );
+    ppu_set_nametable_attr( NAMETABLE_A_ATTR, 0, 5,  2, 2, 2, 2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
-    text_draw_string( (SCREEN_WIDTH/2) - ( 12 / 2 ), (SCREEN_HEIGH - 3), PALETTE_BACKGROUND_1, tr_version );
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), 13, PALETTE_BACKGROUND_0, tr_new_game );
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), 16, PALETTE_BACKGROUND_0, tr_continue );
 
-    text_draw_string( (SCREEN_WIDTH/2) - ( 8 / 2 ), (SCREEN_HEIGH - 1), PALETTE_BACKGROUND_1, tr_copyright );
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(12), (SCREEN_HEIGH - 3), PALETTE_BACKGROUND_1, tr_version );
 
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), (SCREEN_HEIGH - 1), PALETTE_BACKGROUND_1, tr_copyright );
+
+    b = 0;
     t = 0;
+    game_state_internal = 0;
+    timer_set( game_state_timer, 10 );
 }
 
 void __fastcall__ game_state_title_leave()
 {
-    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
 }
 
 void __fastcall__ game_state_title_update()
 {
     gamepad_poll( 0 );
+
+    timer_tick( game_state_timer );
+    if( timer_is_done( game_state_timer ) )
+    {
+        timer_set( game_state_timer, 10 );
+        ++b;
+
+        switch( b )
+        {
+            case 0:
+                ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
+                break;
+            case 1:
+                ppu_set_palette( PALETTE_BACKGROUND_2, 0x37, 0x15, 0x26 );
+                break;
+            case 2:
+                ppu_set_palette( PALETTE_BACKGROUND_2, 0x26, 0x37, 0x15 );
+                b = -1;
+                break;
+        }
+    }
 
     switch( t )
     {

@@ -17,7 +17,7 @@ extern uint8_t next_game_state;
 #pragma zpsym("next_game_state")
 extern uint8_t game_state_internal;
 #pragma zpsym("game_state_internal")
-extern uint8_t game_state_timer;
+extern timer_t game_state_timer;
 #pragma zpsym("game_state_timer")
 
 extern rt_timer_t game_rt_timer;

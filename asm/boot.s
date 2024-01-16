@@ -4,7 +4,7 @@
 ;v050517
 
 
-FT_DPCM_OFF = __DMC_START__     ;set in the linker CFG file via MEMORY/DMC section
+;FT_DPCM_OFF = __DMC_START__     ;set in the linker CFG file via MEMORY/DMC section
                                 ;'start' there should be $c000..$ffc0, in 64-byte steps
 FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 
@@ -21,13 +21,17 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __CODE_LOAD__       ,__CODE_RUN__   ,__CODE_SIZE__
 .import __RODATA_LOAD__     ,__RODATA_RUN__ ,__RODATA_SIZE__
 .import __DMC_START__
-.import NES_MAPPER          ,NES_PRG_BANKS  ,NES_CHR_BANKS  ,NES_MIRRORING, NES_BATTERY
+.import NES_MAPPER, NES_PRG_BANKS, NES_CHR_BANKS, NES_MIRRORING, NES_BATTERY, NES_TRAINER
 .importzp _PPU_ARGS
-.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_upload_chr_ram, ppu_clear_chr_ram, nmi
-.import shadow_font
-.import knight_sprite_0
-.import knight_sprite_1
+.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_clear_chr_ram, nmi
+.import mapper_reset
+.import mapper_init
+.import mapper_set_mirroring
+.import mapper_set_chr_bank_0
+.import mapper_set_chr_bank_1
+.import mapper_set_prg_bank
 .include "zeropage.inc"
+.export reset, irq
 
 FT_BASE_ADR         =$0100    ;page in RAM, should be $xx00
 
@@ -50,13 +54,43 @@ TEMP:               .res 2
 
 .segment "HEADER"
 
+.define USE_NES_2_0     1
+
+.if USE_NES_2_0
+.import NES_2_0, NES_2_0_INPUT_TYPE, NES_2_0_SUB_MAPPER, NES_2_0_FRAME_TIME, NES_2_0_WORK_RAM, NES_2_0_SAVE_RAM
+.define NES_2_0     8
+.else
+.define NES_2_0     0
+.endif
+
 .byte 'N','E','S',$1A
+
 .byte <NES_PRG_BANKS
 .byte <NES_CHR_BANKS
-.byte <NES_MIRRORING | (<NES_BATTERY << 2) | ( <NES_MAPPER << 4 )
-.byte (<NES_MAPPER & $F0)
-.res 8,0
+.byte (<NES_MIRRORING & $0F) | (<NES_BATTERY << 1) | (<NES_TRAINER << 2) | ( <NES_MAPPER << 4 )
+.byte (<NES_MAPPER & $F0) | ( <NES_2_0 & $0F)
 
+.if USE_NES_2_0
+.byte ((<NES_2_0_SUB_MAPPER & $0F) << 4)
+.byte 0
+.byte ((<NES_2_0_SAVE_RAM & $0F) << 4) | (<NES_2_0_WORK_RAM & $0F)
+.byte 0
+
+.byte (<NES_2_0_FRAME_TIME & $03)
+.byte 0
+.byte 0
+.byte (<NES_2_0_INPUT_TYPE)
+.else
+.byte 0
+.byte 0
+.byte 0
+.byte 0
+
+.byte 0
+.byte 0
+.byte 0
+.byte 0
+.endif
 
 .segment "RODATA"
 
@@ -66,9 +100,9 @@ TEMP:               .res 2
 
 .segment "VECTORS"
 
-    .word nmi       ;$fffa vblank nmi
-    .word reset     ;$fffc reset
-    .word irq       ;$fffe irq / brk
+    .addr nmi       ;$fffa vblank nmi
+    .addr reset     ;$fffc reset
+    .addr irq       ;$fffe irq / brk
 
 
 .segment "CHARS"
@@ -85,9 +119,11 @@ irq:
 ; start up
 ;
 
+.define USE_CHR_RAM     0
+
 .segment "STARTUP"
 
-.segment "CODE"
+;.segment "CODE"
 reset:
     sei             ; mask interupts
     cld             ; disable decimal mode
@@ -167,6 +203,7 @@ reset:
     jsr ppu_clear_nametable
 
     ; clear all CHR RAM
+.if USE_CHR_RAM
     lda #$00
     sta _PPU_ARGS+0
     jsr ppu_clear_chr_ram
@@ -174,6 +211,7 @@ reset:
     lda #$10
     sta _PPU_ARGS+0
     jsr ppu_clear_chr_ram
+.endif
 
     ; clear ram
     lda #0
@@ -195,6 +233,9 @@ reset:
 
     ; enable NMI
     jsr ppu_enable_default
+
+    ; initialize mapper
+    jsr mapper_init
 
     ; enable interupts
     cli
