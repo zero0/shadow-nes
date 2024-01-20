@@ -23,9 +23,11 @@ MMC1_PRG    =$E000
         jmp reset
 .endmacro
 
+.pushseg
 .repeat (MMC1_PRG_COUNT-1), I
     define_reset_in_segment .concat("ROM_", .sprintf("%02X", I))
 .endrepeat
+.popseg
 
 ;
 .macro define_vectors_in_segment seg, i
@@ -45,9 +47,11 @@ MMC1_PRG    =$E000
     .endscope
 .endmacro
 
+.pushseg
 .repeat (MMC1_PRG_COUNT-1), I
     define_vectors_in_segment .concat("VECTORS_", .sprintf("%02X", I)), I
 .endrepeat
+.popseg
 
 ;
 ; Internal Macros
