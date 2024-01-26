@@ -6,11 +6,13 @@
 #include "ppu.h"
 #include "globals.h"
 #include "game_state.h"
+#include "game_flow.h"
 
 extern ptr_t shadow_font;
 
 void __fastcall__ game_state_title_enter()
 {
+    // clear ppu to known state
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
@@ -29,6 +31,7 @@ void __fastcall__ game_state_title_enter()
     ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
 
+    // draw title screen
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(12), 5, PALETTE_BACKGROUND_2, tr_game_title );
 
     ppu_set_nametable_attr( NAMETABLE_A_ATTR, 0, 5,  2, 2, 2, 2,  TILE_TO_ATTR(SCREEN_WIDTH) );
@@ -39,6 +42,9 @@ void __fastcall__ game_state_title_enter()
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(12), (SCREEN_HEIGH - 3), PALETTE_BACKGROUND_1, tr_version );
 
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), (SCREEN_HEIGH - 1), PALETTE_BACKGROUND_1, tr_copyright );
+
+    // reset game flow
+    reset_game_flow();
 
     b = 0;
     t = 0;

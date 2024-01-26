@@ -12,6 +12,14 @@ uint8_t __fastcall__ gamepad_prev_state( uint8_t pad );
 
 void __fastcall__ gamepad_clear_states( uint8_t pad );
 
+uint8_t __fastcall__ gamepad_layer(void);
+
+uint8_t __fastcall__ gampad_push_layer(void);
+
+void __fastcall__ gamepad_pop_layer(void);
+
+void __fastcall__ gamepad_reset_layer(void);
+
 #define GAMEPAD_A       (uint8_t)0x80
 #define GAMEPAD_B       (uint8_t)0x40
 #define GAMEPAD_SELECT  (uint8_t)0x20

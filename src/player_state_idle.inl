@@ -1,6 +1,6 @@
 
 //
-static __fastcall__ player_state_idle_enter()
+static void __fastcall__ player_state_idle_enter()
 {
     // TODO: play idle animation
 

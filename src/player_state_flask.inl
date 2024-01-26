@@ -15,7 +15,7 @@ static void __fastcall__ perform_flask(void)
     player_next_state = PLAYER_STATE_USING_FLASH;
 }
 
-static __fastcall__ player_state_flash_enter()
+static void __fastcall__ player_state_flash_enter()
 {
     // TODO: implement actual animation
     // play flash animation
@@ -25,7 +25,7 @@ static __fastcall__ player_state_flash_enter()
     flags_reset( player_can_perform_action_flags );
 }
 
-static __fastcall__ player_state_flash_update()
+static void __fastcall__ player_state_flash_update()
 {
     // leave state and heal when animation is done so if interuptted, heal does not work
     if( timer_is_done( player_animation_frame_timer ) )
@@ -61,7 +61,7 @@ static __fastcall__ player_state_flash_update()
     }
 }
 
-static __fastcall__ player_state_flash_leave()
+static void __fastcall__ player_state_flash_leave()
 {
     // TODO: cancel animation
 

@@ -9,6 +9,7 @@ CTRL_PORT1          =$4016
 
     GAMEPAD_STATE:              .res 4  ; four controllers
     GAMEPAD_PREV_STATE:         .res 4  ; four controllers
+    GAMEPAD_LAYER:              .res 1  ;
 
 .define GAMEPAD_A      $01
 .define GAMEPAD_B      $02
@@ -23,6 +24,10 @@ CTRL_PORT1          =$4016
 .export _gamepad_state
 .export _gamepad_prev_state
 .export _gamepad_clear_states
+.export _gamepad_layer
+.export _gamepad_push_layer
+.export _gamepad_pop_layer
+.export _gamepad_reset_layer
 
 .segment "CODE"
 
@@ -98,5 +103,35 @@ CTRL_PORT1          =$4016
     sta GAMEPAD_STATE, x
     sta GAMEPAD_PREV_STATE, x
 
+    rts
+.endproc
+
+; returns the current gamepad layer
+.proc _gamepad_layer
+
+    lda GAMEPAD_LAYER
+    rts
+.endproc
+
+; increment the gamepad layer and return the new value
+.proc _gamepad_push_layer
+
+    inc GAMEPAD_LAYER
+    lda GAMEPAD_LAYER
+    rts
+.endproc
+
+; decrement the gamepad layer
+.proc _gamepad_pop_layer
+
+    dec GAMEPAD_LAYER
+    rts
+.endproc
+
+; reset gamepad layer
+.proc _gamepad_reset_layer
+
+    lda #0
+    sta GAMEPAD_LAYER
     rts
 .endproc
