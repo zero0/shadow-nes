@@ -8,6 +8,7 @@
 #include "game_state.h"
 #include "game_state_title.h"
 #include "game_state_playing.h"
+#include "game_state_cutscene.h"
 #include "game_state_checkpoint.h"
 
 //
@@ -23,7 +24,7 @@ static const game_state_func game_state_leave_func[] = {
     game_state_title_leave,
     game_state_playing_leave,
     game_state_noop,
-    game_state_noop,
+    game_state_cutscene_leave,
     game_state_noop,
     game_state_noop,
     game_state_noop,
@@ -33,7 +34,7 @@ static const game_state_func game_state_enter_func[] = {
     game_state_title_enter,
     game_state_playing_enter,
     game_state_noop,
-    game_state_noop,
+    game_state_cutscene_enter,
     game_state_noop,
     game_state_checkpoint_enter,
     game_state_noop,
@@ -43,7 +44,7 @@ static const game_state_func game_state_update_func[] = {
     game_state_title_update,
     game_state_playing_update,
     game_state_noop,
-    game_state_noop,
+    game_state_cutscene_update,
     game_state_noop,
     game_state_checkpoint_update,
     game_state_noop,
