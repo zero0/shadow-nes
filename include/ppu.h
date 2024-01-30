@@ -272,4 +272,26 @@ void __fastcall__ ppu_write_chr_ram_internal(void);
 
 void __fastcall__ ppu_end_write_chr_ram_internal(void);
 
+//
+//
+//
+
+#define ppu_fade_to(c)          \
+    PPU_ARGS[0] = (c);          \
+    PPU_ARGS[1] = 3;            \
+    ppu_fade_to_internal()
+
+#define ppu_fade_to_black()     ppu_fade_to( 0 )
+
+void __fastcall__ ppu_fade_to_internal(void);
+
+#define ppu_fade_from(c)        \
+    PPU_ARGS[0] = (c);          \
+    PPU_ARGS[1] = 3;            \
+    ppu_fade_from_internal()
+
+#define ppu_fade_from_black()   ppu_fade_from( 0 )
+
+void __fastcall__ ppu_fade_from_internal(void);
+
 #endif // PPU_H

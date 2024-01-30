@@ -138,6 +138,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .define PPU_MASK_EMPHASIZE_GREEN_ON                 $40 ; %01000000
 .define PPU_MASK_EMPHASIZE_BLUE_OFF                 $00 ; %00000000
 .define PPU_MASK_EMPHASIZE_BLUE_ON                  $80 ; %10000000
+.define PPU_MASK_EMPHASIZE_ALL_ON                   PPU_MASK_EMPHASIZE_RED_ON | PPU_MASK_EMPHASIZE_GREEN_ON | PPU_MASK_EMPHASIZE_BLUE_ON
 
 .segment "ZEROPAGE"
 
@@ -160,6 +161,8 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     META_SPRITE_TILE:       .res 1 ;
     META_SPRITE_ADDR:       .res 2 ;
     CHR_UPLOAD_ADDR:        .res 2 ;
+    FADE_FRAME_INTERAL:     .res 1 ;
+    FADE_INDEX:             .res 1 ;
 
 .export _PPU_ARGS
 
@@ -218,6 +221,9 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_begin_write_chr_ram_internal
 .export _ppu_write_chr_ram_internal
 .export _ppu_end_write_chr_ram_internal
+
+.export _ppu_fade_to_internal
+.export _ppu_fade_from_internal
 
 .segment "CODE"
 
@@ -1227,6 +1233,87 @@ ppu_clear_chr_ram:
     stx NAMETABLE_UPDATE_POS
 
 @end:
+    rts
+.endproc
+
+; ppu_fade_to: adjust palettes while fading to ARG[0] with frame interval ARG[1]
+.proc _ppu_fade_to_internal
+
+    lda _PPU_ARGS+1
+    sta FADE_FRAME_INTERAL
+    sta FADE_INDEX
+
+    ;
+    ; phase 0: update background color
+    lda _PPU_ARGS+0
+
+    ; nametable backgroupds
+    sta PALETTE_UPDATE+0
+    sta PALETTE_UPDATE+4
+    sta PALETTE_UPDATE+8
+    sta PALETTE_UPDATE+12
+
+    ; sprite backgrouds
+    sta PALETTE_UPDATE+16
+    sta PALETTE_UPDATE+20
+    sta PALETTE_UPDATE+24
+    sta PALETTE_UPDATE+28
+
+    ; mark palette update
+    inc PALETTE_UPDATE_LEN
+
+    ; loop for a number of frames
+    :
+        jsr _ppu_update
+
+        dec FADE_INDEX
+        bne :-
+
+    ;
+    ; phase 1: shift palettes
+    .repeat 3, I
+
+    ; nametable backgrouds
+    .repeat 4, P
+    lda PALETTE_UPDATE+2+(P*4)
+    sta PALETTE_UPDATE+3+(P*4)
+    lda PALETTE_UPDATE+1+(P*4)
+    sta PALETTE_UPDATE+2+(P*4)
+    lda PALETTE_UPDATE+0+(P*4)
+    sta PALETTE_UPDATE+1+(P*4)
+    .endrepeat
+
+    ; sprite backgrouds
+    .repeat 4, P
+    lda PALETTE_UPDATE+2+((P+4)*4)
+    sta PALETTE_UPDATE+3+((P+4)*4)
+    lda PALETTE_UPDATE+1+((P+4)*4)
+    sta PALETTE_UPDATE+2+((P+4)*4)
+    lda PALETTE_UPDATE+0+((P+4)*4)
+    sta PALETTE_UPDATE+1+((P+4)*4)
+    .endrepeat
+
+    ; mark palette update
+    inc PALETTE_UPDATE_LEN
+
+    lda FADE_FRAME_INTERAL
+    sta FADE_INDEX
+
+    ; loop for a number of frames
+    :
+        jsr _ppu_update
+
+        dec FADE_INDEX
+        bne :-
+
+    .endrepeat
+
+    rts
+.endproc
+
+;
+.proc _ppu_fade_from_internal
+
     rts
 .endproc
 
