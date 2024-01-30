@@ -10,6 +10,7 @@
 #include "game_state_playing.h"
 #include "game_state_cutscene.h"
 #include "game_state_checkpoint.h"
+#include "game_state_store.h"
 
 //
 //
@@ -25,7 +26,7 @@ static const game_state_func game_state_leave_func[] = {
     game_state_playing_leave,
     game_state_noop,
     game_state_cutscene_leave,
-    game_state_noop,
+    game_state_store_leave,
     game_state_noop,
     game_state_noop,
 };
@@ -35,7 +36,7 @@ static const game_state_func game_state_enter_func[] = {
     game_state_playing_enter,
     game_state_noop,
     game_state_cutscene_enter,
-    game_state_noop,
+    game_state_store_enter,
     game_state_checkpoint_enter,
     game_state_noop,
 };
@@ -45,7 +46,7 @@ static const game_state_func game_state_update_func[] = {
     game_state_playing_update,
     game_state_noop,
     game_state_cutscene_update,
-    game_state_noop,
+    game_state_store_update,
     game_state_checkpoint_update,
     game_state_noop,
 };
@@ -81,7 +82,7 @@ void main(void)
 
             game_state_enter_func[game_state]();
 
-ppu_wait_vblank();
+            ppu_wait_vblank();
 
             ppu_on();
 
