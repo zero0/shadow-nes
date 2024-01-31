@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 #pragma warning disable CA1416
 
@@ -134,8 +136,15 @@ namespace img2chr
         [StructLayout(LayoutKind.Sequential)]
         struct ConvertOptions
         {
-            public string defaultAssetLayoutFileName;
-            public string defaultAssetLayoutFileExt;
+            public string defaultGeneratedAssetFolder;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct ChrRomOutput
+        {
+            public string chrRomAsm;
+            public int chrCount;
+            public bool is8x16;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -182,7 +191,7 @@ namespace img2chr
         {
             parameters = null;
 
-            string spriteFilename = $"{srcFilename}.{parameterFileExt}";
+            string spriteFilename = string.IsNullOrEmpty(parameterFileExt) ? srcFilename : $"{srcFilename}.{parameterFileExt}";
             if (File.Exists(spriteFilename))
             {
                 try
@@ -249,13 +258,42 @@ namespace img2chr
 
         static int GetIntParameter(Dictionary<string, string> parameters, string key, int defaultValue = 0)
         {
-            int value = parameters?.TryGetValue(key, out string strValue) ?? false ? int.TryParse(strValue, out int intValue) ? intValue : defaultValue : defaultValue;
+            int value = defaultValue;
+            if (parameters?.TryGetValue(key, out string strValue) ?? false)
+            {
+                System.Globalization.NumberStyles numberStyles = System.Globalization.NumberStyles.Number;
+                if (strValue.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    numberStyles = System.Globalization.NumberStyles.HexNumber;
+                    strValue = strValue.Substring(2);
+                }
+
+                if (int.TryParse(strValue, numberStyles, System.Globalization.CultureInfo.InvariantCulture, out int intValue))
+                {
+                    value = intValue;
+                }
+            }
+
             return value;
         }
 
         static long GetLongParameter(Dictionary<string, string> parameters, string key, long defaultValue = 0)
         {
-            long value = parameters?.TryGetValue(key, out string strValue) ?? false ? long.TryParse(strValue, out long longValue) ? longValue : defaultValue : defaultValue;
+            long value = defaultValue;
+            if (parameters?.TryGetValue(key, out string strValue) ?? false)
+            {
+                System.Globalization.NumberStyles numberStyles = System.Globalization.NumberStyles.Number;
+                if (strValue.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    numberStyles = System.Globalization.NumberStyles.HexNumber;
+                    strValue = strValue.Substring(2);
+                }
+
+                if (long.TryParse(strValue, numberStyles, System.Globalization.CultureInfo.InvariantCulture, out long longValue))
+                {
+                    value = longValue;
+                }
+            }
             return value;
         }
 
@@ -280,15 +318,32 @@ namespace img2chr
             }
         }
 
-        delegate void ConvertFunc(string inputFilename, in ConvertOptions convertOptions);
+        static string PathCombine(params string[] paths)
+        {
+            StringBuilder sb = new();
+            if (paths?.Length > 0)
+            {
+                sb.Append(paths[0]);
+
+                for (int i = 1; i < paths.Length; i++)
+                {
+                    sb.Append(Path.PathSeparator);
+                    sb.Append(paths[i]);
+                }
+            }
+
+            return sb.ToString();
+
+        }
+
+        delegate void ConvertFunc(string inputFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions convertOptions);
 
         const string uint8Type = "uint8_t";
 
-        static void ConvertImageFile(string imageFilename, in ConvertOptions cmdOptions)
+        #region Image File
+        static void ConvertImageFile(string imageFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
             ConvertOptions options = cmdOptions;
-
-            TryGetFileParamters(options.defaultAssetLayoutFileName, options.defaultAssetLayoutFileExt, out var assetLayoutParameters);
 
             bool isSprite = TryGetFileParamters(imageFilename, "sprite", out var spriteParameters);
             bool isFont = TryGetFileParamters(imageFilename, "font", out var fontParameters);
@@ -508,19 +563,14 @@ namespace img2chr
                 }
             }
 
-            string assetLayoutSpriteKey = $"{imageFilename}.sprite";
-            string defaultChrSegment = GetStringParameter(assetLayoutParameters, $"{assetLayoutSpriteKey}.chr-rom", ChrRomSegments[0]);
+            string assetLayoutSpriteKey = $"{Path.GetFileName(imageFilename)}.sprite";
 
             // generate text file
             const string rodataSegment = "RODATA";
-            string chrRomSegment = GetStringParameter(spriteParameters, "chr-rom", defaultChrSegment);
-            int chrRomSegmentIndex = Array.IndexOf(ChrRomSegments, chrRomSegment);
-            Assert(chrRomSegmentIndex >= 0, $"Invalid CHR ROM Segment: {chrRomSegment}");
-
-            StringBuilder sb = new StringBuilder();
             StringBuilder byte0 = new StringBuilder();
             StringBuilder byte1 = new StringBuilder();
 
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine(";");
             sb.AppendLine($"; Generated from {Path.GetFileName(imageFilename)}");
             sb.AppendLine(";");
@@ -544,9 +594,6 @@ namespace img2chr
 
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
             sb.AppendLine($".export _{exportName}");
-            sb.AppendLine();
-            sb.AppendLine($".segment \"{chrRomSegment}\"");
-            sb.AppendLine();
             sb.AppendLine($"_{exportName}:");
             sb.AppendLine();
 
@@ -579,6 +626,19 @@ namespace img2chr
                 sb.AppendLine(byte0.ToString());
                 sb.AppendLine(byte1.ToString());
             }
+
+            sb.AppendLine();
+
+            // output chr data
+            outputChrData.Add(assetLayoutSpriteKey, new()
+            {
+                chrRomAsm = sb.ToString(),
+                chrCount = allUniqueTiles.Count,
+                is8x16 = false
+            });
+
+            // clear for meta sprite info
+            sb.Clear();
 
             // write meta sprites
             if (allMetaSprites.Count > 0)
@@ -659,14 +719,17 @@ namespace img2chr
                 }
             }
 
-            // output
+            // output meta sprite
+            if (sb.Length > 0)
             {
-                string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".s";
+                string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{filename}.s");
                 File.WriteAllText(sFilename, sb.ToString(), UTF8);
                 LogInfo($"Converted {imageFilename} -> {sFilename}");
             }
 
+            // TODO: remove this as the chr layout file should handle this
             // Generate sprite header file
+            if (false)
             {
                 sb.Clear();
 
@@ -680,14 +743,14 @@ namespace img2chr
                 sb.AppendLine($"#define {defineGuard}");
                 sb.AppendLine();
 
-                sb.AppendLine($"#define {$"{exportName.ToUpper()}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
+                //sb.AppendLine($"#define {$"{exportName.ToUpper()}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
 
                 for (int i = 0; i < allUniqueTiles.Count; i++)
                 {
                     UniqueTileEntry uniqueTileEntry = allUniqueTiles[i];
                     TileEntry tileEntry = allTiles[uniqueTileEntry.index];
 
-                    sb.AppendLine($"#define {$"{exportName.ToUpper()}_{tileEntry.x}x{tileEntry.y}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
+                    //sb.AppendLine($"#define {$"{exportName.ToUpper()}_{tileEntry.x}x{tileEntry.y}_CHR_ROM",-40} ({uint8Type})({chrRomSegmentIndex})");
                 }
 
                 // TODO: support meta sprites being on different CHR ROM segments
@@ -705,6 +768,7 @@ namespace img2chr
             if (isFont)
             {
                 string charMap = GetStringParameter(fontParameters, "charmap");
+                Assert(!string.IsNullOrEmpty(charMap), "Font requires 'charmap' property");
                 if (!string.IsNullOrEmpty(charMap))
                 {
                     // Gemerate charmap .s file
@@ -764,7 +828,7 @@ namespace img2chr
                         }
 
                         // write font file
-                        string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.s";
+                        string sFilename = Path.Combine(Path.GetDirectoryName(imageFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{filename}.font.s");
                         File.WriteAllText(sFilename, sb.ToString(), UTF8);
                         LogInfo($"Converted {imageFilename} -> {sFilename}");
                     }
@@ -831,7 +895,7 @@ namespace img2chr
                         sb.AppendLine($"#endif // {defineGuard}");
 
                         // write font file
-                        string hFilename = Path.Combine(Path.GetDirectoryName(imageFilename), filename) + ".font.h";
+                        string hFilename = Path.Combine(Path.GetDirectoryName(imageFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.font.h");
                         File.WriteAllText(hFilename, sb.ToString(), UTF8);
                         LogInfo($"Converted {imageFilename} -> {hFilename}");
                     }
@@ -903,8 +967,10 @@ namespace img2chr
                 return defineName;
             }
         }
+        #endregion
 
-        static void ConvertTextFile(string textFilename, in ConvertOptions cmdOptions)
+        #region Text File
+        static void ConvertTextFile(string textFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
             TryGetFileParamters(textFilename, "tr", out var parameters);
 
@@ -1107,7 +1173,7 @@ namespace img2chr
             foreach (var langToMap in textMap)
             {
                 string lang = langToMap.Key;
-                string sFilename = $"{Path.Combine(Path.GetDirectoryName(textFilename), filename)}.{lang}.s";
+                string sFilename = Path.Combine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{filename}.{lang}.s");
 
                 sb.Clear();
                 sb.AppendLine(";");
@@ -1161,7 +1227,7 @@ namespace img2chr
             foreach (var langToMap in textMap)
             {
                 string lang = langToMap.Key;
-                string hFilename = $"{Path.Combine(Path.GetDirectoryName(textFilename), filename)}.{lang}.h";
+                string hFilename = Path.Combine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.{lang}.h");
 
                 string defineGuard = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
 
@@ -1191,6 +1257,89 @@ namespace img2chr
                 LogInfo($"Converted {textFilename} -> {hFilename}");
             }
         }
+        #endregion
+
+        #region Layout File
+        [StructLayout(LayoutKind.Sequential)]
+        struct ChrRomLayout
+        {
+            public string chrRomKey;
+            public int offset;
+            public int length;
+        }
+
+        static void ConvertLayoutFile(string layoutFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        {
+            string chrSegment = Path.GetFileNameWithoutExtension(layoutFilename).ToUpperInvariant();
+            Assert(Array.IndexOf(ChrRomSegments, chrSegment) >= 0, $"Unknown CHR ROM Layout segment {layoutFilename}");
+
+            TryGetFileParamters(layoutFilename, string.Empty, out var layoutParameters);
+
+            List<ChrRomLayout> chrRomLayouts = new();
+
+            int offset = 0;
+            foreach (var kv in layoutParameters)
+            {
+                bool ok = outputChrData.TryGetValue(kv.Key, out var chrRomOutput);
+                if (ok)
+                {
+                    int chrOffset = GetIntParameter(layoutParameters, kv.Key, offset);
+                    chrRomLayouts.Add(new()
+                    {
+                        chrRomKey = kv.Key,
+                        offset = chrOffset,
+                        length = chrRomOutput.chrCount
+                    });
+
+                    offset = Math.Max(offset + chrRomOutput.chrCount, chrOffset + chrRomOutput.chrCount);
+                }
+            }
+
+            // sort chr rom by offsets
+            chrRomLayouts.Sort((x, y) => x.offset.CompareTo(y.offset));
+
+            StringBuilder sb = new();
+            sb.AppendLine(";");
+            sb.AppendLine($"; Generated from '{Path.GetFileName(layoutFilename)}'");
+            sb.AppendLine(";");
+            sb.AppendLine();
+
+            sb.AppendLine(".pushseg");
+            sb.AppendLine($".segment \"{chrSegment}\"");
+            sb.AppendLine();
+
+            for (offset = 0; offset < 0xFF;)
+            {
+                int chrIndex = chrRomLayouts.FindIndex(x => offset >= x.offset && offset < (x.offset + x.length));
+                if (chrIndex >= 0)
+                {
+                    var chrRom = chrRomLayouts[chrIndex];
+                    bool ok = outputChrData.TryGetValue(chrRom.chrRomKey, out var chrRomOutput);
+                    Assert(ok, $"Unable to find CHR ROM Output {chrRom.chrRomKey}");
+                    sb.Append(chrRomOutput.chrRomAsm);
+
+                    offset += chrRom.length;
+                    Assert(offset < 0xFF, $"{chrSegment} overrun {offset}");
+                }
+                else
+                {
+                    sb.AppendLine("; Empty");
+                    sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
+                    sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
+                    sb.AppendLine();
+
+                    ++offset;
+                }
+            }
+
+            sb.AppendLine(".popseg");
+
+            // write output file
+            string sFilename = Path.Combine(Path.GetDirectoryName(layoutFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{chrSegment.ToLowerInvariant()}.s");
+            File.WriteAllText(sFilename, sb.ToString(), UTF8);
+            LogInfo($"Converted {layoutFilename} -> {sFilename}");
+        }
+        #endregion
 
         static UTF8Encoding UTF8 = new UTF8Encoding(false);
 
@@ -1229,12 +1378,25 @@ namespace img2chr
             "CHR_1F",
         };
 
+        private const int LibraryVersion = 2;
+
+        struct CompileTask
+        {
+            public string inputFileName;
+            public ConvertFunc convertFunc;
+        }
+
         static void Main(string[] args)
         {
+#if DEBUG
+            if (Debugger.IsAttached)
+            {
+                args = new[] { @"W:\Projects\shadow-nes\assets\" };
+            }
+#endif
             ConvertOptions options = new()
             {
-                defaultAssetLayoutFileName = "assets",
-                defaultAssetLayoutFileExt = "layout"
+                defaultGeneratedAssetFolder = "generated"
             };
 
             Dictionary<string, ConvertFunc> formatMap = new() {
@@ -1246,14 +1408,25 @@ namespace img2chr
                 { ".tga", ConvertImageFile },
 
                 { ".txt", ConvertTextFile },
+
+                { ".layout", ConvertLayoutFile },
             };
 
-            bool forceReimport = false;
+            List<CompileTask> compilerTasks = new();
 
-            for (int i = 0; i < args.Length; i++)
+            // TODO: force reimport turned on because of new chr rom layout
+            //   dependency thing needed to make sure that all sprites are generated in chr rom when one changes to make sure it's generated correctly
+            bool forceReimport = true;
+
+#if DEBUG
+            forceReimport |= Debugger.IsAttached;
+#endif
+
+            // process commandline args
+            for (int i = 0; i < args.Length; ++i)
             {
                 string arg = args[i];
-                if (arg.StartsWith("-"))
+                if (arg.StartsWith('-'))
                 {
                     switch (arg.ToLowerInvariant())
                     {
@@ -1265,6 +1438,15 @@ namespace img2chr
                         case "--force-reimport":
                             forceReimport = true;
                             break;
+
+                        case "-g":
+                        case "--generated-dir":
+                            ++i;
+                            if (i < args.Length)
+                            {
+                                options.defaultGeneratedAssetFolder = args[i];
+                            }
+                            break;
                     }
                 }
                 else
@@ -1275,6 +1457,14 @@ namespace img2chr
                         {
                             libraryParameters = new Dictionary<string, string>();
                         }
+
+                        // if there's a version mismatch, perform reimport
+                        if (LibraryVersion != GetIntParameter(libraryParameters, ".version", 0))
+                        {
+                            libraryParameters.Clear();
+                        }
+
+                        SetParameter(libraryParameters, ".version", LibraryVersion);
 
                         bool updateLibrary = false;
 
@@ -1293,7 +1483,7 @@ namespace img2chr
                                     SetParameter(libraryParameters, modtimeKey, fileModtime);
                                     updateLibrary = true;
 
-                                    func(file, options);
+                                    compilerTasks.Add(new() { inputFileName = file, convertFunc = func });
                                 }
                             }
                         }
@@ -1310,6 +1500,14 @@ namespace img2chr
                             libraryParameters = new Dictionary<string, string>();
                         }
 
+                        // if there's a version mismatch, perform reimport
+                        if (LibraryVersion != GetIntParameter(libraryParameters, ".version", 0))
+                        {
+                            libraryParameters.Clear();
+                        }
+
+                        SetParameter(libraryParameters, ".version", LibraryVersion);
+
                         bool updateLibrary = false;
 
                         var ext = Path.GetExtension(arg);
@@ -1324,7 +1522,7 @@ namespace img2chr
                                 SetParameter(libraryParameters, modtimeKey, fileModtime);
                                 updateLibrary = true;
 
-                                func(arg, options);
+                                compilerTasks.Add(new() { inputFileName = arg, convertFunc = func });
                             }
                         }
 
@@ -1334,6 +1532,52 @@ namespace img2chr
                         }
                     }
                 }
+            }
+
+            // create output generated folders
+            if (compilerTasks.Count > 0)
+            {
+                HashSet<string> outputGenDirs = new();
+                foreach (var task in compilerTasks)
+                {
+                    string outGenDir = Path.Combine(Path.GetDirectoryName(compilerTasks[0].inputFileName), options.defaultGeneratedAssetFolder);
+                    outputGenDirs.Add(outGenDir);
+                }
+
+                foreach (var dir in outputGenDirs)
+                {
+                    LogInfo($"Output Gen: {dir}");
+                    Directory.CreateDirectory(dir);
+                    Directory.CreateDirectory(Path.Combine(dir, "asm"));
+                    Directory.CreateDirectory(Path.Combine(dir, "include"));
+                }
+            }
+
+            // remove layout tasks since they should be done last
+            List<CompileTask> layoutTasks = new();
+            for (int i = 0; i < compilerTasks.Count; i++)
+            {
+                CompileTask task = compilerTasks[i];
+                if (".layout".Equals(Path.GetExtension(task.inputFileName)))
+                {
+                    layoutTasks.Add(task);
+                    compilerTasks.RemoveAt(i);
+                    --i;
+                }
+            }
+
+            Dictionary<string, ChrRomOutput> outputChrData = new();
+
+            // process compiler tasks
+            foreach (var task in compilerTasks)
+            {
+                task.convertFunc(task.inputFileName, outputChrData, options);
+            }
+
+            // process layout tasks
+            foreach (var task in layoutTasks)
+            {
+                task.convertFunc(task.inputFileName, outputChrData, options);
             }
         }
     }

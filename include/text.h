@@ -6,7 +6,7 @@
 
 typedef uint8_t str_t;
 
-#include "../assets/gametext.en.h"
+#include "gametext.en.h"
 
 uint8_t __fastcall__ text_strlen_str(str_t str);
 

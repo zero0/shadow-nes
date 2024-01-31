@@ -1,40 +1,23 @@
 ;
-; Assets
+; CHR ROMs
 ;
 
-.macro BlankCHR count
-    .repeat count, I
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .byte   %00000000
-    .endrep
+.macro include_asset file
+.include .concat("../assets/generated/asm/", file);
 .endmacro
+
+include_asset "chr_00.s"
+
+include_asset "chr_01.s"
+
+;
+; Meta-sprites
+;
 
 .segment "RODATA"
 
-.macro include_asset file
-.include .concat("../assets/", file);
-.endmacro
-
-include_asset "shadow-font.s"
-
 include_asset "knight.s"
 
-include_asset "progress_bar.s"
 
 ;
 ; Text
@@ -58,8 +41,6 @@ include_asset "shadow-font.font.s"
 
 .feature string_escapes -
 
-.define TEXT_LANGUAGE   "en"
-.define VERSION         "0.1.0"
 .if .defined(DEBUG_BUILD)
 .define BUILD_TYPE      "d"
 .elseif .defined(RELEASE_BUILD)
@@ -69,6 +50,9 @@ include_asset "shadow-font.font.s"
 .else
 .define BUILD_TYPE      "?"
 .endif
+
+.define TEXT_LANGUAGE   "en"
+.define VERSION         "0.1.0"
 .define COPYRIGHT_YEAR  "2024"
 
 include_asset .concat("gametext.", TEXT_LANGUAGE, ".s")

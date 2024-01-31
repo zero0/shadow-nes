@@ -51,11 +51,13 @@ pushd tools\img2chr\
 dotnet run ..\..\assets\
 popd
 
+set "GAME_ASSETS_INCLUDE=assets/generated/include"
+
 rem Compile source assemblie files
 for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
 
 rem Compile C files
-for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% --add-source %CC_FLAGS% -Oisr -o tmp\c_%%~nC.s %%C
+for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% -I %GAME_ASSETS_INCLUDE% --add-source %CC_FLAGS% -Oisr -o tmp\c_%%~nC.s %%C
 
 rem Compile temp assemblie files
 for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
