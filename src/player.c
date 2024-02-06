@@ -9,6 +9,8 @@
 #include "timer.h"
 #include "combat.h"
 #include "game_state.h"
+#include "game_state_playing.h"
+#include "game_data.h"
 
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
@@ -62,7 +64,6 @@ static uint8_t player_next_state;
 static flags8_t player_can_perform_action_flags;
 
 static flags8_t player_changed_flags;
-static uint8_t player_level;
 static uint8_t player_health;
 static uint8_t player_stamina;
 static uint8_t player_flasks;
@@ -187,7 +188,7 @@ uint8_t __fastcall__ get_player_current_health()
 
 uint8_t __fastcall__ get_player_max_health()
 {
-    return player_max_health_per_level[ player_level ];
+    return player_max_health_per_level[ g_current_game_data.player_level ];
 }
 
 uint8_t __fastcall__ get_player_current_stamina()
@@ -197,15 +198,14 @@ uint8_t __fastcall__ get_player_current_stamina()
 
 uint8_t __fastcall__ get_player_max_stamina()
 {
-    return player_max_stamina_per_level[ player_level ];
+    return player_max_stamina_per_level[ g_current_game_data.player_level ];
 }
 
-void __fastcall__ player_init(uint8_t level)
+void __fastcall__ player_init(void)
 {
-    player_level = level;
-    player_health = player_max_health_per_level[player_level];
-    player_stamina = player_max_stamina_per_level[player_level];
-    player_flasks = player_max_flasks_per_level[player_level];
+    player_health = player_max_health_per_level[g_current_game_data.player_level];
+    player_stamina = player_max_stamina_per_level[g_current_game_data.player_level];
+    player_flasks = player_max_flasks_per_level[g_current_game_data.player_level];
     player_damage_queue_length = 0;
     player_input_queue_length = 0;
     player_state = PLAYER_STATE_IDLE;
@@ -215,7 +215,7 @@ void __fastcall__ player_init(uint8_t level)
     timer_set( player_flash_cooldown_timer, 0 );
     timer_set( player_dodge_cooldown_timer, 0 );
     timer_set( player_stamina_delay_timer, 1 );
-    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
+    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
     flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
@@ -338,7 +338,7 @@ static void __fastcall__ player_update_stamina(void)
     {
         --player_stamina_delay_timer;
     }
-    else if( player_stamina < player_max_stamina_per_level[player_level] )
+    else if( player_stamina < player_max_stamina_per_level[g_current_game_data.player_level] )
     {
         if( player_stamina_regen_timer > 0 )
         {
@@ -346,8 +346,8 @@ static void __fastcall__ player_update_stamina(void)
 
             if( player_stamina_regen_timer == 0 )
             {
-                player_stamina += player_stamina_regen_amount_per_level[player_level];
-                player_stamina_regen_timer = player_stamina_regen_time_per_level[player_level];
+                player_stamina += player_stamina_regen_amount_per_level[g_current_game_data.player_level];
+                player_stamina_regen_timer = player_stamina_regen_time_per_level[g_current_game_data.player_level];
 
                 MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
@@ -367,7 +367,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // player already at full health
-    if( player_health == player_max_health_per_level[player_level] )
+    if( player_health == player_max_health_per_level[g_current_game_data.player_level] )
     {
         return;
     }
@@ -394,9 +394,9 @@ static void __fastcall__ player_heal(void)
     flags_mark( player_changed_flags, PLAYER_CHANGED_HEALTH );
 
     // player health + heal would go past max health, just set to max health
-    if( player_health > ( player_max_health_per_level[player_level] - _temp_dmg.damage ) )
+    if( player_health > ( player_max_health_per_level[g_current_game_data.player_level] - _temp_dmg.damage ) )
     {
-        player_health = player_max_health_per_level[player_level];
+        player_health = player_max_health_per_level[g_current_game_data.player_level];
     }
     else
     {
@@ -503,7 +503,7 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
         timer_set( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_NORMAL );
     }
 
-    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[player_level] );
+    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
     MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
@@ -531,7 +531,7 @@ static void __fastcall__ player_update_input()
     // pause menu
     if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
     {
-set_next_game_state( GAME_STATE_TITLE );
+        game_state_playing_set_pause(1);
     }
 
     // B down, modify input

@@ -4,6 +4,33 @@ tr_new_game,New Game
 tr_continue,Continue
 tr_version,"%.concat(""Version "", VERSION, BUILD_TYPE)%"
 tr_copyright,"%.concat(""(C) "", COPYRIGHT_YEAR)%"
+tr_confirm,Confirm
+tr_cancel,Cancel
+tr_paused,Paused
+tr_save,Save
+
+#
+# Difficulty Names
+#
+
+tr_diff_name_0,Story
+tr_diff_name_1,Easy
+tr_diff_name_2,Normal
+tr_diff_name_3,Hard
+tr_diff_name_4,Extreme
+tr_diff_name_5,Brutal
+tr_diff_name_6,Boss Only
+
+tr_currency_0_name,Flux
+tr_currency_1_name,Ultraflux
+
+tr_shop_title,Shop
+
+tr_checkpoint_title,Burnt Shade Tree
+
+#
+# Boss Info
+#
 
 tr_tower_name,Tower of Luxluma
 
@@ -14,10 +41,10 @@ tr_boss_2_location,${tr_tower_name} Courtyard
 tr_boss_2_name,Brightbeast
 
 tr_boss_3_location,${tr_tower_name} Upper Chapel
-tr_boos_3_name,Corrupted High Radiance Auhmn
+tr_boos_3_name,High Radiance Auhmn
 
-tr_boss_4_location,${tr_tower_name} Gleaming Road (walkway up to the top of the tower)
-tr_boss_4_name,Iridecence Dragon
+tr_boss_4_location,${tr_tower_name} Gleaming Road
+tr_boss_4_name,Iridescence Dragon
 
 tr_boss_5_location,${tr_tower_name} Sewers
 tr_boss_5_name,Ophiotroph Dragon Corpse
@@ -25,11 +52,15 @@ tr_boss_5_name,Ophiotroph Dragon Corpse
 tr_boss_6_location,${tr_tower_name} Ramparts
 tr_boss_6_name,Shadowkin Invader
 
-tr_boss_7_location,${tr_tower_name} Gleaming Road End (door to Radiant Throne)
-tr_boss_7_name,Specular Gaurds Dirk & Quince
+tr_boss_7_location,${tr_tower_name} Gleaming Anteroom
+tr_boss_7_name,Specular Guards Dirk & Quince
 
-tr_boss_8_location,${tr_tower_name} Radiant Throne
+tr_boss_8_location,${tr_tower_name} Radiant Throne Hall
 tr_boss_8_name,Lightlord of Sin
+
+#
+# Cutscenes
+#
 
 tr_cutscene_intro_0,Those born of shadow are forever doomed to serve the light.
 tr_cutscene_intro_1,This corrupted light must be snuffed out. Those born of shadow have devine right to fufill this task.

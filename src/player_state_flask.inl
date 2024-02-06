@@ -36,7 +36,7 @@ static void __fastcall__ player_state_flash_update()
         // enquque heal
         ASSERT(player_damage_queue_length < ARRAY_SIZE(player_damage_queue));
         player_damage_queue[player_damage_queue_length].damage_type = MAKE_DAMAGE_TYPE( DAMAGE_TYPE_ATTR_HEAL, DAMAGE_TYPE_FLAT );
-        player_damage_queue[player_damage_queue_length].damage = player_flask_heal_per_level[player_level];
+        player_damage_queue[player_damage_queue_length].damage = player_flask_heal_per_level[g_current_game_data.player_level];
         ++player_damage_queue_length;
 
         // use flask

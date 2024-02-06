@@ -7,6 +7,7 @@
 #include "globals.h"
 #include "game_state.h"
 #include "game_flow.h"
+#include "game_data.h"
 
 extern ptr_t shadow_font;
 
@@ -91,7 +92,9 @@ void __fastcall__ game_state_title_update()
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
             {
-                set_next_game_state( GAME_STATE_PLAYING );
+                load_game_data_for_new_game();
+
+                advance_game_flow();
             }
             break;
 

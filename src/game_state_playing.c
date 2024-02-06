@@ -8,6 +8,11 @@
 #include "game_state.h"
 #include "globals.h"
 
+#define GAME_STATE_PLAYING_INTRO    (uint8_t)0
+#define GAME_STATE_PLAYING_PLAYING  (uint8_t)1
+#define GAME_STATE_PLAYING_PAUSED   (uint8_t)2
+#define GAME_STATE_PLAYING_TALKING  (uint8_t)3
+
 extern ptr_t progress_bar;
 extern ptr_t shadow_font;
 
@@ -51,14 +56,16 @@ void __fastcall__ game_state_playing_enter()
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
 
+    game_state_internal = GAME_STATE_PLAYING_INTRO;
+
     // health and stamina colors
     ppu_set_nametable_attr( NAMETABLE_A_ATTR, 0, 0,  0, 0, 2, 2,  4 );
 
     // start player
-    player_init(0);
+    player_init();
 
     // start boss
-    init_boss(BOSS_0);
+    init_boss(next_game_state_arg);
 }
 
 void __fastcall__ game_state_playing_leave()
@@ -71,6 +78,18 @@ void __fastcall__ game_state_playing_leave()
 void __fastcall__ game_state_playing_update()
 {
     gamepad_poll(0);
+
+    switch( game_state_internal )
+    {
+        case GAME_STATE_PLAYING_INTRO:
+            break;
+
+        case GAME_STATE_PLAYING_PLAYING:
+            break;
+
+        case GAME_STATE_PLAYING_PAUSED:
+            break;
+    }
 
     // boss health changed
     if( get_boss_changed_flags() & BOSS_CHANGED_HEALTH )
@@ -108,4 +127,14 @@ void __fastcall__ game_state_playing_update()
     //player_update();
 
     //update_boss();
+}
+
+void __fastcall__ game_state_playing_set_pause(uint8_t isPaused)
+{
+    UNUSED(isPaused);
+}
+
+uint8_t __fastcall__ game_state_playing_is_pause(void)
+{
+    return game_state_internal == GAME_STATE_PLAYING_PAUSED;
 }

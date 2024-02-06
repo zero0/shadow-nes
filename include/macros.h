@@ -11,6 +11,8 @@
 #define T_(x)                   #x
 #define T(x)                    T_(x)
 
+#define UNUSED(x)               (void)x
+
 #define STATIC_ASSERT(t)        static void CONCAT(sa, __LINE__)( char [ (t) ? 1 : -1 ] )
 
 #ifdef USE_ASSERTS

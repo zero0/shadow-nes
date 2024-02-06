@@ -7,5 +7,4 @@ void game_state_store_leave(void);
 
 void game_state_store_update(void);
 
-
 #endif // GAME_STATE_STORE_H

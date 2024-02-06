@@ -4,6 +4,7 @@
 #include "macros.h"
 #include "boss.h"
 #include "types.h"
+#include "game_data.h"
 
 #define GAME_DIFFICULTY_MOD_STORY       (uint8_t)6
 #define GAME_DIFFICULTY_MOD_EASY        (uint8_t)5
@@ -92,76 +93,73 @@ STATIC_ASSERT( ARRAY_SIZE(game_flow_steps) < 0xFF );
 //
 //
 
-static uint8_t game_flow_index;
-static uint8_t game_flow_last_checkpoint_index;
-
 void __fastcall__ reset_game_flow(void)
 {
-    game_flow_index = 0;
-    game_flow_last_checkpoint_index = 0;
+    g_current_game_data.current_game_flow = 0;
+    g_current_game_data.current_game_flow_last_checkpoint = 0;
 }
 
 void __fastcall__ checkpoint_game_flow(void)
 {
-    game_flow_last_checkpoint_index = game_flow_index;
+    g_current_game_data.current_game_flow_last_checkpoint = g_current_game_data.current_game_flow;
 }
 
 void __fastcall__ restore_game_flow_from_checkpoint(void)
 {
     // add 1 so it starts from the step after the checkpoint
-    game_flow_index = game_flow_last_checkpoint_index + 1;
+    g_current_game_data.current_game_flow = g_current_game_data.current_game_flow_last_checkpoint + 1;
 }
 
 void __fastcall__ advance_game_flow(void)
 {
     // at the end of the game flow, go back to the title screen
-    if( game_flow_index >= ARRAY_SIZE(game_flow_steps) )
+    if( g_current_game_data.current_game_flow >= ARRAY_SIZE(game_flow_steps) )
     {
         set_next_game_state( GAME_STATE_TITLE );
         return;
     }
 
-    switch( GAME_FLOW_GET_TYPE( game_flow_steps[ game_flow_index ] ) )
+    switch( GAME_FLOW_GET_TYPE( game_flow_steps[ g_current_game_data.current_game_flow ] ) )
     {
         case GAME_FLOW_TYPE_CUTSCENE:
         {
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
 
             // set the next game state with the cutscene id
-            set_next_game_state_arg( GAME_STATE_CUTSCENE, game_flow_steps[ game_flow_index ] );
+            set_next_game_state_arg( GAME_STATE_CUTSCENE, game_flow_steps[ g_current_game_data.current_game_flow ] );
 
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
         }
             break;
 
         case GAME_FLOW_TYPE_SHOP:
         {
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
 
             // set the next game state with the store level
-            set_next_game_state_arg( GAME_STATE_STORE, game_flow_steps[ game_flow_index ] );
+            set_next_game_state_arg( GAME_STATE_STORE, game_flow_steps[ g_current_game_data.current_game_flow ] );
 
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
         }
             break;
 
         case GAME_FLOW_TYPE_CHECKPOINT:
         {
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
 
             // set the next game state to checkpoint (which saves and then advances)
-            set_next_game_state_arg( GAME_STATE_CHECKPOINT, game_flow_steps[ game_flow_index ] );
+            set_next_game_state_arg( GAME_STATE_CHECKPOINT, game_flow_steps[ g_current_game_data.current_game_flow ] );
         }
             break;
 
         case GAME_FLOW_TYPE_BOSS:
         {
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
 
             // set the next game state with the boss id
-            set_next_game_state_arg( GAME_STATE_PLAYING, game_flow_steps[ game_flow_index ] );
+            set_next_game_state_arg( GAME_STATE_PLAYING, game_flow_steps[ g_current_game_data.current_game_flow ] );
 
-            game_flow_index++;
+            g_current_game_data.current_game_flow++;
         }
             break;
 
