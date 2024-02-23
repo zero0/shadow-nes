@@ -4,6 +4,15 @@
 #include "types.h"
 #include "macros.h"
 #include "flags.h"
+#include "boss.h"
+
+enum
+{
+    SaveSlot_0,
+    SaveSlot_1,
+    SaveSlot_2,
+    _SaveSlot_Count
+};
 
 typedef struct {
     uint8_t player_level;
@@ -14,7 +23,7 @@ typedef struct {
     uint8_t current_difficulty;
 
     flags8_t difficulties_defeated;
-    flags8_t bosses_defeated[8];
+    flags8_t bosses_defeated[_Boss_Count];
 
     uint8_t currency_0;
     uint8_t currency_1;

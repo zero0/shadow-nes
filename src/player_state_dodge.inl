@@ -10,6 +10,8 @@
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_DODGE )    \
 )
 
+#define can_queue_dodge()   (1)
+
 const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_P = {  2, 192 };    // 2.75
 const static subpixel_diff_t PLAYER_DODGE_SPEED_CARDINAL_N = { -2, 192 };    // 2.75
 const static subpixel_diff_t PLAYER_DODGE_SPEED_DIAGNAL_P  = {  1, 241 };    // 1.94

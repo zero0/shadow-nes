@@ -39,11 +39,16 @@
 #define PLAYER_STATE_HIT                        (uint8_t)4
 #define PLAYER_STATE_DEAD                       (uint8_t)5
 
-#define PLAYER_DAMAGE_QUEUE_LENGTH              (uint8_t)4
-#define PLAYER_INPUT_QUEUE_LENGTH               (uint8_t)4
+#define PLAYER_DAMAGE_MAX_QUEUE_LENGTH          (uint8_t)4
+STATIC_ASSERT(IS_POW2(PLAYER_DAMAGE_MAX_QUEUE_LENGTH));
+
+#define PLAYER_ACTION_MAX_QUEUE_LENGTH           (uint8_t)8
+#define PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK      (uint8_t)(PLAYER_ACTION_MAX_QUEUE_LENGTH - 1)
+STATIC_ASSERT(IS_POW2(PLAYER_ACTION_MAX_QUEUE_LENGTH));
 
 #define PLAYER_ANIMATION_NONE                   (uint8_t)0xFF
 
+#define PLAYER_CAN_PERFORM_ACTION_NONE          (uint8_t)0
 #define PLAYER_CAN_PERFORM_ACTION_MOVE          (uint8_t)( 1 << 0 )
 #define PLAYER_CAN_PERFORM_ACTION_DODGE         (uint8_t)( 1 << 1 )
 #define PLAYER_CAN_PERFORM_ACTION_FLASK         (uint8_t)( 1 << 2 )
@@ -51,6 +56,14 @@
 #define PLAYER_CAN_PERFORM_ACTION_ATTACK1       (uint8_t)( 1 << 4 )
 #define PLAYER_CAN_PERFORM_ACTION_KNOCKBACK     (uint8_t)( 1 << 5 )
 #define PLAYER_CAN_PERFORM_ACTION_ALL           (uint8_t)~0
+
+enum
+{
+    Player_Action_Dodge,
+    Player_Action_Flask,
+    Player_Action_Attack0,
+    Player_Action_Attack1,
+};
 
 extern ptr_t knight_sprite_0;
 extern ptr_t knight_sprite_1;
@@ -73,6 +86,7 @@ static uint8_t player_combat_position;
 static timer_t player_flash_cooldown_timer;
 static timer_t player_dodge_cooldown_timer;
 static timer_t player_attack_cooldown_timer;
+static timer_t player_attack_combo_timer;
 
 static timer_t player_inv_frame_timer;
 static timer_t player_animation_frame_timer;
@@ -86,13 +100,14 @@ static subpixel_t player_pos_y;
 static subpixel_diff_t player_pos_dx;
 static subpixel_diff_t player_pos_dy;
 
-static damage_t player_damage_queue[PLAYER_DAMAGE_QUEUE_LENGTH];
-STATIC_ASSERT(ARRAY_SIZE(player_damage_queue) == PLAYER_DAMAGE_QUEUE_LENGTH);
+static damage_t player_damage_queue[PLAYER_DAMAGE_MAX_QUEUE_LENGTH];
+STATIC_ASSERT(ARRAY_SIZE(player_damage_queue) == PLAYER_DAMAGE_MAX_QUEUE_LENGTH);
 static uint8_t player_damage_queue_length;
 
-static uint8_t player_input_queue[PLAYER_INPUT_QUEUE_LENGTH];
-STATIC_ASSERT(ARRAY_SIZE(player_input_queue) == PLAYER_INPUT_QUEUE_LENGTH);
-static uint8_t player_input_queue_length;
+static uint8_t player_action_queue[PLAYER_ACTION_MAX_QUEUE_LENGTH];
+STATIC_ASSERT(ARRAY_SIZE(player_action_queue) == PLAYER_ACTION_MAX_QUEUE_LENGTH);
+static uint8_t player_action_queue_length;
+static uint8_t player_action_queue_index;
 
 static damage_t _temp_dmg;
 
@@ -156,7 +171,7 @@ STATIC_ASSERT(ARRAY_SIZE(player_stamina_regen_amount_per_level) == PLAYER_MAX_LE
 // Damage
 //
 
-static const uint8_t player_damage_resistance_modifiers[_DAMAGE_TYPE_COUNT];
+static uint8_t player_damage_resistance_modifiers[_DAMAGE_TYPE_COUNT];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_resistance_modifiers) == _DAMAGE_TYPE_COUNT);
 
 static uint8_t player_damage_status_buildup[_DAMAGE_STATUS_TYPE_COUNT];
@@ -165,12 +180,6 @@ STATIC_ASSERT(ARRAY_SIZE(player_damage_status_buildup) == _DAMAGE_STATUS_TYPE_CO
 static timer_t player_damage_status_timers[ _DAMAGE_STATUS_TYPE_COUNT ];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_status_timers) == _DAMAGE_STATUS_TYPE_COUNT);
 
-static const uint8_t player_attack_0_combo_base_damage[] = {
-    10, 10, 12, 15
-};
-static const uint8_t player_attack_1_combo_base_damage[] = {
-    14, 16, 20
-};
 
 //
 //
@@ -207,7 +216,8 @@ void __fastcall__ player_init(void)
     player_stamina = player_max_stamina_per_level[g_current_game_data.player_level];
     player_flasks = player_max_flasks_per_level[g_current_game_data.player_level];
     player_damage_queue_length = 0;
-    player_input_queue_length = 0;
+    player_action_queue_length = 0;
+    player_action_queue_index = 0;
     player_state = PLAYER_STATE_IDLE;
     player_next_state = PLAYER_STATE_IDLE;
 
@@ -516,99 +526,127 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
 #include "player_state_flask.inl"
 #include "player_state_attack.inl"
 
-// update player input
-static void __fastcall__ player_update_input()
+static void __fastcall__ player_enqueu_action(uint8_t action)
 {
+    player_action_queue[ player_action_queue_length] = action;
+    player_action_queue_length++;
+    player_action_queue_length &= PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK;
+}
+
+// update player input
+static void __fastcall__ player_process_input(void)
+{
+    // b - prev
+    // t - current
+
     // heal
-    if( GAMEPAD_PRESSED( 0, GAMEPAD_SELECT ) )
+    if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_SELECT ) )
     {
         if( can_perform_flask() )
         {
             perform_flask();
         }
+        else if( can_queue_flask() )
+        {
+            player_enqueu_action( (uint8_t)Player_Action_Flask );
+        }
     }
 
     // pause menu
-    if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+    if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_START ) )
     {
         game_state_playing_set_pause(1);
     }
 
     // B down, modify input
-    if( GAMEPAD_DOWN( 0, GAMEPAD_B ) )
+    if( GAMEPAD_BTN_DOWN( t, GAMEPAD_B ) )
     {
         // heavy attack
-        if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_A ) )
         {
             if( can_perform_attack1() )
             {
                 perform_attack1();
             }
+            else if( can_queue_attack1() )
+            {
+                player_enqueu_action( (uint8_t)Player_Action_Attack1 );
+            }
         }
 
-        // dodge in a direction
-        if( can_perform_dodge() )
+        v = 0;
+
+        // dodge left/right
+        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_L ) )
         {
-            v = 0;
+            v |= PLAYER_MOVE_DIRECTION_WEST;
+        }
+        else if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_R ) )
+        {
+            v |= PLAYER_MOVE_DIRECTION_EAST;
+        }
 
-            // dodge left/right
-            if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
-            {
-                v |= PLAYER_MOVE_DIRECTION_WEST;
-            }
-            else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
-            {
-                v |= PLAYER_MOVE_DIRECTION_EAST;
-            }
+        // dodge up/dow
+        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_U ) )
+        {
+            v |= PLAYER_MOVE_DIRECTION_NORTH;
+        }
+        else if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_D ) )
+        {
+            v |= PLAYER_MOVE_DIRECTION_SOUTH;
+        }
 
-            // dodge up/dow
-            if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
-            {
-                v |= PLAYER_MOVE_DIRECTION_NORTH;
-            }
-            else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
-            {
-                v |= PLAYER_MOVE_DIRECTION_SOUTH;
-            }
-
-            // if a direction was pressed, dodge
-            if( v )
+        // if a direction was pressed, dodge
+        if( v )
+        {
+            // dodge in a direction
+            if( can_perform_dodge() )
             {
                 perform_dodge( v );
+            }
+            else if( can_queue_dodge() )
+            {
+                player_enqueu_action( (uint8_t)Player_Action_Dodge );
+                player_enqueu_action( v );
             }
         }
     }
     else
     {
         // light attack
-        if( GAMEPAD_PRESSED( 0, GAMEPAD_A ) )
+        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_A ) )
         {
             if( can_perform_attack0() )
             {
                 perform_attack0();
             }
+            else if( can_queue_attack0() )
+            {
+                player_enqueu_action( (uint8_t)Player_Action_Attack0 );
+            }
         }
 
+        // move in a direction
         if( can_perform_move() )
         {
             v = 0;
 
             // dodge left/right
-            if( GAMEPAD_DOWN( 0, GAMEPAD_L ) )
+            if( GAMEPAD_BTN_DOWN( t, GAMEPAD_L ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_WEST;
             }
-            else if( GAMEPAD_DOWN( 0, GAMEPAD_R ) )
+            else if( GAMEPAD_BTN_DOWN( t, GAMEPAD_R ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_EAST;
             }
 
             // up/dow
-            if( GAMEPAD_DOWN( 0, GAMEPAD_U ) )
+            if( GAMEPAD_BTN_DOWN( t, GAMEPAD_U ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_NORTH;
             }
-            else if( GAMEPAD_DOWN( 0, GAMEPAD_D ) )
+            else if( GAMEPAD_BTN_DOWN( t, GAMEPAD_D ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_SOUTH;
             }
@@ -618,6 +656,58 @@ static void __fastcall__ player_update_input()
                 perform_move( v );
             }
         }
+    }
+}
+
+static void __fastcall__ player_process_action_queue(void)
+{
+    while( player_action_queue_index != player_action_queue_length )
+    {
+        b = player_action_queue[ player_action_queue_index ];
+        player_action_queue_index++;
+        player_action_queue_index &= PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK;
+
+        switch(b)
+        {
+            case Player_Action_Dodge:
+            {
+                // pull dodge direction from queue
+                v = player_action_queue[ player_action_queue_index ];
+                player_action_queue_index++;
+                player_action_queue_index &= PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK;
+
+                if( can_perform_dodge() )
+                {
+                    perform_dodge(v);
+                }
+            }
+                break;
+            case Player_Action_Flask:
+            {
+                if( can_perform_flask() )
+                {
+                    perform_flask();
+                }
+            }
+                break;
+            case Player_Action_Attack0:
+            {
+                if( can_perform_attack0() )
+                {
+                    perform_attack0();
+                }
+            }
+                break;
+            case Player_Action_Attack1:
+            {
+                if( can_perform_attack1() )
+                {
+                    perform_attack1();
+                }
+            }
+                break;
+        }
+
     }
 }
 
@@ -648,16 +738,15 @@ void __fastcall__ player_update(void)
     timer_tick( player_attack_cooldown_timer );
     timer_tick( player_inv_frame_timer );
     timer_tick( player_animation_frame_timer );
+    timer_tick( player_attack_combo_timer );
 
-    // update input
-    player_update_input();
+    if( timer_is_done( player_attack_combo_timer ) )
+    {
+        player_current_attack_combo = 0xFF;
+    }
 
-    // move player
-    subpixel_inc( player_pos_x, player_pos_dx );
-    subpixel_inc( player_pos_y, player_pos_dy );
-
-    subpixel_diff_set_zero( player_pos_dx );
-    subpixel_diff_set_zero( player_pos_dy );
+    // process action queue
+    player_process_action_queue();
 
     // perform state transitions
     if( player_state != player_next_state )
@@ -705,6 +794,18 @@ void __fastcall__ player_update(void)
             break;
     }
 
+    // process input
+    b = gamepad_prev_state(0);
+    t = gamepad_state(0);
+    player_process_input();
+
+    // move player
+    subpixel_inc( player_pos_x, player_pos_dx );
+    subpixel_inc( player_pos_y, player_pos_dy );
+
+    subpixel_diff_set_zero( player_pos_dx );
+    subpixel_diff_set_zero( player_pos_dy );
+
     // draw status bars
     player_render_status_bars();
 
@@ -745,7 +846,7 @@ uint8_t __fastcall__ test_attack_hits_player( uint8_t attack_location )
 
 void __fastcall__ queue_damage_player( uint8_t damage_type, uint8_t damage )
 {
-    ASSERT(player_damage_queue_length < ARRAY_SIZE(player_damage_queue));
+    ASSERT(player_damage_queue_length < PLAYER_DAMAGE_MAX_QUEUE_LENGTH);
     player_damage_queue[player_damage_queue_length].damage_type = damage_type;
     player_damage_queue[player_damage_queue_length].damage = damage;
     ++player_damage_queue_length;

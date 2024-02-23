@@ -5,15 +5,20 @@
 #include "text.h"
 #include "flags.h"
 
-#define BOSS_0          (uint8_t)0
-#define BOSS_1          (uint8_t)1
-#define BOSS_2          (uint8_t)2
-#define BOSS_3          (uint8_t)3
-#define BOSS_4          (uint8_t)4
-#define BOSS_5          (uint8_t)5
-#define BOSS_6          (uint8_t)6
-#define BOSS_7          (uint8_t)7
-#define _BOSS_COUNT     (uint8_t)8
+enum
+{
+    Boss_0,
+    Boss_1,
+    Boss_2,
+    Boss_3,
+    Boss_4,
+    Boss_5,
+    Boss_6,
+    Boss_7,
+    Boss_8,
+    Boss_9,
+    _Boss_Count,
+};
 
 #define BOSS_CHANGED_HEALTH     (uint8_t)( 1 << 0 )
 #define BOSS_CHANGED_POSITION   (uint8_t)( 1 << 0 )

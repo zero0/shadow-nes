@@ -10,22 +10,25 @@
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_FLASK )    \
 )
 
+#define can_queue_flask()       \
+( 1 )
+
 static void __fastcall__ perform_flask(void)
 {
     player_next_state = PLAYER_STATE_USING_FLASH;
 }
 
-static void __fastcall__ player_state_flash_enter()
+static void __fastcall__ player_state_flash_enter(void)
 {
     // TODO: implement actual animation
     // play flash animation
     timer_set( player_animation_frame_timer, 40 );
 
-    // reset action flags ( cannot interupt)
+    // reset action flags (cannot interupt)
     flags_reset( player_can_perform_action_flags );
 }
 
-static void __fastcall__ player_state_flash_update()
+static void __fastcall__ player_state_flash_update(void)
 {
     // leave state and heal when animation is done so if interuptted, heal does not work
     if( timer_is_done( player_animation_frame_timer ) )
@@ -61,7 +64,7 @@ static void __fastcall__ player_state_flash_update()
     }
 }
 
-static void __fastcall__ player_state_flash_leave()
+static void __fastcall__ player_state_flash_leave(void)
 {
     // TODO: cancel animation
 

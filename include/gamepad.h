@@ -32,9 +32,9 @@ STATIC_ASSERT( sizeof( GAMEPAD_A ) == sizeof( uint8_t ) );
 
 // true if the button is down
 #define GAMEPAD_BTN(v, b)               ( ( (v) & (b) ) == (b) )
+
 #define GAMEPAD_BTN_DOWN(c, b)          ( GAMEPAD_BTN( c, b ) )
 #define GAMEPAD_BTN_UP(c, b)            ( !GAMEPAD_BTN( c, b ) )
-
 #define GAMEPAD_BTN_PRESSED(p, c, b)    ( GAMEPAD_BTN_UP(p, b) && GAMEPAD_BTN_DOWN(c, b) )
 #define GAMEPAD_BTN_RELEASED(p, c, b)   ( GAMEPAD_BTN_DOWN(p, b) && GAMEPAD_BTN_UP(c, b) )
 #define GAMEPAD_BTN_HELD(p, c, b)       ( GAMEPAD_BTN_DOWN(p, b) && GAMEPAD_BTN_DOWN(c, b) )
