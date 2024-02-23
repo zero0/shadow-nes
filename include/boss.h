@@ -7,17 +7,19 @@
 
 enum
 {
-    Boss_0,
-    Boss_1,
-    Boss_2,
-    Boss_3,
-    Boss_4,
-    Boss_5,
-    Boss_6,
-    Boss_7,
-    Boss_8,
-    Boss_9,
-    _Boss_Count,
+    BOSS_0,
+    BOSS_1,
+    BOSS_2,
+    BOSS_3,
+    BOSS_4,
+    BOSS_5,
+    BOSS_6,
+    BOSS_7,
+
+    //
+    BOSS_8,
+    BOSS_9,
+    _BOSS_COUNT,
 };
 
 #define BOSS_CHANGED_HEALTH     (uint8_t)( 1 << 0 )

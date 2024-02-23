@@ -11,21 +11,78 @@ static const uint8_t all_boss_health_per_block_log2[] = {
 
 static const uint16_t all_boss_max_healths[] = {
     (uint16_t)1792,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    0,
+    0,
 };
+STATIC_ASSERT(ARRAY_SIZE(all_boss_max_healths) == _BOSS_COUNT);
 
 static const uint8_t all_boss_armors[] = {
     0,
-};
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
 
-static const str_t all_boss_names[] = {
-    tr_boss_1_name,
-};
-static const str_t all_boss_location_names[] = {
-    tr_boss_1_location,
-};
-static const uint8_t all_boss_music[] = {
+    0,
     0,
 };
+STATIC_ASSERT(ARRAY_SIZE(all_boss_armors) == _BOSS_COUNT);
+
+static const str_t all_boss_names[] = {
+    tr_boss_0_name,
+    tr_boss_1_name,
+    tr_boss_2_name,
+    tr_boss_3_name,
+    tr_boss_4_name,
+    tr_boss_5_name,
+    tr_boss_6_name,
+    tr_boss_7_name,
+
+    tr_boss_8_name,
+    tr_boss_9_name,
+};
+STATIC_ASSERT(ARRAY_SIZE(all_boss_names) == _BOSS_COUNT);
+
+static const str_t all_boss_location_names[] = {
+    tr_boss_1_location,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    0,
+    0,
+};
+STATIC_ASSERT(ARRAY_SIZE(all_boss_location_names) == _BOSS_COUNT);
+
+static const uint8_t all_boss_music[] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    0,
+    0,
+};
+STATIC_ASSERT(ARRAY_SIZE(all_boss_music) == _BOSS_COUNT);
 
 #define BOSS_STATE_DEAD             (uint8_t)(1 << 0)
 #define BOSS_STATE_UNDEF_0          (uint8_t)(1 << 1)

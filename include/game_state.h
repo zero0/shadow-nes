@@ -6,15 +6,24 @@
 #include "types.h"
 #include "macros.h"
 
-#define GAME_STATE_INIT         (uint8_t)0
-#define GAME_STATE_TITLE        (uint8_t)1
-#define GAME_STATE_PLAYING      (uint8_t)2
-#define GAME_STATE_CONTINUE     (uint8_t)3
-#define GAME_STATE_CUTSCENE     (uint8_t)4
-#define GAME_STATE_STORE        (uint8_t)5
-#define GAME_STATE_CHECKPOINT   (uint8_t)6
-#define GAME_STATE_GAME_OVER    (uint8_t)7
-#define _GAME_STATE_COUNT       (uint8_t)8
+#include "game_state_title.h"
+#include "game_state_playing.h"
+#include "game_state_cutscene.h"
+#include "game_state_store.h"
+#include "game_state_checkpoint.h"
+
+enum
+{
+    GAME_STATE_INIT,
+    GAME_STATE_TITLE,
+    GAME_STATE_PLAYING,
+    GAME_STATE_CONTINUE,
+    GAME_STATE_CUTSCENE,
+    GAME_STATE_STORE,
+    GAME_STATE_CHECKPOINT,
+    GAME_STATE_GAME_OVER,
+    _GAME_STATE_COUNT,
+};
 
 extern uint8_t game_state;
 #pragma zpsym("game_state")

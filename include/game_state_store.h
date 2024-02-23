@@ -3,9 +3,10 @@
 
 enum
 {
-    Store_0,
-    Store_1,
-    Store_2
+    STORE_0,
+    STORE_1,
+    STORE_2,
+    _STORE_COUNT,
 };
 
 void game_state_store_enter(void);

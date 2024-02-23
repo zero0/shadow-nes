@@ -29,34 +29,47 @@ tr_shop_title,Shop
 tr_checkpoint_title,Burnt Shade Tree
 
 #
+# Characters
+#
+
+tr_char_unknown,???
+tr_char_shademother,Shademother
+
+#
 # Boss Info
 #
 
 tr_tower_name,Tower of Luxluma
 
-tr_boss_1_location,${tr_tower_name} Bridge
-tr_boss_1_name,"Yrkargarin, Lost Knight of Luxluma"
+tr_boss_0_location,${tr_tower_name} Bridge
+tr_boss_0_name,"Yrkargarin, Lost Knight of Luxluma"
 
-tr_boss_2_location,${tr_tower_name} Courtyard
-tr_boss_2_name,Brightbeast
+tr_boss_1_location,${tr_tower_name} Courtyard
+tr_boss_1_name,Brightbeast
 
-tr_boss_3_location,${tr_tower_name} Upper Chapel
-tr_boos_3_name,High Radiance Auhmn
+tr_boss_2_location,${tr_tower_name} Upper Chapel
+tr_boss_2_name,High Radiance Auhmn
 
-tr_boss_4_location,${tr_tower_name} Gleaming Road
-tr_boss_4_name,Iridescence Dragon
+tr_boss_3_location,${tr_tower_name} Gleaming Road
+tr_boss_3_name,Iridescence Dragon
 
-tr_boss_5_location,${tr_tower_name} Sewers
-tr_boss_5_name,Ophiotroph Dragon Corpse
+tr_boss_4_location,${tr_tower_name} Sewers
+tr_boss_4_name,Ophiotroph Dragon Corpse
 
-tr_boss_6_location,${tr_tower_name} Ramparts
-tr_boss_6_name,Shadowkin Invader
+tr_boss_5_location,${tr_tower_name} Ramparts
+tr_boss_5_name,Shadowkin Invader
 
-tr_boss_7_location,${tr_tower_name} Gleaming Anteroom
-tr_boss_7_name,Specular Guards Dirk & Quince
+tr_boss_6_location,${tr_tower_name} Gleaming Anteroom
+tr_boss_6_name,Specular Guards Dirk & Quince
 
-tr_boss_8_location,${tr_tower_name} Radiant Throne Hall
-tr_boss_8_name,Lightlord of Sin
+tr_boss_7_location,${tr_tower_name} Radiant Throne Hall
+tr_boss_7_name,Lightlord of Sin
+
+tr_boss_8_location,Land of Light
+tr_boss_8_name,Quintessence of Light
+
+tr_boss_9_location,Land of Shadow
+tr_boss_9_name,Icon of the ${tr_char_shademother}
 
 #
 # Cutscenes

@@ -8,10 +8,14 @@
 #include "game_state.h"
 #include "globals.h"
 
-#define GAME_STATE_PLAYING_INTRO    (uint8_t)0
-#define GAME_STATE_PLAYING_PLAYING  (uint8_t)1
-#define GAME_STATE_PLAYING_PAUSED   (uint8_t)2
-#define GAME_STATE_PLAYING_TALKING  (uint8_t)3
+enum
+{
+    GAME_STATE_PLAYING_INTRO,
+    GAME_STATE_PLAYING_PLAYING,
+    GAME_STATE_PLAYING_PAUSED,
+    GAME_STATE_PLAYING_TALKING,
+    _GAME_STATE_PLAYING_COUNT,
+};
 
 extern ptr_t progress_bar;
 extern ptr_t shadow_font;

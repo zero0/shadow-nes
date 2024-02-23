@@ -8,10 +8,10 @@
 
 enum
 {
-    SaveSlot_0,
-    SaveSlot_1,
-    SaveSlot_2,
-    _SaveSlot_Count
+    SAVE_SLOT_0,
+    SAVE_SLOT_1,
+    SAVE_SLOT_2,
+    _SAVE_SLOT_COUNT
 };
 
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
     uint8_t current_difficulty;
 
     flags8_t difficulties_defeated;
-    flags8_t bosses_defeated[_Boss_Count];
+    flags8_t bosses_defeated[_BOSS_COUNT];
 
     uint8_t currency_0;
     uint8_t currency_1;

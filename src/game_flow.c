@@ -1,6 +1,5 @@
 #include "game_flow.h"
 #include "game_state.h"
-#include "game_state_cutscene.h"
 #include "macros.h"
 #include "boss.h"
 #include "types.h"
@@ -22,10 +21,14 @@
 #define GAME_FLOW_DIFFICULTY_HARD(x)    GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_HARD)
 #define GAME_FLOW_DIFFICULTY_BRUTAL(x)  GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_BURTAL)
 
-#define GAME_FLOW_TYPE_CUTSCENE         (uint8_t)0
-#define GAME_FLOW_TYPE_SHOP             (uint8_t)1
-#define GAME_FLOW_TYPE_CHECKPOINT       (uint8_t)2
-#define GAME_FLOW_TYPE_BOSS             (uint8_t)3
+enum
+{
+    GAME_FLOW_TYPE_CUTSCENE,
+    GAME_FLOW_TYPE_STORE,
+    GAME_FLOW_TYPE_CHECKPOINT,
+    GAME_FLOW_TYPE_BOSS,
+    _GAME_FLOW_TYPE_COUNT,
+};
 
 #define GAME_FLOW_GET_TYPE(x)           ( 0x03 & (x) )
 #define GAME_FLOW_IS_DIFFICULTY(x,d)    ( ( 0x07 & ( (x) >> 2 ) ) <= (d) )
@@ -38,51 +41,51 @@ const static uint8_t game_flow_steps[] = {
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_000_Intro,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_0,
+    GAME_FLOW_TYPE_BOSS, BOSS_0,
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
 
     GAME_FLOW_TYPE_CHECKPOINT,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_1,
+    GAME_FLOW_TYPE_BOSS, BOSS_1,
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
 
     GAME_FLOW_TYPE_CHECKPOINT,
-    GAME_FLOW_TYPE_SHOP, 0,
+    GAME_FLOW_TYPE_STORE, STORE_0,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_2,
-    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
-
-    GAME_FLOW_TYPE_CHECKPOINT,
-
-    GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_3,
-
-    GAME_FLOW_TYPE_CHECKPOINT,
-
-    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
-    GAME_FLOW_TYPE_BOSS, Boss_4,
-    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
-
-    GAME_FLOW_TYPE_CHECKPOINT,
-    GAME_FLOW_TYPE_SHOP, 1,
-
-    GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_5,
+    GAME_FLOW_TYPE_BOSS, BOSS_2,
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
 
     GAME_FLOW_TYPE_CHECKPOINT,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_6,
+    GAME_FLOW_TYPE_BOSS, BOSS_3,
+
+    GAME_FLOW_TYPE_CHECKPOINT,
+
+    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
+    GAME_FLOW_TYPE_BOSS, BOSS_4,
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
 
     GAME_FLOW_TYPE_CHECKPOINT,
-    GAME_FLOW_TYPE_SHOP, 2,
+    GAME_FLOW_TYPE_STORE, STORE_1,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
-    GAME_FLOW_TYPE_BOSS, Boss_7,
+    GAME_FLOW_TYPE_BOSS, BOSS_5,
+    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
+
+    GAME_FLOW_TYPE_CHECKPOINT,
+
+    GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
+    GAME_FLOW_TYPE_BOSS, BOSS_6,
+    GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
+
+    GAME_FLOW_TYPE_CHECKPOINT,
+    GAME_FLOW_TYPE_STORE, STORE_2,
+
+    GAME_FLOW_TYPE_CUTSCENE, Cutscene_100_Boss0_Preroll,
+    GAME_FLOW_TYPE_BOSS, BOSS_7,
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_110_Boss0_Postroll,
 
     GAME_FLOW_TYPE_CUTSCENE, Cutscene_999_Credits
@@ -132,7 +135,7 @@ void __fastcall__ advance_game_flow(void)
         }
             break;
 
-        case GAME_FLOW_TYPE_SHOP:
+        case GAME_FLOW_TYPE_STORE:
         {
             g_current_game_data.current_game_flow++;
 

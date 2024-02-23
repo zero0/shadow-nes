@@ -32,7 +32,7 @@ void __fastcall__ load_game_data_for_new_game(void)
 void __fastcall__ load_game_data_from_save_slot(uint8_t saveSlot)
 {
     UNUSED(saveSlot);
-    ASSERT(saveSlot < _SaveSlot_Count);
+    ASSERT(saveSlot < _SAVE_SLOT_COUNT);
 
     // TODO: load game data from save ram
 
@@ -54,7 +54,7 @@ void __fastcall__ load_game_data_from_save_slot(uint8_t saveSlot)
 void __fastcall__ save_game_data_to_save_slot(uint8_t saveSlot)
 {
     UNUSED(saveSlot);
-    ASSERT(saveSlot < _SaveSlot_Count);
+    ASSERT(saveSlot < _SAVE_SLOT_COUNT);
 
     // TODO: save game data to save ram
 }

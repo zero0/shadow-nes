@@ -9,16 +9,19 @@
 //
 //
 
-#define DAMAGE_TYPE_FLAT        (uint8_t)0  // flag dmg
-#define DAMAGE_TYPE_PHYSICAL    (uint8_t)1  // applies stun
-#define DAMAGE_TYPE_FIRE        (uint8_t)2  // applies burn
-#define DAMAGE_TYPE_COLD        (uint8_t)3  // applies frozen
-#define DAMAGE_TYPE_POISON      (uint8_t)4  // applies poison
-#define DAMAGE_TYPE_RADIANT     (uint8_t)5  // applies blinded
-#define DAMAGE_TYPE_SHADOW      (uint8_t)6  // applies withered
-#define DAMAGE_TYPE_MAGIC       (uint8_t)7  // applies manaburn
-#define DAMAGE_TYPE_FATIGUE     (uint8_t)8  // applies exhaustion, damage stamina instead of health
-#define _DAMAGE_TYPE_COUNT      (uint8_t)9
+enum
+{
+    DAMAGE_TYPE_FLAT,                   // flag dmg
+    DAMAGE_TYPE_PHYSICAL,               // applies stun
+    DAMAGE_TYPE_FIRE,                   // applies burn
+    DAMAGE_TYPE_COLD,                   // applies frozen
+    DAMAGE_TYPE_POISON,                 // applies poison
+    DAMAGE_TYPE_RADIANT,                // applies blinded
+    DAMAGE_TYPE_SHADOW,                 // applies withered
+    DAMAGE_TYPE_MAGIC,                  // applies manaburn
+    DAMAGE_TYPE_FATIGUE,                // applies exhaustion, damage stamina instead of health
+    _DAMAGE_TYPE_COUNT,
+};
 STATIC_ASSERT(_DAMAGE_TYPE_COUNT <= 0x0F );
 
 #define DAMAGE_TYPE_ATTR_NONE   (uint8_t)0
@@ -61,25 +64,28 @@ typedef struct {
 //
 //
 
-#define DAMAGE_STATUS_TYPE_STUNNED      (uint8_t)0    // stop stamina regen, reset stamina on apply
-#define DAMAGE_STATUS_TYPE_BURN         (uint8_t)1    // fire dmg per tick, reduce phys armor
-#define DAMAGE_STATUS_TYPE_FROZEN       (uint8_t)2    // slowed stamina regen, reduce fatigue armor
-#define DAMAGE_STATUS_TYPE_POISONED     (uint8_t)3    // poison dmg per tick, reduces hp no lower than 1
-#define DAMAGE_STATUS_TYPE_BLINDED      (uint8_t)4    // reduce outgoing dmg to 0 (miss)
-#define DAMAGE_STATUS_TYPE_WITHERD      (uint8_t)5    // lowered incoming healing
-#define DAMAGE_STATUS_TYPE_MANABURN     (uint8_t)6    // 2x dmg from magic
-#define DAMAGE_STATUS_TYPE_EXHAUSTION   (uint8_t)7    // slowed all regen, reduced dmg output
-#define _DAMAGE_STATUS_TYPE_COUNT       (uint8_t)8
+enum
+{
+    DAMAGE_STATUS_TYPE_STUNNED,             // stop stamina regen, reset stamina on apply
+    DAMAGE_STATUS_TYPE_BURN,                // fire dmg per tick, reduce phys armor
+    DAMAGE_STATUS_TYPE_FROZEN,              // slowed stamina regen, reduce fatigue armor
+    DAMAGE_STATUS_TYPE_POISONED,            // poison dmg per tick, reduces hp no lower than 1
+    DAMAGE_STATUS_TYPE_BLINDED,             // reduce outgoing dmg to 0 (miss)
+    DAMAGE_STATUS_TYPE_WITHERD,             // lowered incoming healing
+    DAMAGE_STATUS_TYPE_MANABURN,            // 2x dmg from magic
+    DAMAGE_STATUS_TYPE_EXHAUSTION,          // slowed all regen, reduced dmg output
+    _DAMAGE_STATUS_TYPE_COUNT,
+};
 STATIC_ASSERT(_DAMAGE_STATUS_TYPE_COUNT <= 8);
 
-#define DAMAGE_STATUS_STUNNED           (uint8_t)(1 << DAMAGE_STATUS_TYPE_STUNNED )
-#define DAMAGE_STATUS_BURN              (uint8_t)(1 << DAMAGE_STATUS_TYPE_BURN )
-#define DAMAGE_STATUS_FROZEN            (uint8_t)(1 << DAMAGE_STATUS_TYPE_FROZEN )
-#define DAMAGE_STATUS_POISONED          (uint8_t)(1 << DAMAGE_STATUS_TYPE_POISONED )
-#define DAMAGE_STATUS_BLINDED           (uint8_t)(1 << DAMAGE_STATUS_TYPE_BLINDED )
-#define DAMAGE_STATUS_WITHERD           (uint8_t)(1 << DAMAGE_STATUS_TYPE_WITHERD )
-#define DAMAGE_STATUS_MANABURN          (uint8_t)(1 << DAMAGE_STATUS_TYPE_MANABURN )
-#define DAMAGE_STATUS_EXHAUSTION        (uint8_t)(1 << DAMAGE_STATUS_TYPE_EXHAUSTION )
+#define DAMAGE_STATUS_STUNNED               (uint8_t)(1 << DAMAGE_STATUS_TYPE_STUNNED )
+#define DAMAGE_STATUS_BURN                  (uint8_t)(1 << DAMAGE_STATUS_TYPE_BURN )
+#define DAMAGE_STATUS_FROZEN                (uint8_t)(1 << DAMAGE_STATUS_TYPE_FROZEN )
+#define DAMAGE_STATUS_POISONED              (uint8_t)(1 << DAMAGE_STATUS_TYPE_POISONED )
+#define DAMAGE_STATUS_BLINDED               (uint8_t)(1 << DAMAGE_STATUS_TYPE_BLINDED )
+#define DAMAGE_STATUS_WITHERD               (uint8_t)(1 << DAMAGE_STATUS_TYPE_WITHERD )
+#define DAMAGE_STATUS_MANABURN              (uint8_t)(1 << DAMAGE_STATUS_TYPE_MANABURN )
+#define DAMAGE_STATUS_EXHAUSTION            (uint8_t)(1 << DAMAGE_STATUS_TYPE_EXHAUSTION )
 
 typedef flags8_t damage_status_t;
 
