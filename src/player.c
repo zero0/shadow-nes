@@ -9,7 +9,6 @@
 #include "timer.h"
 #include "combat.h"
 #include "game_state.h"
-#include "game_state_playing.h"
 #include "game_data.h"
 
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224

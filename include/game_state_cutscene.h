@@ -3,12 +3,14 @@
 
 enum
 {
-    Cutscene_000_Intro,
+    CUTSCENE_000_INTRO,
 
-    Cutscene_100_Boss0_Preroll,
-    Cutscene_110_Boss0_Postroll,
+    CUTSCENE_100_BOSS_0,
+    CUTSCENE_110_BOSS_0,
 
-    Cutscene_999_Credits,
+    CUTSCENE_999_CREDITS,
+
+    _CUTSCENE_COUNT,
 };
 
 void game_state_cutscene_enter(void);

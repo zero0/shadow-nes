@@ -6,11 +6,6 @@
 #include "timer.h"
 
 #include "game_state.h"
-#include "game_state_title.h"
-#include "game_state_playing.h"
-#include "game_state_cutscene.h"
-#include "game_state_checkpoint.h"
-#include "game_state_store.h"
 
 //
 //
