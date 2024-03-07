@@ -48,7 +48,7 @@ if exist obj (del /Q obj) else md obj
 
 rem Run img2chr tool to generate .s files from images
 pushd tools\img2chr\
-dotnet run ..\..\assets\
+dotnet run ..\..\assets\ || goto :fail_assetbuild
 popd
 
 set "GAME_ASSETS_INCLUDE=assets/generated/include"
@@ -82,6 +82,10 @@ goto :end
 
 :fail
 echo %ESC%[91mCompile bin\%GAME_NAME%.nes failed.%ESC%[0m
+goto :end
+
+:fail_assetbuild
+echo %ESC%[91mAsset Build for bin\%GAME_NAME%.nes failed.%ESC%[0m
 goto :end
 
 :end
