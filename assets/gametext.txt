@@ -26,7 +26,7 @@ tr_currency_1_name,Ultraflux
 
 tr_shop_title,Shop
 
-tr_checkpoint_title,Burnt Shade Tree
+tr_checkpoint_title,Withered Shade Tree
 
 #
 # Characters
@@ -41,42 +41,42 @@ tr_char_shademother,Shademother
 
 tr_tower_name,Tower of Luxluma
 
-tr_boss_0_location,${tr_tower_name} Bridge
-tr_boss_0_name,"Yrkargarin, Lost Knight of Luxluma"
+tr_boss_0_location,Entrance
+tr_boss_0_name,Lost Knight Yrkargarin
 
-tr_boss_1_location,${tr_tower_name} Courtyard
+tr_boss_1_location,Courtyard
 tr_boss_1_name,Brightbeast
 
-tr_boss_2_location,${tr_tower_name} Upper Chapel
+tr_boss_2_location,Upper Chapel
 tr_boss_2_name,High Radiance Auhmn
 
-tr_boss_3_location,${tr_tower_name} Gleaming Road
+tr_boss_3_location,Gleaming Road
 tr_boss_3_name,Iridescence Dragon
 
-tr_boss_4_location,${tr_tower_name} Sewers
+tr_boss_4_location,Sewers
 tr_boss_4_name,Ophiotroph Dragon Corpse
 
-tr_boss_5_location,${tr_tower_name} Ramparts
+tr_boss_5_location,Ramparts
 tr_boss_5_name,Shadowkin Invader
 
-tr_boss_6_location,${tr_tower_name} Gleaming Anteroom
+tr_boss_6_location,Gleaming Anteroom
 tr_boss_6_name,Specular Guards Dirk & Quince
 
-tr_boss_7_location,${tr_tower_name} Radiant Throne Hall
+tr_boss_7_location,Radiant Throne Hall
 tr_boss_7_name,Lightlord of Sin
 
-tr_boss_8_location,Land of Light
+tr_boss_8_location,Echo of Light
 tr_boss_8_name,Quintessence of Light
 
-tr_boss_9_location,Land of Shadow
+tr_boss_9_location,Vestige of Shadow
 tr_boss_9_name,Icon of the ${tr_char_shademother}
 
 #
 # Cutscenes
 #
 
-tr_cutscene_intro_0,Those born of shadow are forever doomed to serve the light.
-tr_cutscene_intro_1,This corrupted light must be snuffed out. Those born of shadow have devine right to fufill this task.
-tr_cutscene_intro_2,When the light is stained; dim; corrupted. Those born to shadow are bound to act.
+tr_cutscene_intro_0,Those born of shadow are\nforever doomed to serve\nthe light.
+tr_cutscene_intro_1,This corrupted light must be\nsnuffed out. Those born of\nshadow have devine right to\nfufill this task.
+tr_cutscene_intro_2,When the light is stained; dim;\ncorrupted. Those born to shadow\nare bound to act.
 tr_cutscene_intro_3,fa
 tr_cutscene_intro_4,ee

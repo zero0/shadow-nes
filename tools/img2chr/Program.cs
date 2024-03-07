@@ -187,6 +187,11 @@ namespace img2chr
             return !condition;
         }
 
+        static void InvalidCodePath(string msg = null, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
+        {
+            Console.Error.WriteLine($"Invalid code path {filepath}:{line}{(msg == null ? "" : $": {msg}")}");
+        }
+
         static bool TryGetFileParamters(string srcFilename, string parameterFileExt, out Dictionary<string, string> parameters)
         {
             parameters = null;
@@ -333,7 +338,71 @@ namespace img2chr
             }
 
             return sb.ToString();
+        }
 
+        static string CharacterToDefineName(char c)
+        {
+            string defineName = null;
+            if (char.IsDigit(c))
+            {
+                defineName = c.ToString();
+            }
+            else if (char.IsLetter(c))
+            {
+                if (char.IsUpper(c))
+                {
+                    defineName = $"upper_{char.ToLower(c)}";
+                }
+                else
+                {
+                    defineName = $"lower_{c}";
+                }
+            }
+            else
+            {
+                switch (c)
+                {
+                    case ' ': defineName = "space"; break;
+                    case '.': defineName = "period"; break;
+                    case ',': defineName = "comma"; break;
+                    case '!': defineName = "exclimation"; break;
+                    case '?': defineName = "question_mark"; break;
+                    case '<': defineName = "less_than"; break;
+                    case '>': defineName = "greater_than"; break;
+                    case ';': defineName = "semicolon"; break;
+                    case ':': defineName = "colon"; break;
+                    case '[': defineName = "left_angle_bracket"; break;
+                    case ']': defineName = "right_angle_bracket"; break;
+                    case '@': defineName = "at"; break;
+                    case '#': defineName = "hash"; break;
+                    case '$': defineName = "dollar"; break;
+                    case '%': defineName = "percent"; break;
+                    case '^': defineName = "carot"; break;
+                    case '&': defineName = "ampersand"; break;
+                    case '*': defineName = "star"; break;
+                    case '(': defineName = "left_parentheses"; break;
+                    case ')': defineName = "right_parentheses"; break;
+                    case '-': defineName = "minus"; break;
+                    case '_': defineName = "underscore"; break;
+                    case '=': defineName = "equals"; break;
+                    case '+': defineName = "plus"; break;
+                    case '~': defineName = "tilde"; break;
+                    case '\'': defineName = "single_quote"; break;
+                    case '`': defineName = "single_back_quote"; break;
+                    case '"': defineName = "double_quote"; break;
+                    case '/': defineName = "forward_slash"; break;
+                    case '\\': defineName = "back_slash"; break;
+                    case '\r': defineName = "carage_return"; break;
+                    case '\n': defineName = "new_line"; break;
+                    case '\t': defineName = "tab"; break;
+                    case '\b': defineName = "break"; break;
+                    default:
+                        InvalidCodePath($"Unable to find name for character '{c}'");
+                        break;
+                }
+            }
+
+            return defineName;
         }
 
         delegate void ConvertFunc(string inputFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions convertOptions);
@@ -815,7 +884,7 @@ namespace img2chr
                                         case 't': c = '\t'; str = "\\t"; break;
                                         case 'b': c = '\b'; str = "\\b"; break;
                                         case '\\': c = '\\'; str = "\\"; break;
-                                        default: Assert(false, $"Invalid escape character {c}"); break;
+                                        default: InvalidCodePath($"Invalid escape character {c}"); break;
                                     }
                                 }
                                 else if (c == ' ')
@@ -857,7 +926,7 @@ namespace img2chr
 
                             if (!string.IsNullOrEmpty(defineName))
                             {
-                                sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (${uint8Type})({charOffset + index})");
+                                sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} ({uint8Type})({charOffset + index})");
                             }
                         }
 
@@ -878,7 +947,7 @@ namespace img2chr
                                         case 't': c = '\t'; break;
                                         case 'b': c = '\b'; break;
                                         case '\\': c = '\\'; break;
-                                        default: Assert(false, $"Invalid escape character {c}"); break;
+                                        default: InvalidCodePath($"Invalid escape character {c}"); break;
                                     }
                                 }
 
@@ -886,7 +955,7 @@ namespace img2chr
 
                                 if (!string.IsNullOrEmpty(defineName))
                                 {
-                                    sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} (${uint8Type})({charOffset + index})");
+                                    sb.AppendLine($"#define {$"FONT_CHAR_{defineName.ToUpperInvariant()}",-40} ({uint8Type})({charOffset + index})");
                                 }
                             }
                         }
@@ -902,77 +971,13 @@ namespace img2chr
                 }
             }
 
-            static string CharacterToDefineName(char c)
-            {
-                string defineName = null;
-                if (char.IsDigit(c))
-                {
-                    defineName = c.ToString();
-                }
-                else if (char.IsLetter(c))
-                {
-                    if (char.IsUpper(c))
-                    {
-                        defineName = $"upper_{c}";
-                    }
-                    else
-                    {
-                        defineName = $"lower_{c}";
-                    }
-                }
-                else
-                {
-                    switch (c)
-                    {
-                        case ' ': defineName = "space"; break;
-                        case '.': defineName = "period"; break;
-                        case ',': defineName = "comma"; break;
-                        case '!': defineName = "exclimation"; break;
-                        case '?': defineName = "question_mark"; break;
-                        case '<': defineName = "less_than"; break;
-                        case '>': defineName = "greater_than"; break;
-                        case ';': defineName = "semicolon"; break;
-                        case ':': defineName = "colon"; break;
-                        case '[': defineName = "left_angle_bracket"; break;
-                        case ']': defineName = "right_angle_bracket"; break;
-                        case '@': defineName = "at"; break;
-                        case '#': defineName = "hash"; break;
-                        case '$': defineName = "dollar"; break;
-                        case '%': defineName = "percent"; break;
-                        case '^': defineName = "carot"; break;
-                        case '&': defineName = "ampersand"; break;
-                        case '*': defineName = "star"; break;
-                        case '(': defineName = "left_parentheses"; break;
-                        case ')': defineName = "right_parentheses"; break;
-                        case '-': defineName = "minus"; break;
-                        case '_': defineName = "underscore"; break;
-                        case '=': defineName = "equals"; break;
-                        case '+': defineName = "plus"; break;
-                        case '~': defineName = "tilde"; break;
-                        case '\'': defineName = "single_quote"; break;
-                        case '`': defineName = "single_back_quote"; break;
-                        case '"': defineName = "double_quote"; break;
-                        case '/': defineName = "forward_slash"; break;
-                        case '\\': defineName = "back_slash"; break;
-                        case '\r': defineName = "carage_return"; break;
-                        case '\n': defineName = "new_line"; break;
-                        case '\t': defineName = "tab"; break;
-                        case '\b': defineName = "break"; break;
-                        default:
-                            Assert(false, $"Unable to find name for character '{c}'");
-                            break;
-                    }
-                }
-
-                return defineName;
-            }
         }
         #endregion
 
         #region Text File
         static void ConvertTextFile(string textFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
-            TryGetFileParamters(textFilename, "tr", out var parameters);
+            TryGetFileParamters(textFilename, "tr", out var remapCharsParameters);
 
             static bool ParseElements(string line, out List<string> values)
             {
@@ -988,6 +993,25 @@ namespace img2chr
                     char c = line[i];
                     switch (c)
                     {
+                        case '\\':
+                            ++i;
+                            if (i < line.Length)
+                            {
+                                c = line[i];
+                                switch (c)
+                                {
+                                    case '\\': sb.Append('\\'); break;
+                                    case 'n': sb.Append('\n'); break;
+                                    case 'r': sb.Append('\r'); break;
+                                    case 't': sb.Append('\t'); break;
+                                    case '\'': sb.Append('\''); break;
+                                    case '"': sb.Append('"'); break;
+                                    case '%': sb.Append('%'); break;
+                                    default: InvalidCodePath($"Unkown switch command \\{c}"); break;
+                                }
+                            }
+                            break;
+
                         case '%':
                             inVerbatum = !inVerbatum;
                             sb.Append(c);
@@ -1046,6 +1070,11 @@ namespace img2chr
                 return ok;
             }
 
+            static bool IsVerbatumString(string str)
+            {
+                return str.StartsWith('%') && str.EndsWith('%');
+            }
+
             FileStreamOptions fileOptions = new()
             {
                 Mode = FileMode.Open,
@@ -1057,8 +1086,8 @@ namespace img2chr
             string line = fr.ReadLine();
 
             ParseElements(line, out var headers);
-
             // language -> key -> value
+
             Dictionary<string, Dictionary<string, string>> textMap = new();
 
             // skip first header
@@ -1114,14 +1143,14 @@ namespace img2chr
                                 }
                                 else
                                 {
-                                    Assert(false, $"Unable to find reference '{refKey}' in '{kv.Key}'");
+                                    LogError($"Unable to find reference '{refKey}' in '{kv.Key}'");
                                     changed = false;
                                     break;
                                 }
                             }
                             else
                             {
-                                Assert(false, $"Circular reference found in '{kv.Key}'");
+                                LogError($"Circular reference found in '{kv.Key}'");
                                 changed = false;
                                 break;
                             }
@@ -1137,30 +1166,82 @@ namespace img2chr
 
             StringBuilder sb = new();
 
-            // remap characters
+            // Test for long strings
+            const int kMaxStringWidth = 32;
             foreach (var langToMap in textMap)
             {
                 foreach (var kv in langToMap.Value)
                 {
                     string value = kv.Value;
-                    bool changed = false;
 
-                    sb.Clear();
-                    for (int i = 0; i < value.Length; i++)
+                    if (value.Length > kMaxStringWidth && !IsVerbatumString(value))
                     {
-                        char c = value[i];
+                        string[] lines = value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-                        string chrmapKey = $"charmap.{c}";
+                        bool allLinesShort = true;
+                        foreach (string l in lines)
+                        {
+                            allLinesShort &= l.Length < kMaxStringWidth;
+                        }
 
-                        char mappedChar = GetCharParameter(parameters, chrmapKey, c);
-                        sb.Append(mappedChar);
-
-                        changed |= mappedChar != c;
+                        if (!allLinesShort)
+                        {
+                            LogError($"String too long [{langToMap.Key}]:[{kv.Key}] -> [{value}]");
+                        }
                     }
+                }
+            }
 
-                    if (changed)
+            // replace single character escape sequence with full expanded sequence if ca65 supports escape sequences in strings
+            const bool supportsEscapeSequences = true;
+            if (supportsEscapeSequences)
+            {
+                foreach (var langToMap in textMap)
+                {
+                    foreach (var kv in langToMap.Value)
                     {
-                        langToMap.Value[kv.Key] = sb.ToString();
+                        string value = kv.Value;
+                        if (!IsVerbatumString(value))
+                        {
+
+                            value = value.Replace("\n", "\\n");
+                            value = value.Replace("\t", "\\t");
+                            value = value.Replace("\b", "\\b");
+                            value = value.Replace("\"", "\\\"");
+                            value = value.Replace("\'", "\\'");
+
+                            langToMap.Value[kv.Key] = value;
+                        }
+                    }
+                }
+            }
+
+            // remap characters if needed
+            if (remapCharsParameters?.Count > 0)
+            {
+                foreach (var langToMap in textMap)
+                {
+                    foreach (var kv in langToMap.Value)
+                    {
+                        string value = kv.Value;
+
+                        sb.Clear();
+                        for (int i = 0; i < value.Length; i++)
+                        {
+                            char c = value[i];
+
+                            string chrmapKey = $"charmap.{CharacterToDefineName(c)}";
+
+                            string mappedChar = GetStringParameter(remapCharsParameters, chrmapKey, c.ToString());
+                            sb.Append(mappedChar);
+                        }
+
+                        value = sb.ToString();
+
+                        if (kv.Value != value)
+                        {
+                            langToMap.Value[kv.Key] = value;
+                        }
                     }
                 }
             }
@@ -1209,7 +1290,7 @@ namespace img2chr
                 foreach (var kv in langToMap.Value)
                 {
                     string tr = $"{kv.Key}:";
-                    if (kv.Value.StartsWith('%') && kv.Value.EndsWith('%'))
+                    if (IsVerbatumString(kv.Value))
                     {
                         sb.AppendLine($"{tr,-32} TR {kv.Value[1..^1]}");
                     }
