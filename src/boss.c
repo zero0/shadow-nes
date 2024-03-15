@@ -4,6 +4,7 @@
 #include "combat.h"
 #include "globals.h"
 #include "subpixel.h"
+#include "collision.h"
 
 static const uint8_t all_boss_health_per_block_log2[] = {
     7,
@@ -103,6 +104,9 @@ static uint8_t boss_combat_position;
 
 static subpixel_t boss_position_x;
 static subpixel_t boss_position_y;
+
+static aabb_t boss_hit_box;
+static aabb_t boss_damage_box;
 
 static damage_t boss_damage_queue[4];
 static uint8_t boss_damage_queue_length;

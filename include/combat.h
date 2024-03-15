@@ -4,6 +4,7 @@
 #include "types.h"
 #include "flags.h"
 #include "subpixel.h"
+#include "collision.h"
 
 //
 //

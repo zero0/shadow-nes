@@ -8,6 +8,7 @@
 #include "flags.h"
 #include "timer.h"
 #include "combat.h"
+#include "collision.h"
 #include "game_state.h"
 #include "game_data.h"
 
@@ -98,6 +99,9 @@ static subpixel_t player_pos_x;
 static subpixel_t player_pos_y;
 static subpixel_diff_t player_pos_dx;
 static subpixel_diff_t player_pos_dy;
+
+static aabb_t player_hit_box;
+static aabb_t player_damage_box;
 
 static damage_t player_damage_queue[PLAYER_DAMAGE_MAX_QUEUE_LENGTH];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_queue) == PLAYER_DAMAGE_MAX_QUEUE_LENGTH);
