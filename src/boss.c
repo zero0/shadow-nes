@@ -247,7 +247,7 @@ static void __fastcall__ boss_process_damage_queue(void)
     boss_damage_queue_length = 0;
 }
 
-void __fastcall__ init_boss(uint8_t bossIndex)
+void __fastcall__ boss_init(uint8_t bossIndex)
 {
     boss_index = bossIndex;
     boss_state = 0;
@@ -257,7 +257,7 @@ void __fastcall__ init_boss(uint8_t bossIndex)
     boss_health = 1000;//all_boss_max_healths[ current_boss_index ];
 }
 
-void __fastcall__ update_boss(void)
+void __fastcall__ boss_update(void)
 {
     flags_reset( boss_changed_flags );
 

@@ -37,8 +37,8 @@ str_t get_boss_location(void);
 
 flags8_t get_boss_changed_flags(void);
 
-void init_boss( uint8_t bossIndex );
+void boss_init( uint8_t bossIndex );
 
-void update_boss(void);
+void boss_update(void);
 
 #endif // BOSS_H

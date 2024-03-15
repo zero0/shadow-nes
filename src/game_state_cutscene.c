@@ -10,8 +10,9 @@
 
 enum
 {
-    HOLD_TO_SKIP_ENTIRE_CUTSCENE_TIME_FRAMES = 3 * 60,
+    HOLD_TO_SKIP_ENTIRE_CUTSCENE_TIME_FRAMES = 2 * 60,
     MAX_CUTSCENE_TEXTS = 4,
+    END_CUTSCENE = 0xFF,
 };
 
 enum
@@ -20,7 +21,14 @@ enum
     CUTSCENE_TYPE_DIALOG,
 };
 
-#define MAKE_CUTSCENE_ATTR( t )                         (uint8_t)( ( (t) & 0x0F ) )
+enum
+{
+    CUTSCENE_V_ALIGN_MIDDLE =   0,
+    CUTSCENE_V_ALIGN_TOP =      1 << 0,
+    CUTSCENE_V_ALIGN_BOTTOM =   1 << 1,
+};
+
+#define MAKE_CUTSCENE_ATTR( t, a )                      (uint8_t)( ( ( (a) << 4 ) & 0xF0 ) | ( (t) & 0x0F ) )
 #define MAKE_CUTSCENE_PALETTE_4( p0, p1, p2, p3 )       (uint8_t)( ( (p3) & 0x03 ) << 6 | ( (p2) & 0x03 ) << 4 | ( (p1) & 0x03 ) << 2 | ( (p0) & 0x03 ) )
 #define MAKE_CUTSCENE_PALETTE_2_DIALOG( c, d )          MAKE_CUTSCENE_PALETTE_4( c, d, c, d )
 #define MAKE_CUTSCENE_PALETTE( p )                      MAKE_CUTSCENE_PALETTE_4( p, p, p, p )
@@ -36,8 +44,18 @@ typedef struct
 } cutscene_desc_t;
 
 static const cutscene_desc_t all_cutscenes[] = {
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT ), MAKE_CUTSCENE_PALETTE_2_DIALOG( PALETTE_BACKGROUND_0, PALETTE_BACKGROUND_1 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
 };
+STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
+
+//
+//
+//
 
 extern ptr_t shadow_font;
 
@@ -132,7 +150,7 @@ static void __fastcall__ advance_cutscene(void)
         end_cutscene();
     }
     // if there's no more text, end the cutscene
-    else if( all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step ] == 0xFF )
+    else if( all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step ] == (uint8_t)END_CUTSCENE )
     {
         end_cutscene();
     }

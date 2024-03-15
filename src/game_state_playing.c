@@ -69,7 +69,7 @@ void __fastcall__ game_state_playing_enter()
     player_init();
 
     // start boss
-    init_boss(next_game_state_arg);
+    boss_init(next_game_state_arg);
 }
 
 void __fastcall__ game_state_playing_leave()
@@ -130,7 +130,7 @@ void __fastcall__ game_state_playing_update()
 
     //player_update();
 
-    //update_boss();
+    //boss_update();
 }
 
 void __fastcall__ game_state_playing_set_pause(uint8_t isPaused)
