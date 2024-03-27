@@ -282,18 +282,6 @@ uint8_t __fastcall__ test_attack_hits_boss( uint8_t attack_location )
     // if the boss is in Iframes, return no hit
     if( boss_inv_frame_timer > 0 ) return 0;
 
-    // if the boss position changed, update combat position
-    if( flags_is_set( boss_changed_flags, BOSS_CHANGED_POSITION ) )
-    {
-        boss_combat_position = convert_subpixel_to_combat_position( boss_position_x, boss_position_y );
-    }
-
-    // test combat position against attack location
-    TEST_COMBAT_POSITION( boss_combat_position, attack_location );
-
-    // positino not found, this should not happen
-    INVALID_CODE_PATH;
-
     return 0;
 }
 

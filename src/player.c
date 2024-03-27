@@ -95,13 +95,11 @@ static timer_t player_stamina_delay_timer;
 
 static uint8_t player_playing_animation;
 
-static subpixel_t player_pos_x;
-static subpixel_t player_pos_y;
 static subpixel_diff_t player_pos_dx;
 static subpixel_diff_t player_pos_dy;
 
-static aabb_t player_hit_box;
-static aabb_t player_damage_box;
+static ext_aabb_t player_hit_box;
+static ltrb_aabb_t player_damage_box;
 
 static damage_t player_damage_queue[PLAYER_DAMAGE_MAX_QUEUE_LENGTH];
 STATIC_ASSERT(ARRAY_SIZE(player_damage_queue) == PLAYER_DAMAGE_MAX_QUEUE_LENGTH);
@@ -233,8 +231,8 @@ void __fastcall__ player_init(void)
     flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
     // start in the center of the play space
-    subpixel_set( player_pos_x, COMBAT_PLAYFIELD_WIDTH.pix >> 1, 0 );
-    subpixel_set( player_pos_y, COMBAT_PLAYFIELD_HEIGHT.pix >> 1, 0 );
+    subpixel_set( player_hit_box.center_x, 12, 0 );
+    subpixel_set( player_hit_box.center_y, 10, 0 );
     subpixel_set_zero( player_pos_dx );
     subpixel_set_zero( player_pos_dy );
 
@@ -537,13 +535,17 @@ static void __fastcall__ player_enqueu_action(uint8_t action)
 }
 
 // update player input
-static void __fastcall__ player_process_input(void)
+static void __fastcall__ player_process_input(uint8_t prev, uint8_t current)
 {
-    // b - prev
-    // t - current
+    // pause menu
+    if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_START ) )
+    {
+        game_state_playing_set_pause(1);
+        return;
+    }
 
     // heal
-    if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_SELECT ) )
+    if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_SELECT ) )
     {
         if( can_perform_flask() )
         {
@@ -555,17 +557,11 @@ static void __fastcall__ player_process_input(void)
         }
     }
 
-    // pause menu
-    if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_START ) )
-    {
-        game_state_playing_set_pause(1);
-    }
-
     // B down, modify input
-    if( GAMEPAD_BTN_DOWN( t, GAMEPAD_B ) )
+    if( GAMEPAD_BTN_DOWN( prev, GAMEPAD_B ) )
     {
         // heavy attack
-        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_A ) )
+        if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_A ) )
         {
             if( can_perform_attack1() )
             {
@@ -580,21 +576,21 @@ static void __fastcall__ player_process_input(void)
         v = 0;
 
         // dodge left/right
-        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_L ) )
+        if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_L ) )
         {
             v |= PLAYER_MOVE_DIRECTION_WEST;
         }
-        else if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_R ) )
+        else if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_R ) )
         {
             v |= PLAYER_MOVE_DIRECTION_EAST;
         }
 
         // dodge up/dow
-        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_U ) )
+        if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_U ) )
         {
             v |= PLAYER_MOVE_DIRECTION_NORTH;
         }
-        else if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_D ) )
+        else if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_D ) )
         {
             v |= PLAYER_MOVE_DIRECTION_SOUTH;
         }
@@ -617,7 +613,7 @@ static void __fastcall__ player_process_input(void)
     else
     {
         // light attack
-        if( GAMEPAD_BTN_PRESSED( b, t, GAMEPAD_A ) )
+        if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_A ) )
         {
             if( can_perform_attack0() )
             {
@@ -635,21 +631,21 @@ static void __fastcall__ player_process_input(void)
             v = 0;
 
             // dodge left/right
-            if( GAMEPAD_BTN_DOWN( t, GAMEPAD_L ) )
+            if( GAMEPAD_BTN_DOWN( prev, GAMEPAD_L ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_WEST;
             }
-            else if( GAMEPAD_BTN_DOWN( t, GAMEPAD_R ) )
+            else if( GAMEPAD_BTN_DOWN( prev, GAMEPAD_R ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_EAST;
             }
 
             // up/dow
-            if( GAMEPAD_BTN_DOWN( t, GAMEPAD_U ) )
+            if( GAMEPAD_BTN_DOWN( prev, GAMEPAD_U ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_NORTH;
             }
-            else if( GAMEPAD_BTN_DOWN( t, GAMEPAD_D ) )
+            else if( GAMEPAD_BTN_DOWN( prev, GAMEPAD_D ) )
             {
                 v |= PLAYER_MOVE_DIRECTION_SOUTH;
             }
@@ -726,7 +722,7 @@ void __fastcall__ player_update(void)
 
     // tick build up
     b = player_damage_status;
-    TICK_BUILDUP(player_damage_status_buildup, player_damage_status, player_damage_resistance_modifiers, 10);
+    TICK_BUILDUP(player_damage_status_buildup, player_damage_status, player_damage_resistance_modifiers, 1);
     if( b != player_damage_status )
     {
         flags_mark( player_changed_flags, PLAYER_CHANGED_STATUS );
@@ -798,13 +794,11 @@ void __fastcall__ player_update(void)
     }
 
     // process input
-    b = gamepad_prev_state(0);
-    t = gamepad_state(0);
-    player_process_input();
+    player_process_input( gamepad_prev_state(0), gamepad_state(0) );
 
     // move player
-    subpixel_inc( player_pos_x, player_pos_dx );
-    subpixel_inc( player_pos_y, player_pos_dy );
+    subpixel_inc( player_hit_box.center_x, player_pos_dx );
+    subpixel_inc( player_hit_box.center_y, player_pos_dy );
 
     subpixel_diff_set_zero( player_pos_dx );
     subpixel_diff_set_zero( player_pos_dy );
@@ -827,24 +821,19 @@ void __fastcall__ player_update(void)
 // Combat interface
 //
 
-uint8_t __fastcall__ test_attack_hits_player( uint8_t attack_location )
+uint8_t __fastcall__ test_attack_hits_player(void)
 {
+    t = 0;
+
     // if the player is in Iframes, return no hit
-    if( player_inv_frame_timer > 0 ) return 0;
+    if( player_inv_frame_timer ) return t;
 
-    // update player combat position
-    if( flags_is_set( player_changed_flags, PLAYER_CHANGED_POSITION ) )
-    {
-        player_combat_position = convert_subpixel_to_combat_position( player_pos_x, player_pos_y );
-    }
+    // test the player's hit box with the damage hurt box
+    begin_collision_ext_aabb( lh, player_hit_box );
+    begin_collision_ltrb_aabb( rh, combat_damage_area.aabb );
+    t = perform_collision_test();
 
-    // test combat position against attack location
-    TEST_COMBAT_POSITION( player_combat_position, attack_location );
-
-    // positino not found, this should not happen
-    INVALID_CODE_PATH;
-
-    return 0;
+    return t;
 }
 
 void __fastcall__ queue_damage_player( uint8_t damage_type, uint8_t damage )

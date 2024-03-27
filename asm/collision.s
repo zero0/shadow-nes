@@ -11,19 +11,22 @@ _test_collision_rh:  .res 4
 .export _test_collision_lh
 .export _test_collision_rh
 
+;
+;
+;
 
 .segment "CODE"
-
-.export _test_collision_internal
 
 .define AABB_LEFT    0
 .define AABB_TOP     1
 .define AABB_RIGHT   2
 .define AABB_BOTTOM  3
 
+.export _perform_collision_test
+
 ; TODO: use `adc` to accumulate carry bit instead?
 ; returns in A the collision test of _test_collision_lh vs _test_collision_lh
-.proc _test_collision_internal
+.proc _perform_collision_test
 
     ; count number of passed tests
     ldx #0
