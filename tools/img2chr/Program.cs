@@ -974,6 +974,91 @@ namespace img2chr
         }
         #endregion
 
+        #region Aseprite File
+        static void ConverteAsepriteFile(string asepriteFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        {
+            ConvertOptions options = cmdOptions;
+
+            bool isSprite = TryGetFileParamters(asepriteFilename, "sprite", out var spriteParameters);
+
+            if (!GetBoolParameter(spriteParameters, "enable-import", true))
+            {
+                return;
+            }
+
+
+            FileStreamOptions fileOptions = new()
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read
+            };
+
+
+            byte[] asepriteData = null;
+            try
+            {
+                asepriteData = File.ReadAllBytes(asepriteFilename);
+            }
+            catch (Exception e)
+            {
+                LogError(e.Message);
+            }
+
+            if (asepriteData?.Length > 0)
+            {
+                const ushort MagicNumber = 0xA5E0;
+                using MemoryStream ms = new MemoryStream(asepriteData, false);
+
+                uint fileSize = ReadMemory<uint>(ms);
+                Assert(asepriteData.Length == fileSize);
+                ushort magicNumber = ReadMemory<ushort>(ms);
+                Assert(magicNumber == MagicNumber);
+                ushort frames = ReadMemory<ushort>(ms);
+                ushort widthPixels = ReadMemory<ushort>(ms);
+                ushort heightPixels = ReadMemory<ushort>(ms);
+                ushort colorDepth = ReadMemory<ushort>(ms);
+                uint flags = ReadMemory<uint>(ms);
+                ushort speedMS = ReadMemory<ushort>(ms);
+                ReadMemory<uint>(ms); // 0
+                ReadMemory<uint>(ms); // 0
+                byte paletteEntry = ReadMemory<byte>(ms);
+                ReadMemory<byte>(ms); // ignore
+                ReadMemory<byte>(ms); // ignore
+                ReadMemory<byte>(ms); // ignore
+                ushort numColors = ReadMemory<ushort>(ms);
+                byte pixelWidth = ReadMemory<byte>(ms);
+                byte pixelHeight = ReadMemory<byte>(ms);
+                short xPositionOfGrid = ReadMemory<short>(ms);
+                short yPositionOfGrid = ReadMemory<short>(ms);
+                ushort gridWidth = ReadMemory<ushort>(ms);
+                ushort gridHeight = ReadMemory<ushort>(ms);
+                IgnoreMemory<byte>(ms, 84);
+
+
+            }
+
+        }
+        #endregion
+
+        static unsafe T ReadMemory<T>(MemoryStream stream) where T : unmanaged
+        {
+            int size = Marshal.SizeOf<T>();
+            Span<byte> buffer = stackalloc byte[size];
+            int read = stream.Read(buffer);
+            Assert(read == size);
+            fixed (byte* p = buffer)
+            {
+                return *(T*)p;
+            }
+        }
+
+        static void IgnoreMemory<T>(MemoryStream ms, int length) where T : unmanaged
+        {
+            int totalSize = Marshal.SizeOf<T>() * length;
+            Assert(ms.Position + totalSize < ms.Length);
+            ms.Position += totalSize;
+        }
+
         #region Text File
         static void ConvertTextFile(string textFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
@@ -1472,7 +1557,7 @@ namespace img2chr
 #if DEBUG
             if (Debugger.IsAttached)
             {
-                args = new[] { @"W:\Projects\shadow-nes\assets\" };
+                args = new[] { @"assets\" };
             }
 #endif
             ConvertOptions options = new()
@@ -1491,6 +1576,8 @@ namespace img2chr
                 { ".txt", ConvertTextFile },
 
                 { ".layout", ConvertLayoutFile },
+
+                { ".aseprite", ConverteAsepriteFile },
             };
 
             List<CompileTask> compilerTasks = new();
