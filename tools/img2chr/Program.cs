@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 
 #pragma warning disable CA1416
 
@@ -975,6 +974,446 @@ namespace img2chr
         #endregion
 
         #region Aseprite File
+        enum ChunkType : ushort
+        {
+            None = 0,
+            OldPaletteChunk1 = 0x0004,
+            OldPaletteChunk2 = 0x0011,
+            LayerChunk = 0x2004,
+            CelChunk = 0x2005,
+            CelExtraChunk = 0x2006,
+            ColorProfileChunk = 0x2007,
+            ExternalFilesChunk = 0x2008,
+            MaskChunk = 0x2016, // Deprecated
+            PathChunk = 0x2017,
+            TagsChunk = 0x2018,
+            PaletteChunk = 0x2019,
+            UserDataChunk = 0x2020,
+            SliceChunk = 0x2022,
+            TilesetChunk = 0x2023,
+        };
+
+        enum ColorDepth
+        {
+            Palette = 8,
+            Grayscale = 16,
+            RGBA = 32,
+        }
+
+        enum ColorProfileType
+        {
+            None,
+            sRGB,
+            ICC,
+        };
+
+        [Flags]
+        enum ColorProfileFlags
+        {
+            None = 0,
+            UseFixedGamma = 1 << 0,
+        }
+
+        [Flags]
+        enum PaletteFlags
+        {
+            None = 0,
+            HasName = 1 << 0,
+        }
+
+        enum ExternalFileType
+        {
+            Palette,
+            Tileset,
+            ExtensionNameForProperties,
+            ExtensionNameForTileManagement,
+        }
+        class ExternalFile
+        {
+            public string filename;
+            public uint entryID;
+            public ExternalFileType type;
+        }
+
+        [Flags]
+        enum UserDataFlags
+        {
+            None = 0,
+            HasText = 1 << 0,
+            HasColor = 1 << 1,
+            HasProperties = 1 << 2,
+        }
+
+        class UserData
+        {
+            public string text;
+            public PixelRGBA color;
+            public PropertyMap[] propertyMaps;
+            public byte[] propertyMapData;
+
+            public class PropertyMap
+            {
+                public enum PropertyType
+                {
+                    None,
+                    Boolean,
+                    Int8,
+                    UInt8,
+                    Int16,
+                    UInt16,
+                    Int32,
+                    UInt32,
+                    Int64,
+                    UInt64,
+                    Fixed,
+                    Float32,
+                    Float64,
+                    String,
+                    Point,
+                    Size,
+                    Rect,
+                    Vector,
+                    PropertyMap,
+                    UUID,
+                }
+                public struct Property
+                {
+                    public PropertyType type;
+                    public int offset;
+                }
+
+                public uint key;
+                public Dictionary<string, Property> properties;
+            }
+        }
+
+        enum CelType
+        {
+            RawImage,
+            LinkedCel,
+            CompressedImage,
+            CompressedTilemap,
+        };
+
+        [Flags]
+        enum CelExtraFlags
+        {
+            None = 0,
+            PreciseBoundsSet = 1 << 0
+        }
+
+        class Cel
+        {
+            public ushort layerIndex;
+            public short xPos;
+            public short yPos;
+            public byte opacityLevel;
+            public CelType type;
+            public short zIndex;
+
+            public PixelData pixelData;
+            public LinkedCel linkedCel;
+            public Tilemap tilemap;
+
+            public CelExtraFlags celExtraFlags;
+
+            public FixedPoint preciseXPos;
+            public FixedPoint preciseYPos;
+            public FixedPoint preciseWidth;
+            public FixedPoint preciseHeight;
+
+            public List<UserData> userData;
+
+            public class PixelData
+            {
+                // pixel data
+                public ushort width;
+                public ushort height;
+                public byte[] pixelData;
+#if false
+                unsafe public Span<PixelRGBA> pixelDataRGBA
+                {
+                    get
+                    {
+                        Assert(pixelData.Length % sizeof(PixelRGBA) == 0);
+                        fixed (void* ptr = pixelData)
+                        {
+                            return new Span<PixelRGBA>(ptr, pixelData.Length / sizeof(PixelRGBA));
+                        }
+                    }
+                }
+
+                unsafe public Span<PixelGrayscale> pixelDataGrayscale
+                {
+                    get
+                    {
+                        Assert(pixelData.Length % sizeof(PixelGrayscale) == 0);
+                        fixed (void* ptr = pixelData)
+                        {
+                            return new Span<PixelGrayscale>(ptr, pixelData.Length / sizeof(PixelGrayscale));
+                        }
+                    }
+                }
+
+                unsafe public Span<PixelIndexed> pixelDataIndexed
+                {
+                    get
+                    {
+                        Assert(pixelData.Length % sizeof(PixelIndexed) == 0);
+                        fixed (void* ptr = pixelData)
+                        {
+                            return new Span<PixelIndexed>(ptr, pixelData.Length / sizeof(PixelIndexed));
+                        }
+                    }
+                }
+#endif
+            }
+
+            public class LinkedCel
+            {
+                public int frameToLink;
+            }
+
+            public class Tilemap
+            {
+                public ushort width;
+                public ushort height;
+                public ushort bitsPerTile;
+
+                public uint maskTileID;
+                public uint maskXFlip;
+                public uint maskYFlip;
+                public uint maskDiagonalFlip;
+                public byte[] tileData;
+
+                unsafe public Span<byte> tileDataUInt8
+                {
+                    get
+                    {
+                        return new Span<byte>(tileData);
+                    }
+                }
+
+                unsafe public Span<ushort> tileDataUInt16
+                {
+                    get
+                    {
+                        fixed (void* ptr = tileData)
+                        {
+                            return new Span<ushort>(ptr, tileData.Length / sizeof(ushort));
+                        }
+                    }
+                }
+
+                unsafe public Span<uint> tileDataUInt32
+                {
+                    get
+                    {
+                        fixed (void* ptr = tileData)
+                        {
+                            return new Span<uint>(ptr, tileData.Length / sizeof(uint));
+                        }
+                    }
+                }
+            }
+
+        }
+
+        enum LayerType
+        {
+            Normal,
+            Group,
+            Tilemap,
+        }
+
+        [Flags]
+        enum LayerFlags
+        {
+            None = 0,
+            Visible = 1 << 0,
+            Editable = 1 << 1,
+            LockMovement = 1 << 2,
+            Background = 1 << 3,
+            PreferLinkedCels = 1 << 4,
+            LayerGroupCollapsed = 1 << 5,
+            ReferenceLayer = 1 << 6,
+        }
+
+        enum BlendMode
+        {
+            Normal = 0,
+            Multiply = 1,
+            Screen = 2,
+            Overlay = 3,
+            Darken = 4,
+            Lighten = 5,
+            ColorDodge = 6,
+            ColorBurn = 7,
+            HardLight = 8,
+            SoftLight = 9,
+            Difference = 10,
+            Exclusion = 11,
+            Hue = 12,
+            Saturation = 13,
+            Color = 14,
+            Luminosity = 15,
+            Addition = 16,
+            Subtract = 17,
+            Divide = 18,
+        }
+
+        class Palette
+        {
+            public PaletteColorRGBA color;
+            public string name;
+
+            public List<UserData> userData;
+        }
+
+        class Layer
+        {
+            public LayerFlags flags;
+            public LayerType type;
+            public ushort layerChildLevel;
+            public ushort defaultWidthInPixels;
+            public ushort defaultHeightInPixels;
+            public BlendMode blendMode;
+            public byte opacity;
+            public string name;
+            public uint tilesetIndex;
+            public List<UserData> userData;
+        };
+
+        class Tag
+        {
+            public ushort fromFrame;
+            public ushort toFrame;
+            public byte loopAnimDirection;
+            public ushort repeatCount;
+            public PaletteColorRGB tagColor;
+            public string tagName;
+            public List<UserData> userData;
+        }
+
+        [Flags]
+        enum SliceFlags
+        {
+            None = 0,
+            NineSlice = 1 << 0,
+            HasPivot = 1 << 1,
+        }
+
+        class Slice
+        {
+            public string name;
+
+            public Key[] sliceKeys;
+            public List<UserData> userData;
+
+            public struct Key
+            {
+                public uint frameNumber;
+                public int sliceXOrigin;
+                public int sliceYOrigin;
+                public uint sliceWidth;
+                public uint sliceHeight;
+                public int centerXPos;
+                public int centerYPos;
+                public uint centerWidth;
+                public uint centerHeight;
+                public int pivotXPos;
+                public int pivotYPos;
+            }
+        }
+
+        [Flags]
+        enum TilesetFlags
+        {
+            None,
+            IncludeExternalFile = 1 << 0,
+            IncludeTilesInFile = 1 << 1,
+            UseEmptyTile0 = 1 << 2,
+            MatchXFlip = 1 << 3,
+            MatchYFlip = 1 << 4,
+            MatchDFlip = 1 << 5,
+        }
+
+        class Tileset
+        {
+            public uint tilesetID;
+            public TilesetFlags flags;
+            public uint numTiles;
+            public ushort tileWidth;
+            public ushort tileHeight;
+            public short baseIndex;
+            public string name;
+            public uint externalFileID;
+            public uint externalTilesetID;
+            public byte[] tilesetData;
+            public List<UserData> userData;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Size = 4)]
+        struct FixedPoint
+        {
+            public short number;
+            public short fraction;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct Point
+        {
+            public int x;
+            public int y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct Size
+        {
+            public int width;
+            public int height;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct Rect
+        {
+            public Point origin;
+            public Size size;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PaletteColorRGB
+        {
+            public byte r, g, b;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PaletteColorRGBA
+        {
+            public byte r, g, b, a;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PixelRGBA
+        {
+            public byte r, g, b, a;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PixelGrayscale
+        {
+            public byte value, a;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PixelIndexed
+        {
+            public byte index;
+        }
+
+        //
+        // Format Reference: https://github.com/aseprite/aseprite/blob/main/docs/ase-file-specs.md
+        //
         static void ConverteAsepriteFile(string asepriteFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
             ConvertOptions options = cmdOptions;
@@ -986,14 +1425,6 @@ namespace img2chr
                 return;
             }
 
-
-            FileStreamOptions fileOptions = new()
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read
-            };
-
-
             byte[] asepriteData = null;
             try
             {
@@ -1004,45 +1435,680 @@ namespace img2chr
                 LogError(e.Message);
             }
 
-            if (asepriteData?.Length > 0)
+            if (asepriteData?.Length == 0)
             {
-                const ushort MagicNumber = 0xA5E0;
-                using MemoryStream ms = new MemoryStream(asepriteData, false);
-
-                uint fileSize = ReadMemory<uint>(ms);
-                Assert(asepriteData.Length == fileSize);
-                ushort magicNumber = ReadMemory<ushort>(ms);
-                Assert(magicNumber == MagicNumber);
-                ushort frames = ReadMemory<ushort>(ms);
-                ushort widthPixels = ReadMemory<ushort>(ms);
-                ushort heightPixels = ReadMemory<ushort>(ms);
-                ushort colorDepth = ReadMemory<ushort>(ms);
-                uint flags = ReadMemory<uint>(ms);
-                ushort speedMS = ReadMemory<ushort>(ms);
-                ReadMemory<uint>(ms); // 0
-                ReadMemory<uint>(ms); // 0
-                byte paletteEntry = ReadMemory<byte>(ms);
-                ReadMemory<byte>(ms); // ignore
-                ReadMemory<byte>(ms); // ignore
-                ReadMemory<byte>(ms); // ignore
-                ushort numColors = ReadMemory<ushort>(ms);
-                byte pixelWidth = ReadMemory<byte>(ms);
-                byte pixelHeight = ReadMemory<byte>(ms);
-                short xPositionOfGrid = ReadMemory<short>(ms);
-                short yPositionOfGrid = ReadMemory<short>(ms);
-                ushort gridWidth = ReadMemory<ushort>(ms);
-                ushort gridHeight = ReadMemory<ushort>(ms);
-                IgnoreMemory<byte>(ms, 84);
-
-
+                return;
             }
+
+            const ushort MagicNumberHeader = 0xA5E0;
+            const ushort MagicNumberFrame = 0xF1FA;
+            using MemoryStream ms = new MemoryStream(asepriteData, false);
+
+            // header
+            AssertReadMemoryEquals<uint>(ms, (uint)asepriteData.Length);
+            AssertReadMemoryEquals<ushort>(ms, (ushort)MagicNumberHeader);
+            ushort frames = ReadMemory<ushort>(ms);
+            ushort widthPixels = ReadMemory<ushort>(ms);
+            ushort heightPixels = ReadMemory<ushort>(ms);
+            ColorDepth colorDepth = (ColorDepth)ReadMemory<ushort>(ms);
+            uint flags = ReadMemory<uint>(ms);
+            ushort speedMS = ReadMemory<ushort>(ms);
+            AssertReadMemoryEquals<uint>(ms, 0); // 0
+            AssertReadMemoryEquals<uint>(ms, 0); // 0
+            byte paletteEntry = ReadMemory<byte>(ms);
+            IgnoreMemory<byte>(ms); // ignore
+            IgnoreMemory<byte>(ms); // ignore
+            IgnoreMemory<byte>(ms); // ignore
+            ushort numColors = ReadMemory<ushort>(ms);
+            byte pixelWidth = ReadMemory<byte>(ms);
+            byte pixelHeight = ReadMemory<byte>(ms);
+            short xPositionOfGrid = ReadMemory<short>(ms);
+            short yPositionOfGrid = ReadMemory<short>(ms);
+            ushort gridWidth = ReadMemory<ushort>(ms);
+            ushort gridHeight = ReadMemory<ushort>(ms);
+            IgnoreMemory<byte>(ms, 84);
+
+            Dictionary<uint, ExternalFile> externalFiles = new();
+            List<Palette> palettes = new();
+            List<Layer> layers = new();
+            List<Cel> cels = new();
+            List<Tag> tags = new();
+            List<Slice> slices = new();
+            List<Tileset> tilesets = new();
+
+            #region Process Aseprite Formal
+            // frames
+            for (int f = 0, fmax = frames; f < fmax; ++f)
+            {
+                uint frameSize = ReadMemory<uint>(ms);
+                AssertReadMemoryEquals<ushort>(ms, MagicNumberFrame);
+                ushort numChunksOld = ReadMemory<ushort>(ms);
+                ushort frameDurationMS = ReadMemory<ushort>(ms);
+                IgnoreMemory<byte>(ms, 2);
+                uint numChunksNew = ReadMemory<uint>(ms);
+
+                uint numChunks = numChunksNew == 0 ? numChunksOld : numChunksNew;
+                bool ignoreOldPalette = false;
+
+                Cel currentCel = null;
+                ChunkType lastReadChunk = ChunkType.None;
+
+                // chunks
+                for (int c = 0, cmax = (int)numChunks; c < cmax; ++c)
+                {
+                    uint chunckSize = ReadMemory<uint>(ms);
+                    ChunkType chunkType = (ChunkType)ReadMemory<ushort>(ms);
+
+                    // chunk size includes header
+                    int chunchReadSize = (int)chunckSize - (sizeof(uint) + sizeof(ushort));
+
+                    if (chunchReadSize > 0)
+                    {
+                        switch (chunkType)
+                        {
+                            case ChunkType.None:
+                                InvalidCodePath("No chunk read");
+                                break;
+                            case ChunkType.OldPaletteChunk1:
+                                {
+                                    if (!ignoreOldPalette)
+                                    {
+                                        ushort numPackets = ReadMemory<ushort>(ms);
+                                        for (int p = 0, pmax = (int)numPackets; p < pmax; ++p)
+                                        {
+                                            byte paletteEntriesToSkip = ReadMemory<byte>(ms);
+                                            byte numColorsInPacket = ReadMemory<byte>(ms);
+
+                                            for (int cp = 0, cpmax = numColorsInPacket == 0 ? 256 : numColorsInPacket; c < cmax; ++c)
+                                            {
+                                                PaletteColorRGB paletteColor = ReadMemory<PaletteColorRGB>(ms);
+
+                                                int idx = cp + paletteEntriesToSkip;
+                                                while (palettes.Count <= idx)
+                                                {
+                                                    palettes.Add(new()
+                                                    {
+                                                        color = default,
+                                                        name = "<unknown>"
+                                                    });
+                                                }
+
+                                                palettes[idx].color = new()
+                                                {
+                                                    r = paletteColor.r,
+                                                    g = paletteColor.g,
+                                                    b = paletteColor.b,
+                                                    a = 255,
+                                                };
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            case ChunkType.OldPaletteChunk2:
+                                {
+                                    if (!ignoreOldPalette)
+                                    {
+                                        ushort numPackets = ReadMemory<ushort>(ms);
+                                        for (int p = 0, pmax = (int)numPackets; p < pmax; ++p)
+                                        {
+                                            byte paletteEntriesToSkip = ReadMemory<byte>(ms);
+                                            byte numColorsInPacket = ReadMemory<byte>(ms);
+
+                                            for (int cp = 0, cpmax = numColorsInPacket == 0 ? 256 : numColorsInPacket; c < cmax; ++c)
+                                            {
+                                                PaletteColorRGB paletteColor = ReadMemory<PaletteColorRGB>(ms);
+
+                                                int idx = cp + paletteEntriesToSkip;
+                                                while (palettes.Count <= idx)
+                                                {
+                                                    palettes.Add(new()
+                                                    {
+                                                        color = default,
+                                                        name = "<unknown>"
+                                                    });
+                                                }
+
+                                                // [0..63] -> [0..255]
+                                                palettes[idx].color = new()
+                                                {
+                                                    r = (byte)(paletteColor.r * 4),
+                                                    g = (byte)(paletteColor.g * 4),
+                                                    b = (byte)(paletteColor.b * 4),
+                                                    a = 255,
+                                                };
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            case ChunkType.LayerChunk:
+                                {
+                                    LayerFlags layerFlags = (LayerFlags)ReadMemory<ushort>(ms);
+                                    LayerType layerType = (LayerType)ReadMemory<ushort>(ms);
+                                    ushort layerChildLevel = ReadMemory<ushort>(ms);
+                                    ushort defaultLayerWidthInPixels = ReadMemory<ushort>(ms);
+                                    ushort defaultLayerHeightInPixels = ReadMemory<ushort>(ms);
+                                    BlendMode blendMode = (BlendMode)ReadMemory<ushort>(ms);
+                                    byte opacity = ReadMemory<byte>(ms);
+                                    IgnoreMemory<byte>(ms, 3);
+                                    string layerName = ReadString(ms);
+                                    uint tilesetIndex = 0;
+
+                                    if (layerType == LayerType.Tilemap)
+                                    {
+                                        tilesetIndex = ReadMemory<uint>(ms);
+                                    }
+
+                                    layers.Add(new()
+                                    {
+                                        flags = layerFlags,
+                                        type = layerType,
+                                        layerChildLevel = layerChildLevel,
+                                        defaultWidthInPixels = defaultLayerWidthInPixels,
+                                        defaultHeightInPixels = defaultLayerHeightInPixels,
+                                        blendMode = blendMode,
+                                        opacity = opacity,
+                                        name = layerName,
+                                        tilesetIndex = tilesetIndex,
+                                    });
+                                }
+                                break;
+                            case ChunkType.CelChunk:
+                                {
+                                    ushort layerIndex = ReadMemory<ushort>(ms);
+                                    short xPos = ReadMemory<short>(ms);
+                                    short yPos = ReadMemory<short>(ms);
+                                    byte opacity = ReadMemory<byte>(ms);
+                                    CelType celType = (CelType)ReadMemory<ushort>(ms);
+                                    short zIndex = ReadMemory<short>(ms);
+                                    IgnoreMemory<byte>(ms, 5);
+
+                                    currentCel = new();
+                                    currentCel.layerIndex = layerIndex;
+                                    currentCel.xPos = xPos;
+                                    currentCel.yPos = yPos;
+                                    currentCel.opacityLevel = opacity;
+                                    currentCel.type = celType;
+                                    currentCel.zIndex = zIndex;
+
+                                    switch (celType)
+                                    {
+                                        case CelType.RawImage:
+                                            {
+                                                Cel.PixelData pixelData = new();
+                                                pixelData.width = ReadMemory<ushort>(ms);
+                                                pixelData.height = ReadMemory<ushort>(ms);
+
+                                                int readSize = pixelData.width * pixelData.height * (int)colorDepth;
+                                                pixelData.pixelData = ReadMemory(ms, readSize);
+
+                                                currentCel.pixelData = pixelData;
+                                            }
+                                            break;
+                                        case CelType.LinkedCel:
+                                            {
+                                                Cel.LinkedCel linkedCel = new()
+                                                {
+                                                    frameToLink = ReadMemory<ushort>(ms)
+                                                };
+
+                                                currentCel.linkedCel = linkedCel;
+                                            }
+                                            break;
+                                        case CelType.CompressedImage:
+                                            {
+                                                currentCel.pixelData = new();
+                                                currentCel.pixelData.width = ReadMemory<ushort>(ms);
+                                                currentCel.pixelData.height = ReadMemory<ushort>(ms);
+
+                                                using (ZLibStream compressedStream = new ZLibStream(ms, CompressionMode.Decompress, true))
+                                                {
+                                                    int readSize = currentCel.pixelData.width * currentCel.pixelData.height * (int)colorDepth;
+                                                    currentCel.pixelData.pixelData = DecompressMemory(compressedStream, 0, readSize);
+                                                }
+                                            }
+                                            break;
+                                        case CelType.CompressedTilemap:
+                                            {
+                                                Cel.Tilemap tilemap = new();
+                                                tilemap.width = ReadMemory<ushort>(ms);
+                                                tilemap.height = ReadMemory<ushort>(ms);
+                                                tilemap.bitsPerTile = ReadMemory<ushort>(ms);
+                                                tilemap.maskTileID = ReadMemory<uint>(ms);
+                                                tilemap.maskXFlip = ReadMemory<uint>(ms);
+                                                tilemap.maskYFlip = ReadMemory<uint>(ms);
+                                                tilemap.maskDiagonalFlip = ReadMemory<uint>(ms);
+                                                IgnoreMemory<byte>(ms, 10);
+
+                                                using (ZLibStream compressedStream = new ZLibStream(ms, CompressionMode.Decompress, true))
+                                                {
+                                                    int readSize = tilemap.width * tilemap.height * tilemap.bitsPerTile;
+                                                    tilemap.tileData = DecompressMemory(compressedStream, 0, readSize);
+                                                }
+
+                                                currentCel.tilemap = tilemap;
+                                            }
+                                            break;
+                                        default:
+                                            InvalidCodePath($"Unknown Cel Type {celType}");
+                                            break;
+                                    }
+
+                                    cels.Add(currentCel);
+                                }
+                                break;
+                            case ChunkType.CelExtraChunk:
+                                {
+                                    // TODO: finish implementing
+                                    Assert(currentCel != null);
+                                    uint celExtraFlags = ReadMemory<uint>(ms);
+                                    FixedPoint preciseXPos = ReadMemory<FixedPoint>(ms);
+                                    FixedPoint preciseYPos = ReadMemory<FixedPoint>(ms);
+                                    FixedPoint widthOfCellInSprite = ReadMemory<FixedPoint>(ms);
+                                    FixedPoint heightOfCellInSprite = ReadMemory<FixedPoint>(ms);
+                                    IgnoreMemory<byte>(ms, 16);
+                                }
+                                break;
+                            case ChunkType.ColorProfileChunk:
+                                {
+                                    ColorProfileType type = (ColorProfileType)ReadMemory<ushort>(ms);
+                                    ColorProfileFlags colorProfileFlags = (ColorProfileFlags)ReadMemory<ushort>(ms);
+                                    FixedPoint fixedGamma = ReadMemory<FixedPoint>(ms);
+                                    IgnoreMemory<byte>(ms, 8);
+
+                                    if (type == ColorProfileType.ICC)
+                                    {
+                                        uint iccDataLength = ReadMemory<uint>(ms);
+                                        byte[] iccData = ReadMemory(ms, (int)iccDataLength);
+                                    }
+                                }
+                                break;
+                            case ChunkType.ExternalFilesChunk:
+                                {
+                                    uint numEntries = ReadMemory<uint>(ms);
+                                    IgnoreMemory<byte>(ms, 8);
+
+                                    for (int e = 0, emax = (int)numEntries; e < emax; ++e)
+                                    {
+                                        uint entryID = ReadMemory<uint>(ms);
+                                        byte type = ReadMemory<byte>(ms);
+                                        IgnoreMemory<byte>(ms, 7);
+                                        string externalFileName = ReadString(ms);
+
+                                        bool added = externalFiles.TryAdd(entryID, new()
+                                        {
+                                            filename = externalFileName,
+                                            entryID = entryID,
+                                            type = (ExternalFileType)type
+                                        });
+                                        Assert(added, $"Unable to add External File {externalFileName} at {entryID}");
+                                    }
+                                }
+                                break;
+                            case ChunkType.MaskChunk:
+                                {
+                                    Assert(false, "MaskChuck as been deprecated");
+                                    IgnoreMemory<short>(ms);
+                                    IgnoreMemory<short>(ms);
+                                    ushort width = ReadMemory<ushort>(ms);
+                                    ushort height = ReadMemory<ushort>(ms);
+                                    IgnoreMemory<byte>(ms, 8);
+                                    ushort maskNameLength = ReadMemory<ushort>(ms);
+                                    IgnoreMemory<byte>(ms, maskNameLength);
+                                    IgnoreMemory<byte>(ms, height * ((width + 7) / 8));
+                                }
+                                break;
+                            case ChunkType.PathChunk:
+                                {
+                                    Assert(false, "PathChunk is never used");
+                                }
+                                break;
+                            case ChunkType.TagsChunk:
+                                {
+                                    ushort numTags = ReadMemory<ushort>(ms);
+                                    IgnoreMemory<byte>(ms, 8);
+
+                                    for (int t = 0, tmax = numTags; t < tmax; ++t)
+                                    {
+                                        Tag tag = new();
+
+                                        tag.fromFrame = ReadMemory<ushort>(ms);
+                                        tag.toFrame = ReadMemory<ushort>(ms);
+                                        tag.loopAnimDirection = ReadMemory<byte>(ms);
+                                        tag.repeatCount = ReadMemory<ushort>(ms);
+                                        IgnoreMemory<byte>(ms, 6);
+                                        tag.tagColor = ReadMemory<PaletteColorRGB>(ms);
+                                        IgnoreMemory<byte>(ms, 1);
+                                        tag.tagName = ReadString(ms);
+
+                                        tags.Add(tag);
+                                    }
+                                }
+                                break;
+                            case ChunkType.PaletteChunk:
+                                {
+                                    ignoreOldPalette = true;
+
+                                    uint newPaletteSize = ReadMemory<uint>(ms);
+                                    uint firstColorIndex = ReadMemory<uint>(ms);
+                                    uint lastColorIndex = ReadMemory<uint>(ms);
+                                    IgnoreMemory<byte>(ms, 8);
+
+                                    int offset = (int)firstColorIndex;
+                                    for (int p = 0, pmax = (int)(lastColorIndex - firstColorIndex + 1); p < pmax; ++p)
+                                    {
+                                        PaletteFlags paletteFlags = (PaletteFlags)ReadMemory<ushort>(ms);
+                                        PaletteColorRGBA paletteColor = ReadMemory<PaletteColorRGBA>(ms);
+
+                                        int idx = p + offset;
+                                        while (palettes.Count <= idx)
+                                        {
+                                            palettes.Add(new()
+                                            {
+                                                color = default,
+                                                name = "<unknown>"
+                                            });
+                                        }
+
+                                        palettes[idx].color = paletteColor;
+
+                                        if ((paletteFlags & PaletteFlags.HasName) == PaletteFlags.HasName)
+                                        {
+                                            palettes[idx].name = ReadString(ms);
+                                        }
+                                    }
+                                }
+                                break;
+                            case ChunkType.UserDataChunk:
+                                {
+                                    UserData userData = new();
+                                    UserDataFlags userDataFlags = (UserDataFlags)ReadMemory<uint>(ms);
+
+                                    if ((userDataFlags & UserDataFlags.HasText) == UserDataFlags.HasText)
+                                    {
+                                        userData.text = ReadString(ms);
+                                    }
+
+                                    if ((userDataFlags & UserDataFlags.HasColor) == UserDataFlags.HasColor)
+                                    {
+                                        userData.color = ReadMemory<PixelRGBA>(ms);
+                                    }
+
+                                    if ((userDataFlags & UserDataFlags.HasProperties) == UserDataFlags.HasProperties)
+                                    {
+                                        uint sizeOfPropertyMaps = ReadMemory<uint>(ms);
+                                        Assert(sizeOfPropertyMaps >= 8);
+
+                                        uint numPropertyMaps = ReadMemory<uint>(ms);
+
+                                        userData.propertyMaps = new UserData.PropertyMap[(int)numPropertyMaps];
+                                        userData.propertyMapData = ReadMemory(ms, (int)(sizeOfPropertyMaps - 8));
+
+                                        ProcessPropertyMap(userData);
+
+                                        static void ProcessPropertyMap(UserData userData)
+                                        {
+                                            using MemoryStream ms = new(userData.propertyMapData, false);
+
+                                            for (int p = 0, pmax = userData.propertyMaps.Length; p < pmax; ++p)
+                                            {
+                                                uint propertyMapKey = ReadMemory<uint>(ms);
+                                                uint numProperties = ReadMemory<uint>(ms);
+
+                                                UserData.PropertyMap propertyMap = (userData.propertyMaps[p] ??= new());
+                                                propertyMap.key = propertyMapKey;
+
+                                                for (int i = 0, imax = (int)numProperties; i < imax; ++i)
+                                                {
+                                                    string propertyName = ReadString(ms);
+                                                    UserData.PropertyMap.PropertyType propertyType = (UserData.PropertyMap.PropertyType)ReadMemory<ushort>(ms);
+
+                                                    UserData.PropertyMap.Property property = new()
+                                                    {
+                                                        type = propertyType,
+                                                        offset = (int)ms.Position,
+                                                    };
+
+                                                    bool added = propertyMap.properties.TryAdd(propertyName, property);
+                                                    Assert(added);
+
+                                                    switch (propertyType)
+                                                    {
+                                                        case UserData.PropertyMap.PropertyType.Boolean:
+                                                            IgnoreMemory<byte>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Int8:
+                                                            IgnoreMemory<byte>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.UInt8:
+                                                            IgnoreMemory<byte>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Int16:
+                                                            IgnoreMemory<short>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.UInt16:
+                                                            IgnoreMemory<ushort>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Int32:
+                                                            IgnoreMemory<int>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.UInt32:
+                                                            IgnoreMemory<uint>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Int64:
+                                                            IgnoreMemory<long>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.UInt64:
+                                                            IgnoreMemory<ulong>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Fixed:
+                                                            IgnoreMemory<FixedPoint>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Float32:
+                                                            IgnoreMemory<float>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Float64:
+                                                            IgnoreMemory<double>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.String:
+                                                            ReadString(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Point:
+                                                            IgnoreMemory<Point>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Size:
+                                                            IgnoreMemory<Size>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Rect:
+                                                            IgnoreMemory<Rect>(ms);
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.Vector:
+                                                            {
+                                                                uint numElements = ReadMemory<uint>(ms);
+                                                                ushort elementsType = ReadMemory<ushort>(ms);
+
+                                                                // TODO: implemente
+                                                                if (elementsType == 0)
+                                                                {
+
+                                                                }
+                                                                else
+                                                                {
+
+                                                                }
+                                                            }
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.PropertyMap:
+                                                            {
+                                                                // TODO: implement
+                                                            }
+                                                            break;
+                                                        case UserData.PropertyMap.PropertyType.UUID:
+                                                            IgnoreMemory<byte>(ms, 16);
+                                                            break;
+                                                        default:
+                                                            InvalidCodePath($"Unknown Property Type {propertyType}");
+                                                            break;
+                                                    }
+
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    switch (lastReadChunk)
+                                    {
+                                        case ChunkType.OldPaletteChunk1:
+                                            Assert(palettes.Count > 0);
+                                            (palettes[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.OldPaletteChunk2:
+                                            Assert(palettes.Count > 0);
+                                            (palettes[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.LayerChunk:
+                                            Assert(layers.Count > 0);
+                                            (layers[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.CelChunk:
+                                            Assert(cels.Count > 0);
+                                            (cels[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.CelExtraChunk:
+                                            Assert(cels.Count > 0);
+                                            (cels[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.ColorProfileChunk:
+                                            InvalidCodePath("Should this track user data?");
+                                            break;
+                                        case ChunkType.ExternalFilesChunk:
+                                            InvalidCodePath("Should this track user data?");
+                                            break;
+                                        case ChunkType.MaskChunk:
+                                            InvalidCodePath("MaskChunk is deprecated");
+                                            break;
+                                        case ChunkType.PathChunk:
+                                            InvalidCodePath("PathChunk is never used");
+                                            break;
+                                        case ChunkType.TagsChunk:
+                                            Assert(tags.Count > 0);
+                                            (tags[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.PaletteChunk:
+                                            Assert(palettes.Count > 0);
+                                            (palettes[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.UserDataChunk:
+                                            InvalidCodePath("UserData should not be the Last Read Chunk");
+                                            break;
+                                        case ChunkType.SliceChunk:
+                                            Assert(slices.Count > 0);
+                                            (slices[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        case ChunkType.TilesetChunk:
+                                            Assert(tilesets.Count > 0);
+                                            (tilesets[^1].userData ??= new()).Add(userData);
+                                            break;
+                                        default:
+                                            InvalidCodePath($"Invalid Last Read Chunk {lastReadChunk}");
+                                            break;
+                                    }
+                                }
+                                break;
+                            case ChunkType.SliceChunk:
+                                {
+                                    Slice slice = new();
+
+                                    uint numSliceKeys = ReadMemory<uint>(ms);
+                                    SliceFlags sliceFlags = (SliceFlags)ReadMemory<uint>(ms);
+                                    IgnoreMemory<uint>(ms);
+                                    slice.name = ReadString(ms);
+
+                                    slice.sliceKeys = new Slice.Key[numSliceKeys];
+
+                                    for (int s = 0, smax = (int)numSliceKeys; s < smax; ++s)
+                                    {
+                                        ref Slice.Key key = ref slice.sliceKeys[s];
+                                        key.frameNumber = ReadMemory<uint>(ms);
+                                        key.sliceXOrigin = ReadMemory<int>(ms);
+                                        key.sliceYOrigin = ReadMemory<int>(ms);
+                                        key.sliceWidth = ReadMemory<uint>(ms);
+                                        key.sliceHeight = ReadMemory<uint>(ms);
+
+                                        if ((sliceFlags & SliceFlags.NineSlice) == SliceFlags.NineSlice)
+                                        {
+                                            key.centerXPos = ReadMemory<int>(ms);
+                                            key.centerYPos = ReadMemory<int>(ms);
+                                            key.centerWidth = ReadMemory<uint>(ms);
+                                            key.centerHeight = ReadMemory<uint>(ms);
+                                        }
+
+                                        if ((sliceFlags & SliceFlags.HasPivot) == SliceFlags.HasPivot)
+                                        {
+                                            key.pivotXPos = ReadMemory<int>(ms);
+                                            key.pivotYPos = ReadMemory<int>(ms);
+                                        }
+                                    }
+
+                                    slices.Add(slice);
+                                }
+                                break;
+                            case ChunkType.TilesetChunk:
+                                {
+                                    Tileset tileset = new();
+
+                                    tileset.tilesetID = ReadMemory<uint>(ms);
+                                    tileset.flags = (TilesetFlags)ReadMemory<uint>(ms);
+                                    tileset.numTiles = ReadMemory<uint>(ms);
+                                    tileset.tileWidth = ReadMemory<ushort>(ms);
+                                    tileset.tileHeight = ReadMemory<ushort>(ms);
+                                    tileset.baseIndex = ReadMemory<short>(ms);
+                                    IgnoreMemory<byte>(ms, 14);
+                                    tileset.name = ReadString(ms);
+
+                                    if ((tileset.flags & TilesetFlags.IncludeExternalFile) == TilesetFlags.IncludeExternalFile)
+                                    {
+                                        tileset.externalFileID = ReadMemory<uint>(ms);
+                                        tileset.externalTilesetID = ReadMemory<uint>(ms);
+                                    }
+
+                                    if ((tileset.flags & TilesetFlags.IncludeTilesInFile) == TilesetFlags.IncludeTilesInFile)
+                                    {
+                                        uint compressedTilesetDataLength = ReadMemory<uint>(ms);
+
+                                        using (ZLibStream compressedStream = new ZLibStream(ms, CompressionMode.Decompress, true))
+                                        {
+                                            tileset.tilesetData = DecompressMemory(compressedStream, (int)compressedTilesetDataLength, (int)(tileset.tileWidth * tileset.tileHeight * tileset.numTiles));
+                                        }
+                                    }
+
+                                    tilesets.Add(tileset);
+                                }
+                                break;
+                            default:
+                                InvalidCodePath($"Unknown Chunk Type {chunkType}");
+                                break;
+                        }
+
+                        lastReadChunk = chunkType;
+                    }
+                }
+            }
+            #endregion
+
+            #region Convert Aseprite into CHR
+            // convert into chr data
+
+            #endregion
 
         }
         #endregion
 
-        static unsafe T ReadMemory<T>(MemoryStream stream) where T : unmanaged
+        static unsafe T ReadMemory<T>(Stream stream) where T : unmanaged
         {
             int size = Marshal.SizeOf<T>();
+            Assert(stream.Position + size < stream.Length);
             Span<byte> buffer = stackalloc byte[size];
             int read = stream.Read(buffer);
             Assert(read == size);
@@ -1052,7 +2118,47 @@ namespace img2chr
             }
         }
 
-        static void IgnoreMemory<T>(MemoryStream ms, int length) where T : unmanaged
+        static string ReadString(Stream stream)
+        {
+            ushort length = ReadMemory<ushort>(stream);
+            Span<byte> buffer = stackalloc byte[length];
+            int read = stream.Read(buffer);
+            Assert(read == length);
+            return Encoding.UTF8.GetString(buffer);
+        }
+
+        static unsafe void ReadMemory(Stream stream, byte[] buffer, int length)
+        {
+            Assert(stream.Position + length < stream.Length);
+            int read = stream.Read(buffer, 0, length);
+            Assert(read == length);
+        }
+
+        static unsafe byte[] ReadMemory(Stream stream, int length)
+        {
+            Assert(stream.Position + length < stream.Length);
+            byte[] buffer = new byte[length];
+            int read = stream.Read(buffer, 0, length);
+            Assert(read == length);
+            return buffer;
+        }
+
+        static unsafe byte[] DecompressMemory(Stream stream, int compressedLength, int decompressedLength)
+        {
+            //Assert(stream.Position + compressedLength < stream.Length);
+            byte[] buffer = new byte[decompressedLength];
+            int read = stream.Read(buffer, 0, decompressedLength);
+            Assert(read == decompressedLength);
+            return buffer;
+        }
+
+        static unsafe void AssertReadMemoryEquals<T>(Stream stream, T value, IEqualityComparer<T> equalityComparer = null) where T : unmanaged
+        {
+            equalityComparer ??= EqualityComparer<T>.Default;
+            Assert(equalityComparer.Equals(ReadMemory<T>(stream), value));
+        }
+
+        static void IgnoreMemory<T>(Stream ms, int length = 1) where T : unmanaged
         {
             int totalSize = Marshal.SizeOf<T>() * length;
             Assert(ms.Position + totalSize < ms.Length);
