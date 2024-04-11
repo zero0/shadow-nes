@@ -26,8 +26,9 @@ enum
 {
     BOSS_CHANGED_NONE =     0,
     BOSS_CHANGED_HEALTH =   1 << 0,
-    BOSS_CHANGED_STATUS =   1 << 1,
-    BOSS_CHANGED_POSITION = 1 << 2,
+    BOSS_CHANGED_STAMINA =  1 << 1,
+    BOSS_CHANGED_STATUS =   1 << 2,
+    BOSS_CHANGED_POSITION = 1 << 3,
     BOSS_CHANGED_ALL =      ~0,
 };
 

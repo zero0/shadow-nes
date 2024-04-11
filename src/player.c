@@ -19,6 +19,7 @@
 #define PLAYER_DODGE_COOLDOWN_TIME              (uint8_t)15
 #define PLAYER_ATTACK0_COOLDOWN_TIME            (uint8_t)15
 #define PLAYER_ATTACK1_COOLDOWN_TIME            (uint8_t)20
+#define PLAYER_INV_COOLDOWN_TIME                (uint8_t)10
 
 #define PLAYER_DODGE_INV_TIMER                  (uint8_t)40
 #define PLAYER_STAMINA_DELAY_TIMER_NORMAL       (uint8_t)20
@@ -26,18 +27,24 @@
 
 #define PLAYER_MAX_LEVEL                        (uint8_t)4
 
-#define PLAYER_MOVE_DIRECTION_NONE              (uint8_t)0
-#define PLAYER_MOVE_DIRECTION_WEST              (uint8_t)( 1 << 0 )
-#define PLAYER_MOVE_DIRECTION_EAST              (uint8_t)( 1 << 1 )
-#define PLAYER_MOVE_DIRECTION_NORTH             (uint8_t)( 1 << 2 )
-#define PLAYER_MOVE_DIRECTION_SOUTH             (uint8_t)( 1 << 3 )
+enum
+{
+    PLAYER_MOVE_DIRECTION_NONE =    0,
+    PLAYER_MOVE_DIRECTION_WEST =    1 << 0,
+    PLAYER_MOVE_DIRECTION_EAST =    1 << 1,
+    PLAYER_MOVE_DIRECTION_NORTH =   1 << 2,
+    PLAYER_MOVE_DIRECTION_SOUTH =   1 << 3,
+};
 
-#define PLAYER_STATE_IDLE                       (uint8_t)0
-#define PLAYER_STATE_ATTACKING                  (uint8_t)1
-#define PLAYER_STATE_DODGING                    (uint8_t)2
-#define PLAYER_STATE_USING_FLASH                (uint8_t)3
-#define PLAYER_STATE_HIT                        (uint8_t)4
-#define PLAYER_STATE_DEAD                       (uint8_t)5
+enum
+{
+    PLAYER_STATE_IDLE,
+    PLAYER_STATE_ATTACKING,
+    PLAYER_STATE_DODGING,
+    PLAYER_STATE_USING_FLASK,
+    PLAYER_STATE_HIT,
+    PLAYER_STATE_DEAD,
+};
 
 #define PLAYER_DAMAGE_MAX_QUEUE_LENGTH          (uint8_t)4
 STATIC_ASSERT(IS_POW2(PLAYER_DAMAGE_MAX_QUEUE_LENGTH));
@@ -111,10 +118,6 @@ static uint8_t player_action_queue_length;
 static uint8_t player_action_queue_index;
 
 static damage_t _temp_dmg;
-
-#ifdef DEBUG
-static uint8_t debug_player_draw_debug;
-#endif
 
 //
 // Per-Level Data
@@ -230,6 +233,10 @@ void __fastcall__ player_init(void)
 
     flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
+    memset(player_damage_resistance_modifiers, 0, ARRAY_SIZE(player_damage_resistance_modifiers));
+    memset(player_damage_status_buildup, 0, ARRAY_SIZE(player_damage_status_buildup));
+    memset(player_damage_status_timers, 0, ARRAY_SIZE(player_damage_status_timers));
+
     // start in the center of the play space
     subpixel_set( player_hit_box.center_x, 12, 0 );
     subpixel_set( player_hit_box.center_y, 10, 0 );
@@ -240,10 +247,6 @@ void __fastcall__ player_init(void)
     ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
     ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x12 );
     ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x14 );
-
-#ifdef DEBUG
-    debug_player_draw_debug = 1;
-#endif
 }
 
 static void __fastcall__ player_update_physics(void)
@@ -347,23 +350,29 @@ static void __fastcall__ player_update_stamina(void)
 {
     if( player_stamina_delay_timer > 0 )
     {
-        --player_stamina_delay_timer;
+        timer_tick_unchecked( player_stamina_delay_timer );
     }
     else if( player_stamina < player_max_stamina_per_level[g_current_game_data.player_level] )
     {
-        if( player_stamina_regen_timer > 0 )
+        timer_tick( player_stamina_regen_timer );
+        if( timer_is_done( player_stamina_regen_timer ) )
         {
-            --player_stamina_regen_timer;
+            player_stamina += player_stamina_regen_amount_per_level[g_current_game_data.player_level];
 
-            if( player_stamina_regen_timer == 0 )
+            // cap stamina
+            if( player_stamina > player_max_stamina_per_level[g_current_game_data.player_level] )
             {
-                player_stamina += player_stamina_regen_amount_per_level[g_current_game_data.player_level];
-                player_stamina_regen_timer = player_stamina_regen_time_per_level[g_current_game_data.player_level];
-
-                MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
-
-                flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
+                player_stamina = player_max_stamina_per_level[g_current_game_data.player_level];
             }
+
+            // reset regen timer
+            timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
+
+            // modify regent timer based on status
+            MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
+
+            // mark stamina changed
+            flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
         }
     }
 }
@@ -474,6 +483,9 @@ static void __fastcall__ player_take_damage(void)
     {
         player_health -= _temp_dmg.damage;
     }
+
+    // set Iframes
+    timer_set( player_inv_frame_timer, PLAYER_INV_COOLDOWN_TIME );
 }
 
 static void __fastcall__ player_process_damage_queue(void)
@@ -712,7 +724,7 @@ static void __fastcall__ player_process_action_queue(void)
 
 void __fastcall__ player_update(void)
 {
-    player_changed_flags = 0;
+    flags_reset( player_changed_flags );
 
     // process damage queue
     if( player_damage_queue_length > 0 )
@@ -757,7 +769,7 @@ void __fastcall__ player_update(void)
                 player_state_dodge_leave();
                 break;
 
-            case PLAYER_STATE_USING_FLASH:
+            case PLAYER_STATE_USING_FLASK:
                 player_state_flash_leave();
                 break;
         }
@@ -775,7 +787,7 @@ void __fastcall__ player_update(void)
                 player_state_dodge_enter();
                 break;
 
-            case PLAYER_STATE_USING_FLASH:
+            case PLAYER_STATE_USING_FLASK:
                 player_state_flash_enter();
                 break;
         }
@@ -788,8 +800,8 @@ void __fastcall__ player_update(void)
             player_state_dodge_update();
             break;
 
-        case PLAYER_STATE_USING_FLASH:
-            player_state_flash_update();
+        case PLAYER_STATE_USING_FLASK:
+            player_state_flask_update();
             break;
     }
 
@@ -810,10 +822,7 @@ void __fastcall__ player_update(void)
     //player_render_character();
 
 #ifdef DEBUG
-    if( debug_player_draw_debug )
-    {
-        player_render_debug();
-    }
+    player_render_debug();
 #endif
 }
 
