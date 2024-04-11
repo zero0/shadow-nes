@@ -24,17 +24,23 @@
 #define INVALID_CODE_PATH       (void)0
 #endif
 
-
-#define STATE_RESET( s )        (s) = 0
-#define STATE_SET( s, f )       (s) |= (f)
-#define STATE_CLEAR( s, f )     (s) &= ~(f)
-#define STATE_TOGGLE( s, f )    (s) ^= (f)
-#define STATE_IS_SET( s, f )    ( ( (s) & (f) ) == (f) )
-
 #define ARRAY_SIZE( arr )       ( sizeof(arr) / sizeof(arr[0]) )
 
 #ifndef offsetof
 #define offsetof( t, m )        ((uint8_t)&(((t *)0)->m))
 #endif // offsetof
+
+#ifndef memset
+#define memset( p, v, s )           \
+do {                                \
+    __asm__("lda #%b", (v));        \
+    __asm__("ldx #0");              \
+    __asm__("@_" T(__LINE__) ":");  \
+    __asm__("sta %v,x", p);         \
+    __asm__("inx");                 \
+    __asm__("cpx #%b", (s));        \
+    __asm__("bne @_" T(__LINE__) ); \
+} while( 0 )
+#endif // memset
 
 #endif // MACROS_H
