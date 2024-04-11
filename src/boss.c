@@ -6,42 +6,63 @@
 #include "subpixel.h"
 #include "collision.h"
 
-static const uint8_t all_boss_health_per_block_log2[] = {
-    7,
+#include "boss_0_impl.inl"
+
+static const uint8_t all_boss_health_per_block_log2[_BOSS_COUNT] = {
+    BOSS_0_HEALTH_PER_BLOCK_LOG2,
 };
 
-static const uint16_t all_boss_max_healths[] = {
-    (uint16_t)1792,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-
-    0,
-    0,
+enum
+{
+    BOSS_HEALTH_MAX,
+    BOSS_HEALTH_PHASE_TRANSITION,
+    _BOSS_HEALTH_COUNT,
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_max_healths) == _BOSS_COUNT);
 
-static const uint8_t all_boss_armors[] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+static const uint16_t all_boss_healths[_BOSS_COUNT][_BOSS_HEALTH_COUNT] = {
+    BOSS_0_HEALTH,
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
 
-    0,
-    0,
+    {},
+    {},
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_armors) == _BOSS_COUNT);
+STATIC_ASSERT(ARRAY_SIZE(all_boss_healths) == _BOSS_COUNT);
+
+enum
+{
+    BOSS_STAMINA_MAX,
+    BOSS_STAMINA_REGEN,
+    _BOSS_STAMINA_COUNT,
+};
+
+static const uint8_t all_boss_staminas[_BOSS_COUNT][_BOSS_STAMINA_COUNT] = {
+    BOSS_0_STAMINA,
+};
+STATIC_ASSERT(ARRAY_SIZE(all_boss_staminas) == _BOSS_COUNT);
+
+static const uint8_t all_boss_resistances[_BOSS_COUNT][_DAMAGE_TYPE_COUNT] = {
+    BOSS_0_RESISTANCE,
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+
+    {},
+    {},
+};
+STATIC_ASSERT(ARRAY_SIZE(all_boss_resistances) == _BOSS_COUNT);
 
 static const str_t all_boss_names[] = {
-    tr_boss_0_name,
+    BOSS_0_NAME,
     tr_boss_1_name,
     tr_boss_2_name,
     tr_boss_3_name,
@@ -56,7 +77,7 @@ static const str_t all_boss_names[] = {
 STATIC_ASSERT(ARRAY_SIZE(all_boss_names) == _BOSS_COUNT);
 
 static const str_t all_boss_location_names[] = {
-    tr_boss_1_location,
+    BOSS_0_LOCATION,
     0,
     0,
     0,
@@ -70,8 +91,18 @@ static const str_t all_boss_location_names[] = {
 };
 STATIC_ASSERT(ARRAY_SIZE(all_boss_location_names) == _BOSS_COUNT);
 
-static const uint8_t all_boss_music[] = {
-    0,
+enum
+{
+    BOSS_MUSIC_PHASE_INTRO,
+    BOSS_MUSIC_PHASE_ONE,
+    BOSS_MUSIC_PHASE_TRANSITION,
+    BOSS_MUSIC_PHASE_TWO,
+    BOSS_MUSIC_PHASE_OUTRO,
+    _BOSS_MUSIC_PHASE_COUNT,
+};
+
+static const uint8_t all_boss_music[_BOSS_COUNT][_BOSS_MUSIC_PHASE_COUNT] = {
+    BOSS_0_MUSIC,
     0,
     0,
     0,
@@ -85,22 +116,30 @@ static const uint8_t all_boss_music[] = {
 };
 STATIC_ASSERT(ARRAY_SIZE(all_boss_music) == _BOSS_COUNT);
 
-#define BOSS_STATE_DEAD             (uint8_t)(1 << 0)
-#define BOSS_STATE_UNDEF_0          (uint8_t)(1 << 1)
-#define BOSS_STATE_UNDEF_1          (uint8_t)(1 << 2)
-#define BOSS_STATE_UNDEF_2          (uint8_t)(1 << 3)
-#define BOSS_STATE_UNDEF_3          (uint8_t)(1 << 4)
-#define BOSS_STATE_UNDEF_4          (uint8_t)(1 << 5)
-#define BOSS_STATE_UNDEF_5          (uint8_t)(1 << 6)
-#define BOSS_STATE_INV_FRAMES       (uint8_t)(1 << 7)
+//
+//
+//
 
-static uint8_t boss_state;
+enum
+{
+    BOSS_STATE_NONE =       0,
+    BOSS_STATE_DEAD =       1 << 0,
+    BOSS_STATE_PHASE_TWO =  1 << 1,
+    BOSS_STATE_UNDEF_1 =    1 << 2,
+    BOSS_STATE_UNDEF_2 =    1 << 3,
+    BOSS_STATE_UNDEF_3 =    1 << 4,
+    BOSS_STATE_UNDEF_4 =    1 << 5,
+    BOSS_STATE_UNDEF_5 =    1 << 6,
+    BOSS_STATE_INV_FRAMES = 1 << 7,
+};
+
+static flags8_t boss_state;
 static flags8_t boss_changed_flags;
 static uint8_t boss_index;
 static uint16_t boss_health;
+static uint8_t boss_stamina;
 static timer_t boss_inv_frame_timer;
 static damage_status_t boss_damage_status;
-static uint8_t boss_combat_position;
 
 static subpixel_t boss_position_x;
 static subpixel_t boss_position_y;
@@ -108,7 +147,21 @@ static subpixel_t boss_position_y;
 static aabb_t boss_hit_box;
 static aabb_t boss_damage_box;
 
-static damage_t boss_damage_queue[4];
+static uint8_t boss_damage_resistance_modifiers[_DAMAGE_TYPE_COUNT];
+STATIC_ASSERT(ARRAY_SIZE(boss_damage_resistance_modifiers) == _DAMAGE_TYPE_COUNT);
+
+static uint8_t boss_damage_status_buildup[_DAMAGE_STATUS_TYPE_COUNT];
+STATIC_ASSERT(ARRAY_SIZE(boss_damage_status_buildup) == _DAMAGE_STATUS_TYPE_COUNT);
+
+static timer_t boss_damage_status_timers[ _DAMAGE_STATUS_TYPE_COUNT ];
+STATIC_ASSERT(ARRAY_SIZE(boss_damage_status_timers) == _DAMAGE_STATUS_TYPE_COUNT);
+
+
+enum
+{
+    BOSS_DAMAGE_QUEUE_MAX_LENGTH = 4,
+};
+static damage_t boss_damage_queue[BOSS_DAMAGE_QUEUE_MAX_LENGTH];
 static uint8_t boss_damage_queue_length;
 
 static damage_t _temp_dmg;
@@ -125,7 +178,7 @@ uint16_t __fastcall__ get_boss_current_health(void)
 
 uint16_t __fastcall__ get_boss_max_health(void)
 {
-    return all_boss_max_healths[ boss_index ];
+    return all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
 }
 
 str_t __fastcall__ get_boss_name(void)
@@ -143,18 +196,22 @@ flags8_t __fastcall__ get_boss_changed_flags(void)
     return boss_changed_flags;
 }
 
+static void __fastcall__ boss_enter_phase_2(void)
+{
+    flags_mark( boss_state, BOSS_STATE_PHASE_TWO );
+}
+
+static void __fastcall__ boss_death(void)
+{
+    flags_mark( boss_state, BOSS_STATE_DEAD );
+}
+
 static void __fastcall__ boss_heal(void)
 {
 }
 
 static void __fastcall__ boss_take_damage(void)
 {
-    x16 = _temp_dmg.damage;
-    boss_health -= x16;
-
-    flags_mark( boss_changed_flags, BOSS_CHANGED_HEALTH );
-
-    #if 0
     // if boss is in I frames, return
     if( !timer_is_done( boss_inv_frame_timer ) )
     {
@@ -180,7 +237,7 @@ static void __fastcall__ boss_take_damage(void)
     }
 
     // modify damage for resistences
-    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, boss_damage_resistance_modifiers);
+    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, all_boss_resistances[boss_index]);
 
     // no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -193,7 +250,7 @@ static void __fastcall__ boss_take_damage(void)
     BUILDUP_DAMAGE(_temp_dmg, boss_damage_status_buildup, boss_damage_status);
     if( b != boss_damage_status )
     {
-        boss_changed_flags |= PLAYER_CHANGED_STATUS;
+        boss_changed_flags |= BOSS_CHANGED_STATUS;
     }
 
     // take damage
@@ -208,11 +265,15 @@ static void __fastcall__ boss_take_damage(void)
         boss_health -= _temp_dmg.damage;
     }
 
-    if( boss_health == 0 )
+    // enter phase 2
+    if( !flags_is_set( boss_state, BOSS_STATE_PHASE_TWO ) && ( boss_health < all_boss_healths[boss_index][BOSS_HEALTH_PHASE_TRANSITION] ) )
+    {
+        boss_enter_phase_2();
+    }
+    else if( boss_health == 0 )
     {
         boss_death();
     }
-    #endif
 }
 
 #define boss_move_direct( sx, sy )                          \
@@ -254,11 +315,13 @@ static void __fastcall__ boss_process_damage_queue(void)
 void __fastcall__ boss_init(uint8_t bossIndex)
 {
     boss_index = bossIndex;
-    boss_state = 0;
-    flags_mark( boss_changed_flags, 0xFF );
+    boss_state = BOSS_STATE_NONE;
+
+    flags_mark( boss_changed_flags, BOSS_CHANGED_ALL );
     boss_damage_queue_length = 0;
 
-    boss_health = 1000;//all_boss_max_healths[ current_boss_index ];
+    boss_health = all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
+    boss_stamina = all_boss_staminas[ boss_index ][ BOSS_STAMINA_MAX ];
 }
 
 void __fastcall__ boss_update(void)
@@ -279,6 +342,8 @@ void __fastcall__ boss_update(void)
 
 uint8_t __fastcall__ test_attack_hits_boss( uint8_t attack_location )
 {
+    UNUSED(attack_location);
+
     // if the boss is in Iframes, return no hit
     if( boss_inv_frame_timer > 0 ) return 0;
 
