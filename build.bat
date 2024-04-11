@@ -24,11 +24,11 @@ set "LD_FLAGS="
 
 if %BUILD_TYPE%==DEBUG (
     set "CA_FLAGS=-g -D DEBUG_BUILD"
-    set "CC_FLAGS=-g -D DEBUG_BUILD"
+    set "CC_FLAGS=-g -D DEBUG_BUILD --add-source"
     set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
 ) else if %BUILD_TYPE%==RELEASE (
     set "CA_FLAGS=-g -D RELEASE_BUILD"
-    set "CC_FLAGS=-g -O -D RELEASE_BUILD"
+    set "CC_FLAGS=-g -O -D RELEASE_BUILD --add-source"
     set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
 ) else if %BUILD_TYPE%==DISTRO (
     set "CA_FLAGS=-D DISTRO_BUILD"
@@ -48,16 +48,17 @@ if exist obj (del /Q obj) else md obj
 
 rem Run img2chr tool to generate .s files from images
 pushd tools\img2chr\
-dotnet run ..\..\assets\ || goto :fail_assetbuild
+dotnet run -c Release -- ..\..\assets\ || goto :fail_assetbuild
 popd
 
 set "GAME_ASSETS_INCLUDE=assets/generated/include"
+set "GAME_ASSETS_ASM=assets/generated/asm"
 
 rem Compile source assemblie files
-for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
+for %%S in (asm\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% -I %GAME_ASSETS_ASM% %CA_FLAGS% -o obj\%%~nS.o %%S
 
 rem Compile C files
-for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% -I %GAME_ASSETS_INCLUDE% --add-source %CC_FLAGS% -Oisr -o tmp\c_%%~nC.s %%C
+for %%C in (src\*.c) do %CC65_CC% %CPU_TYPE% -I include -I %CC65_ASMINC% -I %GAME_ASSETS_INCLUDE% %CC_FLAGS% -Oisr -o tmp\c_%%~nC.s %%C
 
 rem Compile temp assemblie files
 for %%S in (tmp\*.s) do %CC65_CA% %CPU_TYPE% -I lib -I %CC65_ASMINC% %CA_FLAGS% -o obj\%%~nS.o %%S
