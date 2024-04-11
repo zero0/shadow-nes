@@ -2661,10 +2661,17 @@ namespace img2chr
 
         private const int LibraryVersion = 2;
 
-        struct CompileTask
+        class CompileTask
         {
             public string inputFileName;
             public ConvertFunc convertFunc;
+            public int order;
+        }
+
+        struct SupportedFormat
+        {
+            public ConvertFunc convertFunc;
+            public int order;
         }
 
         static void Main(string[] args)
@@ -2680,19 +2687,19 @@ namespace img2chr
                 defaultGeneratedAssetFolder = "generated"
             };
 
-            Dictionary<string, ConvertFunc> formatMap = new() {
-                { ".png", ConvertImageFile },
-                { ".bmp", ConvertImageFile },
-                { ".jpg", ConvertImageFile },
-                { ".jpeg", ConvertImageFile },
-                { ".gif", ConvertImageFile },
-                { ".tga", ConvertImageFile },
+            Dictionary<string, SupportedFormat> formatMap = new() {
+                { ".png", new() { convertFunc = ConvertImageFile, order = 0 } },
+                { ".bmp", new() { convertFunc = ConvertImageFile, order = 0 } },
+                { ".jpg", new() { convertFunc = ConvertImageFile, order = 0 } },
+                { ".jpeg", new() { convertFunc = ConvertImageFile, order = 0 } },
+                { ".gif", new() { convertFunc = ConvertImageFile, order = 0 } },
+                { ".tga", new() { convertFunc = ConvertImageFile, order = 0 } },
 
-                { ".txt", ConvertTextFile },
+                { ".txt", new() { convertFunc = ConvertTextFile, order = 0 } },
 
-                { ".layout", ConvertLayoutFile },
+                { ".layout", new() {convertFunc = ConvertLayoutFile, order = int.MaxValue } },
 
-                { ".aseprite", ConverteAsepriteFile },
+                { ".aseprite", new(){ convertFunc = ConverteAsepriteFile, order = 0 } },
             };
 
             List<CompileTask> compilerTasks = new();
@@ -2755,7 +2762,7 @@ namespace img2chr
                         foreach (var file in files)
                         {
                             var ext = Path.GetExtension(file);
-                            if (formatMap.TryGetValue(ext, out var func))
+                            if (formatMap.TryGetValue(ext, out var supportedFormat))
                             {
                                 string modtimeKey = $"{Path.GetFileName(file)}.modtime";
                                 long modtime = GetLongParameter(libraryParameters, modtimeKey);
@@ -2766,7 +2773,7 @@ namespace img2chr
                                     SetParameter(libraryParameters, modtimeKey, fileModtime);
                                     updateLibrary = true;
 
-                                    compilerTasks.Add(new() { inputFileName = file, convertFunc = func });
+                                    compilerTasks.Add(new() { inputFileName = file, convertFunc = supportedFormat.convertFunc, order = supportedFormat.order });
                                 }
                             }
                         }
@@ -2794,7 +2801,7 @@ namespace img2chr
                         bool updateLibrary = false;
 
                         var ext = Path.GetExtension(arg);
-                        if (formatMap.TryGetValue(ext, out var func))
+                        if (formatMap.TryGetValue(ext, out var supportedFormat))
                         {
                             string modtimeKey = $"{Path.GetFileName(arg)}.modtime";
                             long modtime = GetLongParameter(libraryParameters, modtimeKey);
@@ -2805,7 +2812,7 @@ namespace img2chr
                                 SetParameter(libraryParameters, modtimeKey, fileModtime);
                                 updateLibrary = true;
 
-                                compilerTasks.Add(new() { inputFileName = arg, convertFunc = func });
+                                compilerTasks.Add(new() { inputFileName = arg, convertFunc = supportedFormat.convertFunc, order = supportedFormat.order });
                             }
                         }
 
@@ -2836,29 +2843,12 @@ namespace img2chr
                 }
             }
 
-            // remove layout tasks since they should be done last
-            List<CompileTask> layoutTasks = new();
-            for (int i = 0; i < compilerTasks.Count; i++)
-            {
-                CompileTask task = compilerTasks[i];
-                if (".layout".Equals(Path.GetExtension(task.inputFileName)))
-                {
-                    layoutTasks.Add(task);
-                    compilerTasks.RemoveAt(i);
-                    --i;
-                }
-            }
-
-            Dictionary<string, ChrRomOutput> outputChrData = new();
+            // sort compiler tasks
+            compilerTasks.Sort((x, y) => x.order.CompareTo(y.order));
 
             // process compiler tasks
+            Dictionary<string, ChrRomOutput> outputChrData = new();
             foreach (var task in compilerTasks)
-            {
-                task.convertFunc(task.inputFileName, outputChrData, options);
-            }
-
-            // process layout tasks
-            foreach (var task in layoutTasks)
             {
                 task.convertFunc(task.inputFileName, outputChrData, options);
             }
