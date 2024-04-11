@@ -5,6 +5,7 @@
 #include "globals.h"
 #include "subpixel.h"
 #include "collision.h"
+#include "ppu.h"
 
 //
 //
@@ -413,6 +414,52 @@ static void __fastcall__ boss_update_stamina(void)
     }
 }
 
+static void __fastcall__ boss_render_status_bar(void)
+{
+    if( flags_is_set( boss_changed_flags, BOSS_CHANGED_HEALTH ) )
+    {
+        x16 = boss_health;
+        y16 = all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
+
+        // player health bar
+        ppu_begin_tile_batch(1,30);
+
+        // full tiles
+        //for( i = 0, imax = (y >> all_boss_health_per_block_log2[boss_index]), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        {
+            ppu_push_tile_batch(0x80 + 8);
+        }
+
+        // partial tile
+        if( i < imax )
+        {
+        //    j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
+            ppu_push_tile_batch(0x80 + ( x - j ) );
+            ++i;
+        }
+
+        // empty tiles
+        for( ; i < imax; ++i )
+        {
+            ppu_push_tile_batch( 0x80 );
+        }
+
+        ppu_end_tile_batch();
+    }
+}
+
+static void __fastcall__ boss_render(void)
+{
+
+}
+
+#if DEBUG
+static void __fastcall__ debug_boss_render(void)
+{
+
+}
+#endif
+
 void __fastcall__ boss_init(uint8_t bossIndex)
 {
     boss_index = bossIndex;
@@ -474,6 +521,8 @@ void __fastcall__ boss_update(void)
         // leave current state
         switch( boss_state )
         {
+            default:
+                break;
         }
 
         boss_state = boss_next_next;
@@ -483,8 +532,21 @@ void __fastcall__ boss_update(void)
         {
             case BOSS_STATE_INTRO:
                 break;
+
+            default:
+                break;
         }
     }
+
+    // render status bar
+    boss_render_status_bar();
+
+    // render boss
+    boss_render();
+
+#if DEBUG
+    debug_boss_render();
+#endif
 }
 
 //
