@@ -1440,8 +1440,18 @@ namespace img2chr
                 return;
             }
 
+            Dictionary<uint, ExternalFile> externalFiles = new();
+            List<Palette> palettes = new();
+            List<Layer> layers = new();
+            List<Cel> cels = new();
+            List<Tag> tags = new();
+            List<Slice> slices = new();
+            List<Tileset> tilesets = new();
+
+            #region Process Aseprite Formal
             const ushort MagicNumberHeader = 0xA5E0;
             const ushort MagicNumberFrame = 0xF1FA;
+
             using MemoryStream ms = new MemoryStream(asepriteData, false);
 
             // header
@@ -1468,15 +1478,6 @@ namespace img2chr
             ushort gridHeight = ReadMemory<ushort>(ms);
             IgnoreMemory<byte>(ms, 84);
 
-            Dictionary<uint, ExternalFile> externalFiles = new();
-            List<Palette> palettes = new();
-            List<Layer> layers = new();
-            List<Cel> cels = new();
-            List<Tag> tags = new();
-            List<Slice> slices = new();
-            List<Tileset> tilesets = new();
-
-            #region Process Aseprite Formal
             // frames
             for (int f = 0, fmax = frames; f < fmax; ++f)
             {
@@ -2099,9 +2100,17 @@ namespace img2chr
 
             #region Convert Aseprite into CHR
             // convert into chr data
+            StringBuilder sb = new();
 
+            // write output file
+            string chrOutputKey = $"{Path.GetFileName(asepriteFilename)}.sprite";
+            outputChrData.Add(chrOutputKey, new()
+            {
+                chrRomAsm = sb.ToString(),
+                chrCount = 0,
+                is8x16 = false,
+            });
             #endregion
-
         }
         #endregion
 
