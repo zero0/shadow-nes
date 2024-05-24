@@ -251,6 +251,11 @@ static void __fastcall__ boss_process_damage_queue(void)
     boss_damage_queue_length = 0;
 }
 
+uint8_t __fastcall__ boss_is_dead(void)
+{
+    return boss_health == 0;
+}
+
 void __fastcall__ boss_init(uint8_t bossIndex)
 {
     boss_index = bossIndex;

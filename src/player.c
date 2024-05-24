@@ -11,6 +11,7 @@
 #include "collision.h"
 #include "game_state.h"
 #include "game_data.h"
+#include "math.h"
 
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
@@ -32,12 +33,17 @@
 #define PLAYER_MOVE_DIRECTION_NORTH             (uint8_t)( 1 << 2 )
 #define PLAYER_MOVE_DIRECTION_SOUTH             (uint8_t)( 1 << 3 )
 
-#define PLAYER_STATE_IDLE                       (uint8_t)0
-#define PLAYER_STATE_ATTACKING                  (uint8_t)1
-#define PLAYER_STATE_DODGING                    (uint8_t)2
-#define PLAYER_STATE_USING_FLASH                (uint8_t)3
-#define PLAYER_STATE_HIT                        (uint8_t)4
-#define PLAYER_STATE_DEAD                       (uint8_t)5
+enum
+{
+    PLAYER_STATE_IDLE,
+    PLAYER_STATE_ATTACKING,
+    PLAYER_STATE_DODGING,
+    PLAYER_STATE_USING_FLASH,
+    PLAYER_STATE_HIT,
+    PLAYER_STATE_BLOCKING,
+    PLAYER_STATE_DEAD,
+    _PLAYER_STATE_COUNT,
+};
 
 #define PLAYER_DAMAGE_MAX_QUEUE_LENGTH          (uint8_t)4
 STATIC_ASSERT(IS_POW2(PLAYER_DAMAGE_MAX_QUEUE_LENGTH));
@@ -48,14 +54,18 @@ STATIC_ASSERT(IS_POW2(PLAYER_ACTION_MAX_QUEUE_LENGTH));
 
 #define PLAYER_ANIMATION_NONE                   (uint8_t)0xFF
 
-#define PLAYER_CAN_PERFORM_ACTION_NONE          (uint8_t)0
-#define PLAYER_CAN_PERFORM_ACTION_MOVE          (uint8_t)( 1 << 0 )
-#define PLAYER_CAN_PERFORM_ACTION_DODGE         (uint8_t)( 1 << 1 )
-#define PLAYER_CAN_PERFORM_ACTION_FLASK         (uint8_t)( 1 << 2 )
-#define PLAYER_CAN_PERFORM_ACTION_ATTACK0       (uint8_t)( 1 << 3 )
-#define PLAYER_CAN_PERFORM_ACTION_ATTACK1       (uint8_t)( 1 << 4 )
-#define PLAYER_CAN_PERFORM_ACTION_KNOCKBACK     (uint8_t)( 1 << 5 )
-#define PLAYER_CAN_PERFORM_ACTION_ALL           (uint8_t)~0
+enum
+{
+    PLAYER_CAN_PERFORM_ACTION_NONE      = 0,
+    PLAYER_CAN_PERFORM_ACTION_MOVE      = 1 << 0,
+    PLAYER_CAN_PERFORM_ACTION_DODGE     = 1 << 1,
+    PLAYER_CAN_PERFORM_ACTION_FLASK     = 1 << 2,
+    PLAYER_CAN_PERFORM_ACTION_ATTACK0   = 1 << 3,
+    PLAYER_CAN_PERFORM_ACTION_ATTACK1   = 1 << 4,
+    PLAYER_CAN_PERFORM_ACTION_KNOCKBACK = 1 << 5,
+    PLAYER_CAN_PERFORM_ACTION_BLOCK     = 1 << 6,
+    PLAYER_CAN_PERFORM_ACTION_ALL       = ~0,
+};
 
 enum
 {
@@ -63,6 +73,7 @@ enum
     Player_Action_Flask,
     Player_Action_Attack0,
     Player_Action_Attack1,
+    Player_action_Block,
 };
 
 extern ptr_t knight_sprite_0;
@@ -83,10 +94,7 @@ static uint8_t player_flasks;
 static damage_status_t player_damage_status;
 static uint8_t player_combat_position;
 
-static timer_t player_flash_cooldown_timer;
 static timer_t player_dodge_cooldown_timer;
-static timer_t player_attack_cooldown_timer;
-static timer_t player_attack_combo_timer;
 
 static timer_t player_inv_frame_timer;
 static timer_t player_animation_frame_timer;
@@ -186,29 +194,9 @@ STATIC_ASSERT(ARRAY_SIZE(player_damage_status_timers) == _DAMAGE_STATUS_TYPE_COU
 //
 //
 
-flags8_t __fastcall__ get_player_changed_flags()
+uint8_t __fastcall__ player_is_dead(void)
 {
-    return player_changed_flags;
-}
-
-uint8_t __fastcall__ get_player_current_health()
-{
-    return player_health;
-}
-
-uint8_t __fastcall__ get_player_max_health()
-{
-    return player_max_health_per_level[ g_current_game_data.player_level ];
-}
-
-uint8_t __fastcall__ get_player_current_stamina()
-{
-    return player_stamina;
-}
-
-uint8_t __fastcall__ get_player_max_stamina()
-{
-    return player_max_stamina_per_level[ g_current_game_data.player_level ];
+    return player_health == 0;
 }
 
 void __fastcall__ player_init(void)
@@ -223,7 +211,6 @@ void __fastcall__ player_init(void)
     player_next_state = PLAYER_STATE_IDLE;
 
     timer_set( player_inv_frame_timer, 0 );
-    timer_set( player_flash_cooldown_timer, 0 );
     timer_set( player_dodge_cooldown_timer, 0 );
     timer_set( player_stamina_delay_timer, 1 );
     timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
@@ -255,10 +242,10 @@ static void __fastcall__ player_update_physics(void)
 static void __fastcall__ player_render_status_bars(void)
 {
     // update health when changed
-    if( get_player_changed_flags() & PLAYER_CHANGED_HEALTH )
+    if( flags_is_set( player_changed_flags, PLAYER_CHANGED_HEALTH ) )
     {
-        x = get_player_current_health();
-        y = get_player_max_health();
+        x = player_health;
+        y = player_max_health_per_level[ g_current_game_data.player_level ];
 
         // player health bar
         ppu_begin_tile_batch(2,1);
@@ -287,10 +274,10 @@ static void __fastcall__ player_render_status_bars(void)
     }
 
     // update stamina when changed
-    if( get_player_changed_flags() & PLAYER_CHANGED_STAMINA )
+    if( flags_is_set( player_changed_flags, PLAYER_CHANGED_STAMINA ) )
     {
-        x = get_player_current_stamina();
-        y = get_player_max_stamina();
+        x = player_stamina;
+        y = player_max_stamina_per_level[ g_current_game_data.player_level ];
 
         // player stamina bar
         ppu_begin_tile_batch(2,2);
@@ -431,7 +418,7 @@ static void __fastcall__ player_take_damage(void)
     // modify dmage by attributes
     MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
 
-    // if no healing left, return
+    // if no damage left, return
     if( _temp_dmg.damage == 0 )
     {
         return;
@@ -464,15 +451,19 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // take damage
-    flags_mark( player_changed_flags, PLAYER_CHANGED_HEALTH );
-
-    if( player_health < _temp_dmg.damage )
+    if( DAMAGE_TYPE_MASK( (_temp_dmg).damage_type ) == DAMAGE_TYPE_FATIGUE )
     {
-        player_health = 0;
+        // subtract clamping to 0
+        sub_clamp0_uint8_o( player_stamina, _temp_dmg, offsetof(damage_t, damage) );
+
+        flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
     }
     else
     {
-        player_health -= _temp_dmg.damage;
+        // subtract clamping to 0
+        sub_clamp0_uint8_o( player_health, _temp_dmg, offsetof(damage_t, damage) );
+
+        flags_mark( player_changed_flags, PLAYER_CHANGED_HEALTH );
     }
 }
 
@@ -526,6 +517,7 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
 #include "player_state_move.inl"
 #include "player_state_flask.inl"
 #include "player_state_attack.inl"
+#include "player_state_block.inl"
 
 static void __fastcall__ player_enqueu_action(uint8_t action)
 {
@@ -537,23 +529,18 @@ static void __fastcall__ player_enqueu_action(uint8_t action)
 // update player input
 static void __fastcall__ player_process_input(uint8_t prev, uint8_t current)
 {
-    // pause menu
-    if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_START ) )
-    {
-        game_state_playing_set_pause(1);
-        return;
-    }
-
     // heal
     if( GAMEPAD_BTN_PRESSED( prev, prev, GAMEPAD_SELECT ) )
     {
         if( can_perform_flask() )
         {
             perform_flask();
+            return;
         }
         else if( can_queue_flask() )
         {
             player_enqueu_action( (uint8_t)Player_Action_Flask );
+            return;
         }
     }
 
@@ -607,6 +594,18 @@ static void __fastcall__ player_process_input(uint8_t prev, uint8_t current)
             {
                 player_enqueu_action( (uint8_t)Player_Action_Dodge );
                 player_enqueu_action( v );
+            }
+        }
+        // otherwise, block
+        else
+        {
+            if( can_perform_block() )
+            {
+                perform_block();
+            }
+            else if( can_queue_block() )
+            {
+                player_enqueu_action( (uint8_t)Player_action_Block );
             }
         }
     }
@@ -705,6 +704,14 @@ static void __fastcall__ player_process_action_queue(void)
                 }
             }
                 break;
+            case Player_action_Block:
+            {
+                if( can_perform_block() )
+                {
+                    perform_block();
+                }
+            }
+                break;
         }
 
     }
@@ -732,17 +739,15 @@ void __fastcall__ player_update(void)
     player_update_stamina();
 
     // tick timers
-    timer_tick( player_flash_cooldown_timer );
     timer_tick( player_dodge_cooldown_timer );
-    timer_tick( player_attack_cooldown_timer );
     timer_tick( player_inv_frame_timer );
     timer_tick( player_animation_frame_timer );
-    timer_tick( player_attack_combo_timer );
 
-    if( timer_is_done( player_attack_combo_timer ) )
-    {
-        player_current_attack_combo = 0xFF;
-    }
+    tick_flask_timers();
+
+    tick_attack_timers();
+
+    tick_block_timers();
 
     // process action queue
     player_process_action_queue();
@@ -753,12 +758,20 @@ void __fastcall__ player_update(void)
         // leave current state
         switch( player_state )
         {
+            case PLAYER_STATE_IDLE:
+                player_state_idle_leave();
+                break;
+
             case PLAYER_STATE_DODGING:
                 player_state_dodge_leave();
                 break;
 
             case PLAYER_STATE_USING_FLASH:
                 player_state_flash_leave();
+                break;
+
+            case PLAYER_STATE_BLOCKING:
+                player_state_block_leave();
                 break;
         }
 
@@ -778,18 +791,30 @@ void __fastcall__ player_update(void)
             case PLAYER_STATE_USING_FLASH:
                 player_state_flash_enter();
                 break;
+
+            case PLAYER_STATE_BLOCKING:
+                player_state_block_enter();
+                break;
         }
     }
 
     // state update
     switch( player_state )
     {
+        case PLAYER_STATE_IDLE:
+            player_state_idle_update();
+            break;
+
         case PLAYER_STATE_DODGING:
             player_state_dodge_update();
             break;
 
         case PLAYER_STATE_USING_FLASH:
             player_state_flash_update();
+            break;
+
+        case PLAYER_STATE_BLOCKING:
+            player_state_block_update();
             break;
     }
 

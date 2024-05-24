@@ -12,8 +12,10 @@ enum
 {
     GAME_STATE_PLAYING_INTRO,
     GAME_STATE_PLAYING_PLAYING,
+    GAME_STATE_PLAYING_OUTRO,
     GAME_STATE_PLAYING_PAUSED,
-    GAME_STATE_PLAYING_TALKING,
+    GAME_STATE_PLAYING_SUCCESS,
+    GAME_STATE_PLAYING_GAME_OVER,
     _GAME_STATE_PLAYING_COUNT,
 };
 
@@ -77,7 +79,27 @@ void __fastcall__ game_state_playing_leave()
 
 }
 
-#define BOSS_HEALTH_PER_TILE_LOG2       (uint8_t)7
+// pause internal state
+static void __fastcall__ game_state_playing_paused_enter(void)
+{
+    ppu_off();
+
+    ppu_set_scroll(0, SCREEN_HEIGH);
+
+    ppu_wait_vblank();
+
+    ppu_on();
+}
+
+static void __fastcall__ game_state_playing_paused_leave(void)
+{
+
+}
+
+static void __fastcall__ game_state_playing_paused_update(void)
+{
+    ppu_set_scroll(0, 0);
+}
 
 void __fastcall__ game_state_playing_update()
 {
@@ -86,51 +108,79 @@ void __fastcall__ game_state_playing_update()
     switch( game_state_internal )
     {
         case GAME_STATE_PLAYING_INTRO:
+        {
+            // TODO: play intro
+            game_state_internal = GAME_STATE_PLAYING_PLAYING;
+        }
             break;
 
         case GAME_STATE_PLAYING_PLAYING:
+        {
+            // open pause menu
+            if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+            {
+                game_state_internal = GAME_STATE_PLAYING_PAUSED;
+
+                game_state_playing_paused_enter();
+                return;
+            }
+
+            // update player and boss
+            player_update();
+
+            boss_update();
+
+            // check if the player died first
+            if( player_is_dead() )
+            {
+                game_state_internal = GAME_STATE_PLAYING_GAME_OVER;
+            }
+            else if( boss_is_dead() )
+            {
+                game_state_internal = GAME_STATE_PLAYING_OUTRO;
+            }
+        }
+            break;
+
+        case GAME_STATE_PLAYING_OUTRO:
+        {
+            // TODO: play outro
+            game_state_internal = GAME_STATE_PLAYING_SUCCESS;
+        }
             break;
 
         case GAME_STATE_PLAYING_PAUSED:
+        {
+            game_state_playing_paused_update();
+
+            // close pause menu
+            if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+            {
+                game_state_internal = GAME_STATE_PLAYING_PLAYING;
+
+                game_state_playing_paused_leave();
+                return;
+            }
+        }
+            break;
+
+
+        case GAME_STATE_PLAYING_SUCCESS:
+        {
+
+        }
+            break;
+
+        case GAME_STATE_PLAYING_GAME_OVER:
+        {
+
+        }
+            break;
+
+        default:
+            INVALID_CODE_PATH;
             break;
     }
-
-    // boss health changed
-    if( get_boss_changed_flags() & BOSS_CHANGED_HEALTH )
-    {
-        x16 = get_boss_current_health();
-        y16 = get_boss_max_health();
-        z = get_boss_health_per_block_log2();
-
-        // player stamina bar
-        ppu_begin_tile_batch(2,27);
-
-        // full tiles
-        for( i16 = 0, imax16 = (y16 >> z), j16 = (1 << z); i16 < imax16 && x16 >= j16; ++i16, j16 += (1 << z) )
-        {
-            ppu_push_tile_batch(0x80 + 8);
-        }
-
-        // partial tile
-        if( i16 < imax16 )
-        {
-            j16 -= (1 << z);
-            ppu_push_tile_batch(0x80 + (0x07 & (uint8_t)( x16 - j16 ) ) );
-            ++i16;
-        }
-
-        // empty tiles
-        for( ; i16 < imax16 && i16 < 20; ++i16 )
-        {
-            ppu_push_tile_batch( 0x80 );
-        }
-
-        ppu_end_tile_batch();
-    }
-
-    //player_update();
-
-    //boss_update();
 }
 
 void __fastcall__ game_state_playing_set_pause(uint8_t isPaused)

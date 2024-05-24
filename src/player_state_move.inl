@@ -4,6 +4,12 @@ const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_N  = { -1, 128 };    // 
 const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_P   = {  1,  15 };    // 1.06
 const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_N   = { -1,  15 };    // 1.06
 
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_P  = {  1, 128 };    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_N  = { -1, 128 };    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P   = {  1,  15 };    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N   = { -1,  15 };    // 1.06
+
+
 // test if move can be performed
 #define can_perform_move()                                                          \
 (                                                                                   \
@@ -61,6 +67,63 @@ static void __fastcall__ perform_move(uint8_t dir)
     else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_WEST ) )
     {
         subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_CARDINAL_N );
+    }
+
+    // player moved positions
+    flags_mark( player_changed_flags, PLAYER_CHANGED_POSITION );
+}
+
+static void __fastcall__ perform_slow_move(uint8_t dir)
+{
+    if( flags_mark( dir, PLAYER_MOVE_DIRECTION_NORTH ) )
+    {
+        // nw
+        if( flags_mark( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P );
+        }
+        // ne
+        else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P );
+        }
+        // pure north
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_CARDINAL_P );
+        }
+    }
+    else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_SOUTH ) )
+    {
+        // sw
+        if( flags_mark( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N );
+        }
+        // se
+        else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+        {
+            subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P );
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N );
+        }
+        // pure south
+        else
+        {
+            subpixel_inc( player_pos_dy, PLAYER_MOVE_SPEED_SLOW_CARDINAL_N );
+        }
+    }
+    // pure east
+    else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_EAST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_CARDINAL_P );
+    }
+    // pure west
+    else if( flags_mark( dir, PLAYER_MOVE_DIRECTION_WEST ) )
+    {
+        subpixel_inc( player_pos_dx, PLAYER_MOVE_SPEED_SLOW_CARDINAL_N );
     }
 
     // player moved positions

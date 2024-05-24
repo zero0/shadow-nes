@@ -4,6 +4,10 @@
 
 .define NES_MAPPER_NROM     0   ; Mapper 000
 .define NES_MAPPER_MMC1     1   ; Mapper 001
+.define NES_MAPPER_UxROM    2   ; Mapper 002
+.define NES_MAPPER_CNROM    3   ; Mapper 003
+.define NES_MAPPER_MMC3     4   ; Mapper 004
+.define NES_MAPPER_MMC5     5   ; Mapper 005
 
 .define NES_MAPPER          NES_MAPPER_MMC1
 
