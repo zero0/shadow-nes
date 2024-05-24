@@ -22,8 +22,15 @@ enum
     _BOSS_COUNT,
 };
 
-#define BOSS_CHANGED_HEALTH     (uint8_t)( 1 << 0 )
-#define BOSS_CHANGED_POSITION   (uint8_t)( 1 << 0 )
+enum
+{
+    BOSS_CHANGED_NONE =     0,
+    BOSS_CHANGED_HEALTH =   1 << 0,
+    BOSS_CHANGED_STAMINA =  1 << 1,
+    BOSS_CHANGED_STATUS =   1 << 2,
+    BOSS_CHANGED_POSITION = 1 << 3,
+    BOSS_CHANGED_ALL =      ~0,
+};
 
 uint8_t get_boss_health_per_block_log2(void);
 

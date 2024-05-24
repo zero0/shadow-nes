@@ -3,7 +3,7 @@
 ;
 
 .macro include_asset file
-.include .concat("../assets/generated/asm/", file);
+.include file
 .endmacro
 
 include_asset "chr_00.s"

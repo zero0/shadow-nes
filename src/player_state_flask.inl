@@ -23,7 +23,7 @@ static timer_t player_flask_cooldown_timer;
 
 static void __fastcall__ perform_flask(void)
 {
-    player_next_state = PLAYER_STATE_USING_FLASH;
+    player_next_state = PLAYER_STATE_USING_FLASK;
 }
 
 static void __fastcall__ player_state_flash_enter(void)
@@ -36,7 +36,7 @@ static void __fastcall__ player_state_flash_enter(void)
     flags_reset( player_can_perform_action_flags );
 }
 
-static void __fastcall__ player_state_flash_update(void)
+static void __fastcall__ player_state_flask_update(void)
 {
     // leave state and heal when animation is done so if interuptted, heal does not work
     if( timer_is_done( player_animation_frame_timer ) )

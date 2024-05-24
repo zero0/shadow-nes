@@ -277,7 +277,7 @@ void queue_damage_player( uint8_t damage_type, uint8_t damage );
 // Defined in boss.c
 //
 
-uint8_t test_attack_hits_boss( uint8_t attack_position );
+uint8_t test_attack_hits_boss(void);
 
 void queue_damage_boss( uint8_t damage_type, uint8_t damage );
 

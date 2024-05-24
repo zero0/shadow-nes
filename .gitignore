@@ -60,3 +60,4 @@ obj/
 *.dbg
 *.library
 assets/generated
+*.sln
