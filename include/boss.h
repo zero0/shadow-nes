@@ -22,27 +22,11 @@ enum
     _BOSS_COUNT,
 };
 
-enum
-{
-    BOSS_CHANGED_NONE =     0,
-    BOSS_CHANGED_HEALTH =   1 << 0,
-    BOSS_CHANGED_STAMINA =  1 << 1,
-    BOSS_CHANGED_STATUS =   1 << 2,
-    BOSS_CHANGED_POSITION = 1 << 3,
-    BOSS_CHANGED_ALL =      ~0,
-};
+//
+//
+//
 
-uint8_t get_boss_health_per_block_log2(void);
-
-uint16_t get_boss_current_health(void);
-
-uint16_t get_boss_max_health(void);
-
-str_t get_boss_name(void);
-
-str_t get_boss_location(void);
-
-flags8_t get_boss_changed_flags(void);
+uint8_t boss_is_ready(void);
 
 void boss_init( uint8_t bossIndex );
 

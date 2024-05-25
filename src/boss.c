@@ -13,6 +13,16 @@
 
 enum
 {
+    BOSS_CHANGED_NONE =     0,
+    BOSS_CHANGED_HEALTH =   1 << 0,
+    BOSS_CHANGED_STAMINA =  1 << 1,
+    BOSS_CHANGED_STATUS =   1 << 2,
+    BOSS_CHANGED_POSITION = 1 << 3,
+    BOSS_CHANGED_ALL =      ~0,
+};
+
+enum
+{
     BOSS_FLAG_NONE =       0,
     BOSS_FLAG_DEAD =       1 << 0,
     BOSS_FLAG_PHASE_TWO =  1 << 1,
@@ -46,7 +56,7 @@ static damage_status_t boss_damage_status;
 static uint16_t boss_health;
 
 static uint8_t boss_state;
-static uint8_t boss_next_next;
+static uint8_t boss_next_state;
 
 static timer_t boss_inv_frame_timer;
 static timer_t boss_stamina_regen_timer;
@@ -238,36 +248,6 @@ do                                          \
 //
 //
 
-uint8_t __fastcall__ get_boss_health_per_block_log2(void)
-{
-    return all_boss_health_per_block_log2[ boss_index ];
-}
-
-uint16_t __fastcall__ get_boss_current_health(void)
-{
-    return boss_health;
-}
-
-uint16_t __fastcall__ get_boss_max_health(void)
-{
-    return all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
-}
-
-str_t __fastcall__ get_boss_name(void)
-{
-    return all_boss_names[ boss_index ];
-}
-
-str_t __fastcall__ get_boss_location(void)
-{
-    return all_boss_location_names[ boss_index ];
-}
-
-flags8_t __fastcall__ get_boss_changed_flags(void)
-{
-    return boss_changed_flags;
-}
-
 static void __fastcall__ boss_enter_phase_2(void)
 {
     flags_mark( boss_flags, BOSS_FLAG_PHASE_TWO );
@@ -416,30 +396,32 @@ static void __fastcall__ boss_update_stamina(void)
 
 static void __fastcall__ boss_render_status_bar(void)
 {
+    // boss health changed
     if( flags_is_set( boss_changed_flags, BOSS_CHANGED_HEALTH ) )
     {
         x16 = boss_health;
-        y16 = all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
+        y16 = all_boss_healths[boss_index][BOSS_HEALTH_MAX];
+        z = all_boss_health_per_block_log2[boss_index];
 
-        // player health bar
-        ppu_begin_tile_batch(1,30);
+        // boss health bar
+        ppu_begin_tile_batch(2,27);
 
         // full tiles
-        //for( i = 0, imax = (y >> all_boss_health_per_block_log2[boss_index]), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
+        for( i16 = 0, imax16 = (y16 >> z), j16 = (1 << z); i16 < imax16 && x16 >= j16; ++i16, j16 += (1 << z) )
         {
             ppu_push_tile_batch(0x80 + 8);
         }
 
         // partial tile
-        if( i < imax )
+        if( i16 < imax16 )
         {
-        //    j -= (1 << PLAYER_HEALTH_PER_TILE_LOG2);
-            ppu_push_tile_batch(0x80 + ( x - j ) );
-            ++i;
+            j16 -= (1 << z);
+            ppu_push_tile_batch(0x80 + (0x07 & (uint8_t)( x16 - j16 ) ) );
+            ++i16;
         }
 
         // empty tiles
-        for( ; i < imax; ++i )
+        for( ; i16 < imax16 && i16 < 20; ++i16 )
         {
             ppu_push_tile_batch( 0x80 );
         }
@@ -460,13 +442,22 @@ static void __fastcall__ debug_boss_render(void)
 }
 #endif
 
+//
+// Public API
+//
+
+uint8_t __fastcall__ boss_is_ready(void)
+{
+    return boss_state != BOSS_STATE_INTRO;
+}
+
 void __fastcall__ boss_init(uint8_t bossIndex)
 {
     boss_index = bossIndex;
     boss_flags = BOSS_FLAG_NONE;
 
     boss_state = BOSS_STATE_IDLE;
-    boss_next_next = BOSS_STATE_INTRO;
+    boss_next_state = BOSS_STATE_INTRO;
 
     timer_reset( boss_inv_frame_timer );
     timer_reset( boss_stamina_regen_timer );
@@ -516,7 +507,7 @@ void __fastcall__ boss_update(void)
     CALL_BOSS_FUNC( boss_index, update );
 
     // update state
-    if( boss_state != boss_next_next )
+    if( boss_state != boss_next_state )
     {
         // leave current state
         switch( boss_state )
@@ -525,17 +516,34 @@ void __fastcall__ boss_update(void)
                 break;
         }
 
-        boss_state = boss_next_next;
+        boss_state = boss_next_state;
 
         // enter new state
         switch( boss_state )
         {
             case BOSS_STATE_INTRO:
+                timer_set( boss_state_timer, 30 );
                 break;
 
             default:
                 break;
         }
+    }
+
+    // update state
+    switch( boss_state )
+    {
+        case BOSS_STATE_INTRO:
+        {
+            if( timer_is_done( boss_state_timer ) )
+            {
+                boss_next_state = BOSS_STATE_IDLE;
+            }
+        }
+            break;
+
+        default:
+            break;
     }
 
     // render status bar

@@ -77,8 +77,6 @@ void __fastcall__ game_state_playing_leave()
 
 }
 
-#define BOSS_HEALTH_PER_TILE_LOG2       (uint8_t)7
-
 void __fastcall__ game_state_playing_update()
 {
     gamepad_poll(0);
@@ -86,51 +84,40 @@ void __fastcall__ game_state_playing_update()
     switch( game_state_internal )
     {
         case GAME_STATE_PLAYING_INTRO:
+        {
+            boss_update();
+
+            if( boss_is_ready() )
+            {
+                game_state_internal = GAME_STATE_PLAYING_PLAYING;
+            }
+        }
             break;
 
         case GAME_STATE_PLAYING_PLAYING:
+        {
+            if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            {
+                game_state_internal = GAME_STATE_PLAYING_PAUSED;
+                return;
+            }
+
+            player_update();
+
+            boss_update();
+        }
             break;
 
         case GAME_STATE_PLAYING_PAUSED:
+        {
+            if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            {
+                game_state_internal = GAME_STATE_PLAYING_PLAYING;
+                return;
+            }
+        }
             break;
     }
-
-    // boss health changed
-    if( get_boss_changed_flags() & BOSS_CHANGED_HEALTH )
-    {
-        x16 = get_boss_current_health();
-        y16 = get_boss_max_health();
-        z = get_boss_health_per_block_log2();
-
-        // player stamina bar
-        ppu_begin_tile_batch(2,27);
-
-        // full tiles
-        for( i16 = 0, imax16 = (y16 >> z), j16 = (1 << z); i16 < imax16 && x16 >= j16; ++i16, j16 += (1 << z) )
-        {
-            ppu_push_tile_batch(0x80 + 8);
-        }
-
-        // partial tile
-        if( i16 < imax16 )
-        {
-            j16 -= (1 << z);
-            ppu_push_tile_batch(0x80 + (0x07 & (uint8_t)( x16 - j16 ) ) );
-            ++i16;
-        }
-
-        // empty tiles
-        for( ; i16 < imax16 && i16 < 20; ++i16 )
-        {
-            ppu_push_tile_batch( 0x80 );
-        }
-
-        ppu_end_tile_batch();
-    }
-
-    //player_update();
-
-    //boss_update();
 }
 
 void __fastcall__ game_state_playing_set_pause(uint8_t isPaused)

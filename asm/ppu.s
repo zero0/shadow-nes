@@ -1,6 +1,6 @@
 
 ;
-; ppu
+; PPU
 ;
 
 .importzp TEMP
@@ -140,12 +140,14 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .define PPU_MASK_EMPHASIZE_BLUE_ON                  $80 ; %10000000
 .define PPU_MASK_EMPHASIZE_ALL_ON                   PPU_MASK_EMPHASIZE_RED_ON | PPU_MASK_EMPHASIZE_GREEN_ON | PPU_MASK_EMPHASIZE_BLUE_ON
 
+.define NMI_NAMETABLE_UPDATE_COUNT_MAX              #32
+
 .segment "ZEROPAGE"
 
     NMI_LOCK:               .res 1 ;
     NMI_COUNT:              .res 1 ;
     NMI_READY:              .res 1 ;
-    NMI_NAMETABLE_COUNT:    .res 1 ;
+    NMI_NAMETABLE_UPDATE_COUNT:    .res 1 ;
     PPU_CTRL_BUFFER:        .res 1 ;
     PPU_MASK_BUFFER:        .res 1 ;
     NAMETABLE_UPDATE_LEN:   .res 1 ;
@@ -1148,9 +1150,9 @@ ppu_clear_chr_ram:
     cpx NAMETABLE_UPDATE_LEN
     beq @end
 
-    ; count nametable updates
-    lda #0
-    sta NMI_NAMETABLE_COUNT
+    ;; count nametable updates
+    ;lda #0
+    ;sta NMI_NAMETABLE_UPDATE_COUNT
 
     ; reset latch
     bit PPU_STATUS
@@ -1186,7 +1188,7 @@ ppu_clear_chr_ram:
     ; write tile to PPU_DATA Y times
     :
         ; add repeat count to nametable count
-        inc NMI_NAMETABLE_COUNT
+        ;inc NMI_NAMETABLE_UPDATE_COUNT
 
         sta PPU_DATA
         dey
@@ -1204,7 +1206,7 @@ ppu_clear_chr_ram:
     ; check tile count != 0
     :
         ; add tile count to nametable count
-        inc NMI_NAMETABLE_COUNT
+        ;inc NMI_NAMETABLE_UPDATE_COUNT
 
         ; tile
         lda NAMETABLE_UPDATE, x
@@ -1218,7 +1220,7 @@ ppu_clear_chr_ram:
 @update_nametable_loop_compare:
 
     ;; if there have been >64 tiles updated, early out of the loop
-    ;lda NMI_NAMETABLE_COUNT
+    ;lda NMI_NAMETABLE_UPDATE_COUNT
     ;cmp #64
     ;bcc @update_nametable_loop_end
     ; bmi @update_nametable_loop_end
@@ -1409,7 +1411,7 @@ ppu_clear_chr_ram:
 
     ; count nametable updates
     lda #0
-    sta NMI_NAMETABLE_COUNT
+    sta NMI_NAMETABLE_UPDATE_COUNT
 
 @update_nametable_loop:
     ; high byte address
@@ -1424,21 +1426,33 @@ ppu_clear_chr_ram:
 
     ; tile count (bit7 0 = individualt, 1 = repeat)
     lda NAMETABLE_UPDATE, x
+
+    ; store processor state because the load dictates where to go next
+    php
+
+    inx
+
+    ; restore processor state from last load
+    plp
+
+    ; if there are zero tiles to update, exit loop
     beq @update_nametable_loop_compare
+
+    ; if bit7 is not set, update individual tiles
     bpl @update_nametable_individual
+
+    ; otherwise, fallthrough to repeat tiles
 
 @update_nametable_repeat:
 
-    ; load tile count
-    inx
-
-    ; mask out bit7 and move to Y
+    ; mask out bit7 of tile count and move to Y
     and #$7F
     tay
 
+    ; add repeat count to nametable update count
     clc
-    adc NMI_NAMETABLE_COUNT
-    sta NMI_NAMETABLE_COUNT
+    adc NMI_NAMETABLE_UPDATE_COUNT
+    sta NMI_NAMETABLE_UPDATE_COUNT
 
     ; tile to repeat
     lda NAMETABLE_UPDATE, x
@@ -1446,32 +1460,26 @@ ppu_clear_chr_ram:
 
     ; write tile to PPU_DATA Y times
     :
-        ; add repeat count to nametable count
-
         sta PPU_DATA
         dey
         bne :-
 
-    ; jump to end
+    ; jump to compare
     jmp @update_nametable_loop_compare
 
 @update_nametable_individual:
 
-    ; load tile count
-    inx
+    ; tile count -> Y
     tay
 
+    ; add tile count to nametable count
     clc
-    adc NMI_NAMETABLE_COUNT
-    sta NMI_NAMETABLE_COUNT
+    adc NMI_NAMETABLE_UPDATE_COUNT
+    sta NMI_NAMETABLE_UPDATE_COUNT
 
-    ; check tile count != 0
-    beq @update_nametable_loop_compare
-
+    ; write individual tiles
     :
-        ; add tile count to nametable count
-
-        ; tile
+        ; load tile to write
         lda NAMETABLE_UPDATE, x
         sta PPU_DATA
         inx
@@ -1480,17 +1488,19 @@ ppu_clear_chr_ram:
         dey
         bne :-
 
+    ; fallthrough to compare
+
 @update_nametable_loop_compare:
 
-    ;; if there have been >64 tiles updated, early out of the loop
-    ;lda NMI_NAMETABLE_COUNT
-    ;cmp #64
-    ;bcc @update_nametable_loop_end
-    ;; bmi @update_nametable_loop_end
+    ; if there have been a lot of tiles updated, early out of the loop
+    lda NMI_NAMETABLE_UPDATE_COUNT
+    cmp NMI_NAMETABLE_UPDATE_COUNT_MAX
+    bcc @update_nametable_loop_end
+    ; bmi @update_nametable_loop_end
 ;
-    ;; loop while X != length
-    ;cpx NAMETABLE_UPDATE_LEN
-    ;bne @update_nametable_loop
+    ; loop while X != length
+    cpx NAMETABLE_UPDATE_LEN
+    bne @update_nametable_loop
 
 @update_nametable_loop_end:
 

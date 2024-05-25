@@ -12,12 +12,11 @@
 
 void __fastcall__ text_draw_string_impl(void)
 {
-    text_begin_str_at(ARGS[3]);
-
     x = ARGS[0];
     y = ARGS[1];
     ppu_begin_tile_batch( x, y );
 
+    text_begin_str_at(ARGS[3]);
     for( i = 0, imax = text_strlen() ; i < imax ; ++i )
     {
         c = text_str_at( i );
@@ -43,6 +42,7 @@ void __fastcall__ text_draw_string_impl(void)
 
             x = ARGS[0];
             y = ARGS[1];
+            ++y;
 
             ppu_begin_tile_batch( x, y );
             continue;

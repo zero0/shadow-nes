@@ -4,6 +4,14 @@
 #include "macros.h"
 #include "types.h"
 
+enum
+{
+    GAMEPAD_0,
+    GAMEPAD_1,
+    GAMEPAD_2,
+    GAMEPAD_3,
+};
+
 void __fastcall__ gamepad_poll( uint8_t pad );
 
 uint8_t __fastcall__ gamepad_state( uint8_t pad );
