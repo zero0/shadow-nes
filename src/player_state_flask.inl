@@ -1,4 +1,11 @@
 
+enum
+{
+    PLAYER_FLASH_ANIMATION_TIME = 40,
+};
+
+static timer_t player_flask_cooldown_timer;
+
 // test if flask can be used
 // 1. player has enough flasks
 // 2. flask cooldown is done
@@ -6,8 +13,9 @@
 #define can_perform_flask()                                                             \
 (                                                                                       \
     player_flasks > 0 &&                                                                \
-    timer_is_done( player_flash_cooldown_timer ) &&                                     \
-    flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_FLASK )    \
+    timer_is_done( player_flask_cooldown_timer ) &&                                     \
+    flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_FLASK ) && \
+    1   \
 )
 
 #define can_queue_flask()       \
@@ -22,7 +30,7 @@ static void __fastcall__ player_state_flash_enter(void)
 {
     // TODO: implement actual animation
     // play flash animation
-    timer_set( player_animation_frame_timer, 40 );
+    timer_set( player_animation_frame_timer, PLAYER_FLASH_ANIMATION_TIME );
 
     // reset action flags (cannot interupt)
     flags_reset( player_can_perform_action_flags );
@@ -69,8 +77,15 @@ static void __fastcall__ player_state_flash_leave(void)
     // TODO: cancel animation
 
     // reset timer regarless of interupt
-    timer_set( player_flash_cooldown_timer, PLAYER_FLASK_COOLDOWN_TIME );
+    timer_set( player_flask_cooldown_timer, PLAYER_FLASK_COOLDOWN_TIME );
 
     // probably don't have to since entering a new state will play most likely play an animtaion
     timer_set( player_animation_frame_timer, 0 );
 }
+
+#define tick_flask_timers()             \
+do                                      \
+{                                       \
+    timer_tick( player_flask_cooldown_timer );   \
+}                                       \
+while( 0 )

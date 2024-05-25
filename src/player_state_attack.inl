@@ -1,6 +1,8 @@
 
 static uint8_t player_current_attack;
 static uint8_t player_current_attack_combo;
+static timer_t player_attack_combo_timer;
+static timer_t player_attack_cooldown_timer;
 
 static const uint8_t player_attack_0_combo_base_damage[] =
 {
@@ -128,3 +130,16 @@ static void __fastcall__ player_state_attack_update(void)
     player_current_attack = 0xFF;
     player_current_attack_combo = 0;
 }
+
+
+#define tick_attack_timers()                            \
+do                                                      \
+{                                                       \
+    timer_tick( player_attack_cooldown_timer );         \
+    timer_tick( player_attack_combo_timer );            \
+                                                        \
+    if( timer_is_done( player_attack_combo_timer ) )    \
+    {                                                   \
+        player_current_attack_combo = 0xFF;             \
+    }                                                   \
+} while( 0 )

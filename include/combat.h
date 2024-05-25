@@ -6,6 +6,9 @@
 #include "subpixel.h"
 #include "collision.h"
 
+#define BUILDUP_MAX     (uint8_t)127
+#define MIN_DAMAGE      (uint8_t)1
+
 //
 // Damage Type
 //
@@ -40,6 +43,7 @@ enum
 #define MAKE_DAMAGE_TYPE_ATTR(da, dt)   ( DAMAGE_TYPE_ATTR_MASK(da) | DAMAGE_TYPE_MASK(dt) )
 #define MAKE_DAMAGE_TYPE(dt)            MAKE_DAMAGE_TYPE_ATTR( DAMAGE_TYPE_ATTR_NONE, (dt) )
 
+// modify incoming damage based on damage attributes
 #define MOD_INCOMING_DAMAGE_FROM_ATTR(dmg)                                  \
 do                                                                          \
 {                                                                           \
@@ -49,6 +53,7 @@ do                                                                          \
     if( (dmg).damage_type & DAMAGE_TYPE_ATTR_MISS ) (dmg).damage = 0;       \
 } while( 0 )
 
+// modify incoming healing based on damage attributes
 #define MOD_INCOMING_HEALING_FROM_ATTR(heal)                                \
 do                                                                          \
 {                                                                           \
@@ -97,17 +102,22 @@ enum
 
 typedef flags8_t damage_status_t;
 
+// modify incoming healing from status effects
 #define MOD_INCOMING_HEALING_FROM_STATUS(heal, st)          \
 do                                                          \
 {                                                           \
     if( (st) & DAMAGE_STATUS_WITHERD ) (heal).damage >>= 1; \
 } while( 0 )
 
+// modify outgoing healing from status effects
 #define MOD_OUTGOING_HEALING_FROM_STATUS(heal, st)          \
 do                                                          \
 {                                                           \
 } while( 0 )
 
+// modify incoming damage based on status effects
+// - Burn = additional physical taken
+// - Manaburn = additional magic damage taken
 #define MOD_INCOMING_DAMAGE_FROM_STATUS(dmg, st)            \
 do                                                          \
 {                                                           \
@@ -115,6 +125,9 @@ do                                                          \
     if( (st) & DAMAGE_STATUS_MANABURN   && DAMAGE_TYPE_MASK( (dmg).damage_type ) == DAMAGE_TYPE_MAGIC )    (dmg).damage <<= 1;    \
 } while( 0 )
 
+// modify outgoing damage based on status effects
+// - Blind = all outgoing damage misses
+// - Exhaustion = all outgoing damage is weak
 #define MOD_OUTGOING_DAMAGE_FROM_STATUS(dmg, st)                                        \
 do                                                                                      \
 {                                                                                       \
@@ -122,31 +135,46 @@ do                                                                              
     if( (st) & DAMAGE_STATUS_EXHAUSTION ) (dmg).damage_type |= DAMAGE_TYPE_ATTR_WEAK;   \
 } while( 0 )
 
-#define MOD_INCOMING_DAMAGE_FROM_RESISTANCE(dmg, res)                                   \
+#define _MOD_INCOMING_DAMAGE(dmg, res, dt)  \
+do                                          \
+{                                           \
+    if( (dmg).damage > (res)[ (dt) ] )      \
+    {                                       \
+        (dmg).damage -= (res)[ (dt) ];      \
+    }                                       \
+    else                                    \
+    {                                       \
+        (dmg).damage = MIN_DAMAGE;          \
+    }                                       \
+} while( 0 )
+
+// modify incoming damage based on different resistences
+#define MOD_INCOMING_DAMAGE_FROM_RESISTANCE(dmg, res)       \
 do                                                          \
 {                                                           \
     switch( DAMAGE_TYPE_MASK((dmg).damage_type) )           \
     {                                                       \
-        case DAMAGE_TYPE_PHYSICAL  : if( (dmg).damage > (res)[ DAMAGE_TYPE_PHYSICAL ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_PHYSICAL ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_FIRE      : if( (dmg).damage > (res)[ DAMAGE_TYPE_FIRE     ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_FIRE     ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_COLD      : if( (dmg).damage > (res)[ DAMAGE_TYPE_COLD     ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_COLD     ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_POISON    : if( (dmg).damage > (res)[ DAMAGE_TYPE_POISON   ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_POISON   ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_RADIANT   : if( (dmg).damage > (res)[ DAMAGE_TYPE_RADIANT  ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_RADIANT  ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_SHADOW    : if( (dmg).damage > (res)[ DAMAGE_TYPE_SHADOW   ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_SHADOW   ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_MAGIC     : if( (dmg).damage > (res)[ DAMAGE_TYPE_MAGIC    ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_MAGIC    ]; else (dmg).damage = 0; break;  \
-        case DAMAGE_TYPE_FATIGUE   : if( (dmg).damage > (res)[ DAMAGE_TYPE_FATIGUE  ] ) (dmg).damage -= (res)[ DAMAGE_TYPE_FATIGUE  ]; else (dmg).damage = 0; break;  \
-        default: break;                                     \
+        case DAMAGE_TYPE_PHYSICAL  : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_PHYSICAL); break;  \
+        case DAMAGE_TYPE_FIRE      : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_FIRE    ); break;  \
+        case DAMAGE_TYPE_COLD      : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_COLD    ); break;  \
+        case DAMAGE_TYPE_POISON    : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_POISON  ); break;  \
+        case DAMAGE_TYPE_RADIANT   : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_RADIANT ); break;  \
+        case DAMAGE_TYPE_SHADOW    : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_SHADOW  ); break;  \
+        case DAMAGE_TYPE_MAGIC     : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_MAGIC   ); break;  \
+        case DAMAGE_TYPE_FATIGUE   : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_FATIGUE ); break;  \
+        default: INVALID_CODE_PATH; break;                  \
     }                                                       \
 } while( 0 )
 
+// modify stamina regen time based on status effect
+// - Frozen = regen time doubled
+// - Exhaustion = regen time doubled
 #define MOD_STAMINA_REGEN_TIME(t, st)                       \
 do                                                          \
 {                                                           \
     if( (st) & DAMAGE_STATUS_FROZEN )           (t) <<= 1;  \
     if( (st) & DAMAGE_STATUS_TYPE_EXHAUSTION )  (t) <<= 1;  \
 } while( 0 )
-
-#define BUILDUP_MAX     (uint8_t)127
 
 // build up starts at 0 and goes to BUILDUP_MAX, >=BUILDUP_MAX == trigger effect, dec by base value
 #define RESET_BUILDUP(bu)             \
@@ -162,38 +190,55 @@ do                                    \
     (bu)[ DAMAGE_TYPE_FATIGUE  ] = 0; \
 } while( 0 )
 
+#define _BUILDUP_DAMAGE_TYPE(dmg, bu, st, dst, dt, bumax)   \
+do                                      \
+{                                       \
+    if( ( (st) & (dst) ) == 0 )         \
+    {                                   \
+        (bu)[ dt ] += (dmg).damage;     \
+        if( (bu)[ dt ] < (bumax) )      \
+        {                               \
+            /* noop */                  \
+        }                               \
+        else                            \
+        {                               \
+            (bu)[ dt ] = (bumax);       \
+            (st) |= (dst);              \
+        }                               \
+    }                                   \
+} while( 0 )
+
 // build up status effects from damage if not already triggered
 #define BUILDUP_DAMAGE(dmg, bu, st)                         \
 do                                                          \
 {                                                           \
     switch( DAMAGE_TYPE_MASK((dmg).damage_type) )           \
     {                                                       \
-        case DAMAGE_TYPE_PHYSICAL  : if( ( (st) & DAMAGE_STATUS_TYPE_STUNNED ) == 0 )    { (bu)[ DAMAGE_TYPE_PHYSICAL ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_PHYSICAL ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_STUNNED; } } break; \
-        case DAMAGE_TYPE_FIRE      : if( ( (st) & DAMAGE_STATUS_TYPE_BURN ) == 0 )       { (bu)[ DAMAGE_TYPE_FIRE     ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_FIRE     ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_BURN; } } break; \
-        case DAMAGE_TYPE_COLD      : if( ( (st) & DAMAGE_STATUS_TYPE_FROZEN ) == 0 )     { (bu)[ DAMAGE_TYPE_COLD     ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_COLD     ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_FROZEN; } } break; \
-        case DAMAGE_TYPE_POISON    : if( ( (st) & DAMAGE_STATUS_TYPE_POISONED ) == 0 )   { (bu)[ DAMAGE_TYPE_POISON   ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_POISON   ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_POISONED; } } break; \
-        case DAMAGE_TYPE_RADIANT   : if( ( (st) & DAMAGE_STATUS_TYPE_BLINDED ) == 0 )    { (bu)[ DAMAGE_TYPE_RADIANT  ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_RADIANT  ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_BLINDED; } } break; \
-        case DAMAGE_TYPE_SHADOW    : if( ( (st) & DAMAGE_STATUS_TYPE_WITHERD ) == 0 )    { (bu)[ DAMAGE_TYPE_SHADOW   ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_SHADOW   ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_WITHERD; } } break; \
-        case DAMAGE_TYPE_MAGIC     : if( ( (st) & DAMAGE_STATUS_TYPE_MANABURN ) == 0 )   { (bu)[ DAMAGE_TYPE_MAGIC    ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_MAGIC    ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_MANABURN; } } break; \
-        case DAMAGE_TYPE_FATIGUE   : if( ( (st) & DAMAGE_STATUS_TYPE_EXHAUSTION ) == 0 ) { (bu)[ DAMAGE_TYPE_FATIGUE  ] += (dmg).damage; if( (bu)[ DAMAGE_TYPE_FATIGUE  ] >= BUILDUP_MAX ) { (st) |= DAMAGE_STATUS_TYPE_EXHAUSTION; } } break; \
-        default: break;                                     \
+        case DAMAGE_TYPE_PHYSICAL  : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_STUNNED,    DAMAGE_TYPE_PHYSICAL,  BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_FIRE      : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_BURN,       DAMAGE_TYPE_FIRE,      BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_COLD      : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_FROZEN,     DAMAGE_TYPE_COLD,      BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_POISON    : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_POISONED,   DAMAGE_TYPE_POISON,    BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_RADIANT   : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_BLINDED,    DAMAGE_TYPE_RADIANT,   BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_SHADOW    : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_WITHERD,    DAMAGE_TYPE_SHADOW,    BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_MAGIC     : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_MANABURN,   DAMAGE_TYPE_MAGIC,     BUILDUP_MAX); break; \
+        case DAMAGE_TYPE_FATIGUE   : _BUILDUP_DAMAGE_TYPE(dmg, bu, st, DAMAGE_STATUS_TYPE_EXHAUSTION, DAMAGE_TYPE_FATIGUE,   BUILDUP_MAX); break; \
+        default: INVALID_CODE_PATH; break;                  \
     }                                                       \
 } while( 0 )
 
 #define _TICK_BUILDUP_DAMAGE_TYPE(dt, s, bu, st, res, d)\
 if( (bu)[ dt ] > 0 )                                    \
 {                                                       \
-    if( (bu)[ dt ] <= (d) )                             \
+    if( (bu)[ dt ] > (d) )                              \
+    {                                                   \
+        (bu)[ dt ] -= (d);                              \
+    }                                                   \
+    else                                                \
     {                                                   \
         (bu)[ dt ] = 0;                                 \
         (st) &= ~(s);                                   \
     }                                                   \
-    else                                                \
-    {                                                   \
-        (bu)[ dt ] -= (d);                              \
-    }                                                   \
 }
-
 
 // tick build up by (d), clearing status effects when build up is 0
 #define TICK_BUILDUP(bu, st, res, d)                                                                    \

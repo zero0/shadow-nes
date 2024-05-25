@@ -12,15 +12,7 @@
 #define PLAYER_CHANGED_POSITION (uint8_t)( 1 << 4 )
 #define PLAYER_CHANGED_ALL      (uint8_t)~0
 
-uint8_t get_player_current_health();
-
-uint8_t get_player_max_health();
-
-uint8_t get_player_current_stamina();
-
-uint8_t get_player_max_stamina();
-
-flags8_t get_player_changed_flags();
+uint8_t player_is_dead(void);
 
 void player_init(void);
 

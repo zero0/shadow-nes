@@ -367,6 +367,11 @@ static void __fastcall__ boss_process_damage_queue(void)
     boss_damage_queue_length = 0;
 }
 
+uint8_t __fastcall__ boss_is_dead(void)
+{
+    return boss_health == 0;
+}
+
 static void __fastcall__ boss_update_stamina(void)
 {
     if( boss_stamina < all_boss_staminas[boss_index][BOSS_STAMINA_MAX] )

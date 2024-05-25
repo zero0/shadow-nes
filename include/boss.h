@@ -28,6 +28,8 @@ enum
 
 uint8_t boss_is_ready(void);
 
+uint8_t boss_is_dead(void);
+
 void boss_init( uint8_t bossIndex );
 
 void boss_update(void);
