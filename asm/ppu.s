@@ -227,7 +227,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_fade_to_internal
 .export _ppu_fade_from_internal
 
-.segment "CODE"
+.segment "LOWCODE"
 
 ; ppu_frame_index: returns in A the frame count [0..255]
 .proc _ppu_frame_index
@@ -1326,7 +1326,7 @@ ppu_clear_chr_ram:
 
 .export nmi
 
-.segment "CODE"
+.segment "LOWCODE"
 
 .proc nmi
     push_reg

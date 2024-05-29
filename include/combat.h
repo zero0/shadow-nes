@@ -149,21 +149,11 @@ do                                          \
 } while( 0 )
 
 // modify incoming damage based on different resistences
-#define MOD_INCOMING_DAMAGE_FROM_RESISTANCE(dmg, res)       \
-do                                                          \
-{                                                           \
-    switch( DAMAGE_TYPE_MASK((dmg).damage_type) )           \
-    {                                                       \
-        case DAMAGE_TYPE_PHYSICAL  : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_PHYSICAL); break;  \
-        case DAMAGE_TYPE_FIRE      : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_FIRE    ); break;  \
-        case DAMAGE_TYPE_COLD      : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_COLD    ); break;  \
-        case DAMAGE_TYPE_POISON    : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_POISON  ); break;  \
-        case DAMAGE_TYPE_RADIANT   : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_RADIANT ); break;  \
-        case DAMAGE_TYPE_SHADOW    : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_SHADOW  ); break;  \
-        case DAMAGE_TYPE_MAGIC     : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_MAGIC   ); break;  \
-        case DAMAGE_TYPE_FATIGUE   : _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_FATIGUE ); break;  \
-        default: INVALID_CODE_PATH; break;                  \
-    }                                                       \
+#define MOD_INCOMING_DAMAGE_FROM_RESISTANCE(dmg, res)                   \
+do                                                                      \
+{                                                                       \
+    ASSERT( DAMAGE_TYPE_MASK((dmg).damage_type) < _DAMAGE_TYPE_COUNT);  \
+    _MOD_INCOMING_DAMAGE(dmg, res, DAMAGE_TYPE_MASK((dmg).damage_type));\
 } while( 0 )
 
 // modify stamina regen time based on status effect

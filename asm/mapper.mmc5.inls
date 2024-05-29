@@ -1,0 +1,166 @@
+;
+; MMC5 Mapper
+;
+
+MMC5_APU_PULSE_1_DUTY_CYCLE         =$5000
+MMC5_APU_PULSE_1_SWEEP              =$5001
+MMC5_APU_PULSE_1_TIMER_LO           =$5002
+MMC5_APU_PULSE_1_LEN_COUNTER        =$5003
+
+MMC5_APU_PULSE_2_DUTY_CYCLE         =$5004
+MMC5_APU_PULSE_2_SWEEP              =$5005
+MMC5_APU_PULSE_2_TIMER_LO           =$5006
+MMC5_APU_PULSE_2_LEN_COUNTER        =$5007
+
+.define MMC5_APU_PCM_IRQ_MODE_WRITE #$00
+.define MMC5_APU_PCM_IRQ_MODE_READ  #$01
+.define MMC5_APU_PCM_IRQ_ENABLE     #$80
+.define MMC5_APU_PCM_IRQ_DISABLE    #$00
+
+MMC5_APU_PCM_IRQ                    =$5010
+MMC5_APU_PCM_RAW                    =$5011
+
+.define MMC5_PRG_MODE_0             #$00
+.define MMC5_PRG_MODE_1             #$01
+.define MMC5_PRG_MODE_2             #$02
+.define MMC5_PRG_MODE_3             #$03
+
+.define MMC5_CHR_MODE_0             #$00
+.define MMC5_CHR_MODE_1             #$01
+.define MMC5_CHR_MODE_2             #$02
+.define MMC5_CHR_MODE_3             #$03
+
+.define MMC5_RAM_PROTECT_MODE_0     #$00
+.define MMC5_RAM_PROTECT_MODE_1     #$01
+.define MMC5_RAM_PROTECT_MODE_2     #$02
+.define MMC5_RAM_PROTECT_MODE_3     #$03
+
+.define MMC5_EXT_RAM_MODE_0         #$00
+.define MMC5_EXT_RAM_MODE_1         #$01
+.define MMC5_EXT_RAM_MODE_2         #$02
+.define MMC5_EXT_RAM_MODE_3         #$03
+
+MMC5_PRG_MODE                       =$5100
+MMC5_CHR_MODE                       =$5101
+MMC5_RAM_PROTECT_1                  =$5102
+MMC5_RAM_PROTECT_2                  =$5103
+MMC5_EXT_RAM_MODE                   =$5104
+MMC5_NAMETABLE_MAPPING              =$5105
+
+MMC5_FILL_TILE                      =$5106
+MMC5_FILL_COLOR                     =$5107
+
+MMC5_PRG_BANKSWITCH_BASE            =$5113
+MMC5_PRG_RAM_BANK                   =MMC5_PRG_BANKSWITCH_BASE+0
+MMC5_PRG_ROM_BANK0                  =MMC5_PRG_BANKSWITCH_BASE+1
+MMC5_PRG_ROM_BANK1                  =MMC5_PRG_BANKSWITCH_BASE+2
+MMC5_PRG_ROM_BANK2                  =MMC5_PRG_BANKSWITCH_BASE+3
+MMC5_PRG_ROM_BANK3                  =MMC5_PRG_BANKSWITCH_BASE+4
+
+MMC5_CHR_BANKSWITCH_BASE            =$5120
+MMC5_CHR_ROM_BANK0                  =MMC5_CHR_BANKSWITCH_BASE+0
+MMC5_CHR_ROM_BANK1                  =MMC5_CHR_BANKSWITCH_BASE+1
+MMC5_CHR_ROM_BANK2                  =MMC5_CHR_BANKSWITCH_BASE+2
+MMC5_CHR_ROM_BANK3                  =MMC5_CHR_BANKSWITCH_BASE+3
+MMC5_CHR_ROM_BANK4                  =MMC5_CHR_BANKSWITCH_BASE+4
+MMC5_CHR_ROM_BANK5                  =MMC5_CHR_BANKSWITCH_BASE+5
+MMC5_CHR_ROM_BANK6                  =MMC5_CHR_BANKSWITCH_BASE+6
+MMC5_CHR_ROM_BANK7                  =MMC5_CHR_BANKSWITCH_BASE+7
+MMC5_CHR_ROM_BANK8                  =MMC5_CHR_BANKSWITCH_BASE+8
+MMC5_CHR_ROM_BANK9                  =MMC5_CHR_BANKSWITCH_BASE+9
+MMC5_CHR_ROM_BANKA                  =MMC5_CHR_BANKSWITCH_BASE+10
+MMC5_CHR_ROM_BANKB                  =MMC5_CHR_BANKSWITCH_BASE+11
+
+MMC5_CHR_UPPER_BITS                 =$5130
+
+MMC5_VERTICAL_SPLIT_MODE            =$5200
+MMC5_VERTICAL_SPLIT_SCROLL          =$5201
+MMC5_VERTICAL_SPLIT_BANK            =$5202
+
+.define MMC5_IRQ_SCANLINE_STATUS_ENABLE     #$80
+.define MMC5_IRQ_SCANLINE_STATUS_DISABLE    #$00
+
+.define MMC5_IRQ_SCANLINE_STATUS_IN_FRAME_MASK  #$40
+.define MMC5_IRQ_SCANLINE_STATUS_PENDING_MASK   #$80
+
+MMC5_IRQ_SCANLINE_CMP               =$5203
+.export MMC5_IRQ_SCANLINE_STATIS    =$5204
+
+MMC5_MUL_UINT8_LH                   =$5205
+MMC5_MUL_UINT8_RH                   =$5206
+
+MMC5_MUL_UINT16_LO                  =$5205
+MMC5_MUL_UINT16_HI                  =$5206
+
+
+;
+; Mapper Interface
+;
+
+;
+.macro mapper_reset_impl
+
+    mapper_init_impl
+
+.endmacro
+
+;
+.macro mapper_set_mirroring_impl
+.endmacro
+
+;
+.macro mapper_set_chr_bank_0_impl
+.endmacro
+
+;
+.macro mapper_set_chr_bank_1_impl
+.endmacro
+
+;
+.macro mapper_set_prg_bank_impl
+.endmacro
+
+;
+.macro mapper_init_impl
+
+    ; use PRG mode 0
+    lda MMC5_PRG_MODE_0
+    sta MMC5_PRG_MODE
+
+    ; use CHR mode 0
+    lda MMC5_CHR_MODE_0
+    sta MMC5_CHR_MODE
+
+    ; use extended RAM mode
+    lda MMC5_EXT_RAM_MODE_1
+    sta MMC5_EXT_RAM_MODE
+
+    ; mapping
+    lda #0
+    sta MMC5_NAMETABLE_MAPPING
+
+    ;
+    lda #$80
+    sta MMC5_PRG_ROM_BANK0
+
+.endmacro
+
+;
+.macro mapper_reset_irq_impl
+
+    ; read IRQ status to reset
+    bit MMC5_IRQ_SCANLINE_STATIS
+
+.endmacro
+
+; set scanline from A
+.macro mapper_set_scanline_irq_impl
+
+    ; store scanline
+    sta MMC5_IRQ_SCANLINE_CMP
+
+    ; enable IRP
+    lda MMC5_IRQ_SCANLINE_STATUS_ENABLE
+    sta MMC5_IRQ_SCANLINE_STATIS
+
+.endmacro

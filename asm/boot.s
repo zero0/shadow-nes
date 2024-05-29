@@ -21,7 +21,6 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __CODE_LOAD__       ,__CODE_RUN__   ,__CODE_SIZE__
 .import __RODATA_LOAD__     ,__RODATA_RUN__ ,__RODATA_SIZE__
 .import __DMC_START__
-.import NES_MAPPER, NES_PRG_BANKS, NES_CHR_BANKS, NES_MIRRORING, NES_BATTERY, NES_TRAINER
 .importzp _PPU_ARGS
 .import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_clear_chr_ram, nmi
 .import mapper_reset
@@ -30,8 +29,13 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import mapper_set_chr_bank_0
 .import mapper_set_chr_bank_1
 .import mapper_set_prg_bank
+.import mapper_reset_irq
+.import mapper_set_scanline_irq
 .include "zeropage.inc"
 .export reset, irq
+
+.import IRQ_SCANLINE_TABLE
+.import IRQ_STATE_TABLE
 
 FT_BASE_ADR         =$0100    ;page in RAM, should be $xx00
 
@@ -48,62 +52,43 @@ PAL_BUF             =$01c0
 
 _ARGS:              .res 8
 TEMP:               .res 2
+IRQ_PTR:            .res 2
 
-.export _ARGS
-.export TEMP
+.exportzp _ARGS
+.exportzp TEMP
 
-.segment "HEADER"
+;
+; Header
+;
 
-.define USE_NES_2_0     1
+.include "header.inls"
 
-.if USE_NES_2_0
-.import NES_2_0, NES_2_0_INPUT_TYPE, NES_2_0_SUB_MAPPER, NES_2_0_FRAME_TIME, NES_2_0_WORK_RAM, NES_2_0_SAVE_RAM
-.define NES_2_0     8
-.else
-.define NES_2_0     0
-.endif
+header_start        Header::NES_2_0
+header_mapper       Mapper::MMC5
+header_wram_size    8 * KB
+header_prg_size     32 * KB
+header_chr_size     512 * KB
+header_mirror       MirrorMode::FourScreen
+header_tv           NTSC, PAL
+header_end          "HEADER"
 
-.byte 'N','E','S',$1A
-
-.byte <NES_PRG_BANKS
-.byte <NES_CHR_BANKS
-.byte (<NES_MIRRORING & $0F) | (<NES_BATTERY << 1) | (<NES_TRAINER << 2) | ( <NES_MAPPER << 4 )
-.byte (<NES_MAPPER & $F0) | ( <NES_2_0 & $0F)
-
-.if USE_NES_2_0
-.byte ((<NES_2_0_SUB_MAPPER & $0F) << 4)
-.byte 0
-.byte ((<NES_2_0_SAVE_RAM & $0F) << 4) | (<NES_2_0_WORK_RAM & $0F)
-.byte 0
-
-.byte (<NES_2_0_FRAME_TIME & $03)
-.byte 0
-.byte 0
-.byte (<NES_2_0_INPUT_TYPE)
-.else
-.byte 0
-.byte 0
-.byte 0
-.byte 0
-
-.byte 0
-.byte 0
-.byte 0
-.byte 0
-.endif
+;
+;
+;
 
 .segment "RODATA"
 
 
 .segment "SAMPLES"
 
-
+.pushseg
 .segment "VECTORS"
 
     .addr nmi       ;$fffa vblank nmi
     .addr reset     ;$fffc reset
     .addr irq       ;$fffe irq / brk
 
+.popseg
 
 .segment "CHARS"
 
@@ -111,9 +96,70 @@ TEMP:               .res 2
 ; irq
 ;
 
-.segment "CODE"
-irq:
+.segment "LOWCODE"
+
+; set IRQ based on IRQ table index A
+.export  _set_irq
+
+_set_irq:
+.proc set_irq
+
+    ; store index in X and 2*index in Y
+    tax
+    asl A
+    tay
+
+    ; load scanline at from index A (now X)
+    lda IRQ_SCANLINE_TABLE,X
+
+    ; set scanline irq
+    jsr mapper_set_scanline_irq
+
+    ; store irq state ptr at index A (now Y)
+    lda IRQ_STATE_TABLE+0,Y
+    sta IRQ_PTR+0
+    lda IRQ_STATE_TABLE+1,Y
+    sta IRQ_PTR+1
+
+    rts
+
+.endproc
+
+;
+.proc wait_irq
+
+
+
+.endproc
+
+; jump to IRQ callback (callback must end with rts)
+.proc irq_call
+    jmp (IRQ_PTR)
+.endproc
+
+.proc irq
+    ; push registers
+    pha
+    txa
+    pha
+    tya
+    pha
+
+    ; reset IRQ status based on mapper
+    jsr mapper_reset_irq
+
+    ; execute IRQ callback
+    jsr irq_call
+
+    ; pop registers
+    pla
+    tay
+    pla
+    tax
+    pla
+
     rti
+.endproc
 
 ;
 ; start up
@@ -123,8 +169,8 @@ irq:
 
 .segment "STARTUP"
 
-;.segment "CODE"
-reset:
+.proc reset
+
     sei             ; mask interupts
     cld             ; disable decimal mode
 
@@ -240,5 +286,11 @@ reset:
     ; enable interupts
     cli
 
+    ;
+    lda #0
+    jsr set_irq
+
     ; run main()
     jmp _main
+
+.endproc

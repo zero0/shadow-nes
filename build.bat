@@ -70,7 +70,8 @@ for %%F in (obj\*.o) do call set "OBJ_FILES=%%F %%OBJ_FILES%%"
 rem set "LD_CONFIG=-t nes"
 rem set "LD_CONFIG=-C config\nrom_256_horz.cfg"
 rem set "LD_CONFIG=-C config\nes.cfg"
-set "LD_CONFIG=-C config\nes_mmc1.cfg"
+rem set "LD_CONFIG=-C config\nes_mmc1.cfg"
+set "LD_CONFIG=-C config\nes_mmc5.cfg"
 
 rem set "LD_DBG="
 

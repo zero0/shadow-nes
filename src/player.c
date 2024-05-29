@@ -377,7 +377,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // modify healing by attributes
-    MOD_INCOMING_HEALING_FROM_ATTR(_temp_dmg);
+    //MOD_INCOMING_HEALING_FROM_ATTR(_temp_dmg);
 
     // if no healing left, return
     if( _temp_dmg.damage == 0 )
@@ -386,7 +386,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // modify healing by status effects
-    MOD_INCOMING_HEALING_FROM_STATUS(_temp_dmg, player_damage_status);
+    //MOD_INCOMING_HEALING_FROM_STATUS(_temp_dmg, player_damage_status);
 
     // if no healing left, return
     if( _temp_dmg.damage == 0 )
@@ -422,7 +422,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify dmage by attributes
-    MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
+    //MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
 
     // if no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -431,7 +431,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify damage from status effects
-    MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
+    //MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
 
     // no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -440,7 +440,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify damage for resistences
-    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, player_damage_resistance_modifiers);
+    //MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, player_damage_resistance_modifiers);
 
     // no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -450,7 +450,7 @@ static void __fastcall__ player_take_damage(void)
 
     // build up damage
     b = player_damage_status;
-    BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
+    //BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
     if( b != player_damage_status )
     {
         flags_mark( player_changed_flags, PLAYER_CHANGED_STATUS );
@@ -516,7 +516,7 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
 
     timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
-    MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
+    //MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
     flags_mark( player_changed_flags, PLAYER_CHANGED_STAMINA );
 }
@@ -728,6 +728,7 @@ static void __fastcall__ player_process_action_queue(void)
 
 void __fastcall__ player_update(void)
 {
+    #if 0
     flags_reset( player_changed_flags );
 
     // process damage queue
@@ -845,6 +846,7 @@ void __fastcall__ player_update(void)
 
 #ifdef DEBUG
     player_render_debug();
+#endif
 #endif
 }
 

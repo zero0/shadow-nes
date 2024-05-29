@@ -29,7 +29,7 @@ CTRL_PORT1          =$4016
 .export _gamepad_pop_layer
 .export _gamepad_reset_layer
 
-.segment "CODE"
+.segment "LOWCODE"
 
 ; poll game pad at index A
 .proc _gamepad_poll

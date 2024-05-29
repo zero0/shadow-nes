@@ -9,7 +9,9 @@
 .define NES_MAPPER_MMC3     4   ; Mapper 004
 .define NES_MAPPER_MMC5     5   ; Mapper 005
 
-.define NES_MAPPER          NES_MAPPER_MMC1
+.ifndef NES_MAPPER
+.define NES_MAPPER          NES_MAPPER_MMC5
+.endif
 
 .segment "ZEROPAGE"
 
@@ -23,12 +25,14 @@ _PRG_BANK_STACK:        .res 8
 ; Mapper Implementation
 ;
 
-.segment "CODE"
+.segment "LOWCODE"
 
 .if NES_MAPPER = NES_MAPPER_NROM
     .include "mapper.nrom.inls"
 .elseif NES_MAPPER = NES_MAPPER_MMC1
     .include "mapper.mmc1.inls"
+.elseif NES_MAPPER = NES_MAPPER_MMC5
+    .include "mapper.mmc5.inls"
 .else
     .error "No Mapper Defined"
 .endif
@@ -43,6 +47,8 @@ _PRG_BANK_STACK:        .res 8
 .export mapper_set_chr_bank_0, _mapper_set_chr_bank_0
 .export mapper_set_chr_bank_1, _mapper_set_chr_bank_1
 .export mapper_set_prg_bank, _mapper_set_prg_bank
+.export mapper_reset_irq, _mapper_reset_irq
+.export mapper_set_scanline_irq, _mapper_set_scanline_irq
 
 ;
 _mapper_reset:
@@ -82,5 +88,19 @@ _mapper_set_chr_bank_1:
 _mapper_set_prg_bank:
 .proc mapper_set_prg_bank
     mapper_set_prg_bank_impl
+    rts
+.endproc
+
+;
+_mapper_reset_irq:
+.proc mapper_reset_irq
+    mapper_reset_irq_impl
+    rts
+.endproc
+
+;
+_mapper_set_scanline_irq:
+.proc mapper_set_scanline_irq
+    mapper_set_scanline_irq_impl
     rts
 .endproc

@@ -151,7 +151,7 @@ APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
 ;
 ;
 
-.segment "CODE"
+.segment "LOWCODE"
 
 ;
 .proc apu_init

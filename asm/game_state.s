@@ -16,3 +16,25 @@ _game_rt_timer:         .res 4
 .export _game_state, _next_game_state, _next_game_state_arg
 .export _game_state_internal, _game_state_timer
 .export _game_rt_timer
+
+;
+; IRQs
+;
+
+.segment "CODE"
+
+.export IRQ_SCANLINE_TABLE
+.export IRQ_STATE_TABLE
+
+IRQ_SCANLINE_TABLE:
+    .byte 0
+
+IRQ_STATE_TABLE:
+    .addr IrqExt
+
+;
+.proc IrqExt
+
+    rts
+
+.endproc

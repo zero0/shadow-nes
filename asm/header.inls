@@ -1,0 +1,333 @@
+;
+; Header
+;
+
+.define KB  1024
+
+;;
+; Puts ceil(log2(sz / 64)) into logsz
+; Code from: nes2header.inc
+.macro _ram_logsize sz, logsz
+  .assert sz >= 0 .and sz <= 512 * KB, error, .concat("RAM size must be 0 to 1048576 (512 KB): ", .string(sz))
+  .if sz < 1
+    logsz = 0
+  .elseif sz <= 128
+    logsz = 1
+  .elseif sz <= 256
+    logsz = 2
+  .elseif sz <= 512
+    logsz = 3
+  .elseif sz <= 1 * KB
+    logsz = 4
+  .elseif sz <= 2 * KB
+    logsz = 5
+  .elseif sz <= 4 * KB
+    logsz = 6
+  .elseif sz <= 8 * KB
+    logsz = 7
+  .elseif sz <= 16 * KB
+    logsz = 8
+  .elseif sz <= 32 * KB
+    logsz = 9
+  .elseif sz <= 64 * KB
+    logsz = 10
+  .elseif sz <= 128 * KB
+    logsz = 11
+  .elseif sz <= 256 * KB
+    logsz = 12
+  .elseif sz <= 512 * KB
+    logsz = 13
+  .else
+    logsz = 14
+  .endif
+.endmacro
+
+.enum Header
+iNES
+NES_2_0
+.endenum
+
+; Start header
+.macro header_start ver
+
+.if ver = Header::iNES
+nes_header = $00
+.elseif ver = Header::NES_2_0
+nes_header = $08
+.else
+.error .concat("Invalid Header version: ", .string(ver))
+.endif
+
+.endmacro
+
+.enum ConsoleType
+NES             = 0
+FamiCom         = 0
+VsSystem        = 1
+PlayChoice10    = 2
+Extended        = 3
+.endenum
+
+; Header console type
+.macro header_console_type type
+.assert type >= 0 .and type < 4, error, .concat("Invalid Console Type: ", .string(type))
+nes_console_type = type
+.endmacro
+
+; Set program size
+.macro header_prg_size size
+.local _size
+_size = (size) / (16 * KB)
+nes_prg_size_lo = <_size
+nes_prg_size_hi = >_size
+.endmacro
+
+; Set CHR size
+.macro header_chr_size size
+.local _size
+_size = (size) / (8 * KB)
+nes_chr_size_lo = <_size
+nes_chr_size_hi = >_size
+.endmacro
+
+; Set working RAM size
+.macro header_wram_size size
+nes_wram_size = size
+.endmacro
+
+; Set battery RAM size
+.macro header_bram_size size
+nes_bram_size = size
+.endmacro
+
+; Set working CHR RAM size
+.macro header_chr_wram_size size
+nes_chr_wram_size = size
+.endmacro
+
+; Set battery CHR RAM size
+.macro header_chr_bram_size size
+nes_chr_bram_size = size
+.endmacro
+
+.enum MirrorMode
+Horizontal
+Vertical
+FourScreen
+FourScreen_218
+.endenum
+
+; Set mirror mode
+.macro header_mirror mirror
+.if mirror = MirrorMode::Horizontal
+nes_mirror = 0
+.elseif mirror = MirrorMode::Vertical
+nes_mirror = 1
+.elseif mirror = MirrorMode::FourScreen
+nes_mirror = 8
+.elseif mirror = MirrorMode::FourScreen_218
+nes_mirror = 9
+.else
+.error .concat("Invalid mirror mode: ", .string(mirror))
+.endif
+.endmacro
+
+.enum Mapper
+NROM
+MMC1
+UxROM
+CNROM
+MMC3
+MMC5
+.endenum
+
+; Define mapper for header
+.macro header_mapper mapper, submapper
+.assert mapper >= 0 .and mapper < 4096, error, .concat("Mapper out of range [0, 4096): ", .string(mapper))
+
+nes_mapper_lo = <mapper
+nes_mapper_hi = >mapper;
+
+.ifnblank submapper
+.assert submapper >= 0 .and submapper < 16, error, .concat("Submapper out of range [0, 16): ", .string(submapper))
+nes_submapper = submapper
+.else
+nes_submapper = 0
+.endif
+.endmacro
+
+.enum
+NTSC
+PAL
+.endenum
+
+; Define what TVs are supported
+.macro header_tv tv_frame_timing, dual_compatible
+.local _tv1, _tv2
+_tv1 = tv_frame_timing
+
+.ifnblank dual_compatible
+.assert .not(tv_frame_timing = dual_compatible), error, .concat("Dual compatible TV settings should be different: ", .string(tv_frame_timing), ", ", .string(dual_compatible))
+_tv2 = $02
+.else
+_tv2 = $00
+.endif
+
+.if _tv1 = NTSC
+nes_tv = $00 | _tv2
+.elseif _tv1 = PAL
+nes_tv = $01 | _tv2
+.else
+.error .concat("Invalid TV frame timing: ", .string(tv_frame_timing))
+.endif
+
+.endmacro
+
+.enum InputType
+Unspecified
+Standard
+FourScore
+Zapper
+.endenum
+
+; Define what inputs are used
+.macro header_input_type input
+.if input = InputType::Unspecified
+nes_input_type = $00
+.elseif input = InputType::Standard
+nes_input_type = $01
+.elseif input = InputType::FourScore
+nes_input_type = $02
+.elseif input = InputType::Zapper
+nes_input_type = $08
+.else
+.error .concat("Unknown input type: ", .string(input))
+.endif
+.endmacro
+
+; End hader
+.macro header_end seg
+.local _nes_prg_size, _nes_chr_size, _nes_battery, _nes_trainer, _nes_mirror, _nes_console_type
+.local _nes_mapper_lo, _nes_mapper_hi, _nes_submapper
+.local _nes_prg_size_hi, _nes_chr_size_hi
+.local _nes_bram_size_log, _nes_wram_size_log, _nes_chr_bram_size_log, _nes_chr_wram_size_log
+.local _nes_tv, _nes_input_type
+
+.assert .not .blank(seg), error, "Segment not defined for header"
+
+.if .defined(nes_prg_size_lo) .and .defined(nes_prg_size_hi)
+_nes_prg_size = nes_prg_size_lo
+_nes_prg_size_hi = nes_prg_size_hi
+.else
+_nes_prg_size = 0
+_nes_prg_size_hi = 0
+.endif
+
+.if .defined(nes_chr_size_lo) .and .defined(nes_chr_size_hi)
+_nes_chr_size = nes_chr_size_lo
+_nes_chr_size_hi = nes_chr_size_hi
+.else
+_nes_chr_size = 0
+_nes_chr_size_hi = 0
+.endif
+
+.if .defined(nes_bram_size) .or .defined(nes_chr_bram_size)
+_nes_battery = 1
+.else
+_nes_battery = 0
+.endif
+
+_nes_trainer = 0
+
+.ifdef nes_mirror
+_nes_mirror = nes_mirror
+.else
+_nes_mirror = 0
+.endif
+
+.if .defined(nes_mapper_lo) .and .defined(nes_mapper_hi)
+_nes_mapper_lo = nes_mapper_lo
+_nes_mapper_hi = nes_mapper_hi
+.else
+_nes_mapper_lo = 0
+_nes_mapper_hi = 0
+.endif
+
+.ifdef nes_submapper
+_nes_submapper = nes_submapper
+.else
+_nes_submapper = 0
+.endif
+
+.ifdef nes_console_type
+_nes_console_type = nes_console_type
+.else
+_nes_console_type = 0
+.endif
+
+.ifdef nes_bram_size
+_ram_logsize nes_bram_size, _nes_bram_size_log
+.else
+_nes_bram_size_log = 0
+.endif
+
+.ifdef nes_wram_size
+_ram_logsize nes_wram_size, _nes_wram_size_log
+.else
+_nes_wram_size_log = 0
+.endif
+
+.ifdef nes_chr_bram_size
+_ram_logsize nes_chr_bram_size, _nes_chr_bram_size_log
+.else
+_nes_chr_bram_size_log = 0
+.endif
+
+.ifdef nes_chr_wram_size
+_ram_logsize nes_chr_wram_size, _nes_chr_wram_size_log
+.else
+_nes_chr_wram_size_log = 0
+.endif
+
+.ifdef nes_tv
+_nes_tv = nes_tv
+.else
+_nes_tv = 0
+.endif
+
+.ifdef nes_input_type
+_nes_input_type = nes_input_type
+.else
+_nes_input_type = 1
+.endif
+
+.pushseg
+.segment seg
+
+.byte 'N','E','S',$1A
+
+.byte _nes_prg_size
+.byte _nes_chr_size
+.byte ( (_nes_mapper_lo & $0F) << 4 ) | (_nes_trainer << 2) | (_nes_battery << 1) | (_nes_mirror)
+.byte ( (_nes_mapper_lo & $F0) << 0 ) | (nes_header) | (_nes_console_type)
+
+.if nes_header = $08
+; NES 2.0 header
+.byte (_nes_submapper << 4) | (_nes_mapper_hi & $0F)
+.byte (_nes_chr_size_hi << 4) | (_nes_prg_size_hi)
+.byte (_nes_bram_size_log << 4) | (_nes_wram_size_log)
+.byte (_nes_chr_bram_size_log << 4) | (_nes_chr_wram_size_log)
+
+.byte (_nes_tv)
+.byte 0
+.byte 0
+.byte (_nes_input_type)
+.else
+; iNES header
+.byte 0, 0, 0, 0
+.byte 0, 0, 0, 0
+.endif
+
+.popseg
+
+.endmacro
