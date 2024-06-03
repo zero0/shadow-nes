@@ -23,6 +23,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __DMC_START__
 .importzp _PPU_ARGS
 .import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_clear_chr_ram, nmi
+.import apu_init
 .import mapper_reset
 .import mapper_init
 .import mapper_set_mirroring
@@ -196,6 +197,9 @@ _wait_irq:
 
     ; init ppu
     jsr ppu_init
+
+    ; init apu
+    jsr apu_init
 
     ; wait for first vblank
     jsr ppu_wait_vblank

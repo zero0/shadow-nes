@@ -6,6 +6,8 @@
 .importzp TEMP
 .importzp sp
 
+.import apu_update
+
 PPU_CTRL            =$2000
 PPU_MASK            =$2001
 PPU_STATUS          =$2002
@@ -1631,6 +1633,7 @@ _ppu_tint_reset_internal:
 
 @ppu_update_end:
     ; TODO: play sound/music
+    jsr apu_update
 
     ; unlock NMI
     lda #0

@@ -15,28 +15,28 @@ APU_DMC                 =$4010
 APU_STATUS              =$4015
 APU_FRAME_COUNTER       =$4017
 
-APU_PULSE1_TIMER        =APU_PULSE1 + 0
-APU_PULSE1_LENGTH       =APU_PULSE1 + 1
-APU_PULSE1_ENVELOPE     =APU_PULSE1 + 2
-APU_PULSE1_SWEEP        =APU_PULSE1 + 3
+APU_PULSE1_VOLUME       =APU_PULSE1 + 0
+APU_PULSE1_SWEEP        =APU_PULSE1 + 1
+APU_PULSE1_TIMER_LO     =APU_PULSE1 + 2
+APU_PULSE1_TIMER_HI     =APU_PULSE1 + 3
 
-APU_PULSE2_TIMER        =APU_PULSE2 + 0
-APU_PULSE2_LENGTH       =APU_PULSE2 + 1
-APU_PULSE2_ENVELOPE     =APU_PULSE2 + 2
-APU_PULSE2_SWEEP        =APU_PULSE2 + 3
+APU_PULSE2_VOLUME       =APU_PULSE2 + 0
+APU_PULSE2_SWEEP        =APU_PULSE2 + 1
+APU_PULSE2_TIMER_LO     =APU_PULSE2 + 2
+APU_PULSE2_TIMER_HI     =APU_PULSE2 + 3
 
-APU_TRIANGLE_TIMER      =APU_TRIANGLE + 0
-APU_TRIANGLE_LENGTH     =APU_TRIANGLE + 2
-APU_TRIANGLE_LINEAR     =APU_TRIANGLE + 3
+APU_TRIANGLE_LINEAR     =APU_TRIANGLE + 0
+APU_TRIANGLE_TIMER_LO   =APU_TRIANGLE + 2
+APU_TRIANGLE_TIMER_HI   =APU_TRIANGLE + 3
 
-APU_NOISE_TIMER         =APU_NOISE + 0
-APU_NOISE_LENGTH        =APU_NOISE + 2
-APU_NOISE_ENVELOPE      =APU_NOISE + 3
+APU_NOISE_VOLUM         =APU_NOISE + 0
+APU_NOISE_NOISE         =APU_NOISE + 2
+APU_NOISE_LENGTH        =APU_NOISE + 3
 
 APU_DMC_TIMER           =APU_DMC + 0
-APU_DMC_MEM_READER      =APU_DMC + 1
-APU_DMC_SAMPLE_BUFFER   =APU_DMC + 2
-APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
+APU_DMC_LOAD_COUNTER    =APU_DMC + 1
+APU_DMC_SAMPLE_ADDR     =APU_DMC + 2
+APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 
 .define APU_STATUS_ENABLE_DMC       %00010000
 .define APU_STATUS_ENABLE_NOISE     %00001000
@@ -62,12 +62,20 @@ APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
 .define APU_PULSE_VOLUME_CONSTANT       %00010000
 .define APU_PULSE_VOLUME_ENVOLOPE       %00000000
 
+.macro lda_apu_pulse_volume    duty, inf, const, vol
+    lda #(((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & $0F))
+.endmacro
+
 ; $4001/5
 .define APU_PULSE_SWEEP_ENABLED         %10000000
 .define APU_PULSE_SWEEP_NEGATE          %00001000
 .define APU_PULSE_SWEEP_PERIOD_SHIFT    4
 .define APU_PULSE_SWEEP_PERIOD_MASK     %01110000
 .define APU_PULSE_SWEEP_SHIFT_MASK      %00000111
+
+.macro lda_apu_pulse_sweep  enable, negate, period, shift
+    lda #( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_NOISE_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
+.endmacro
 
 ; $4002/6
 .define APU_PULSE_PERIOD_LOW_MASK       %11111111
@@ -76,6 +84,12 @@ APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
 .define APU_PULSE_PERIOD_HIGH_MASK      %00000111
 .define APU_PULSE_LENGTH_LOAD_SHIFT     3
 .define APU_PULSE_LENGTH_LOAD_MASK      %11111000
+
+.macro ldax_apu_pulse_timer     period, length
+    lda #( .lobyte(period) )
+    ldx #( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
+.endmacro
+
 
 ; Triangle Wave
 ; $4008
@@ -137,30 +151,49 @@ APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
 .segment "ZEROPAGE"
 
     APU_STATUS_BUFF:            .res 1 ;
+    APU_MUSIC_SPEED:            .res 1 ;
+    APU_SFX_SPEED:              .res 1 ;
 
 ;
 ;
 ;
 
-.define APU_OUTPUT_BUFFER_LENGTH    11
+.define APU_OUTPUT_BUFFER_LENGTH    14
 .segment "BSS"
 
     APU_OUTPUT_BUFFER:         .res APU_OUTPUT_BUFFER_LENGTH ;
 
+APU_OUT_PULSE1_TIMER        =APU_OUTPUT_BUFFER + 0
+APU_OUT_PULSE1_LENGTH       =APU_OUTPUT_BUFFER + 1
+APU_OUT_PULSE1_ENVELOPE     =APU_OUTPUT_BUFFER + 2
+APU_OUT_PULSE1_SWEEP        =APU_OUTPUT_BUFFER + 3
+APU_OUT_PULSE2_TIMER        =APU_OUTPUT_BUFFER + 4
+APU_OUT_PULSE2_LENGTH       =APU_OUTPUT_BUFFER + 5
+APU_OUT_PULSE2_ENVELOPE     =APU_OUTPUT_BUFFER + 6
+APU_OUT_PULSE2_SWEEP        =APU_OUTPUT_BUFFER + 7
+APU_OUT_TRIANGLE_TIMER      =APU_OUTPUT_BUFFER + 8
+APU_OUT_TRIANGLE_LENGTH     =APU_OUTPUT_BUFFER + 9
+APU_OUT_TRIANGLE_LINEAR     =APU_OUTPUT_BUFFER + 10
+APU_OUT_NOISE_TIMER         =APU_OUTPUT_BUFFER + 11
+APU_OUT_NOISE_LENGTH        =APU_OUTPUT_BUFFER + 12
+APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
+
+
 ;
 ;
 ;
+
+.export apu_init
+.export apu_update
+.export apu_enable_all, apu_disable_all
+.export apu_enable_dmc, apu_disable_dmc
+.export _apu_play_music = apu_play_music
+.export _apu_play_sfx = apu_play_sfx
 
 .segment "LOWCODE"
 
 ;
 .proc apu_init
-
-    ;
-    sta APU_PULSE1_TIMER
-    sta APU_PULSE1_LENGTH
-    sta APU_PULSE1_ENVELOPE
-    sta APU_PULSE1_SWEEP
 
     ; enable all channels (-DMC)
     lda #(APU_STATUS_ENABLE_PULSE1 | APU_STATUS_ENABLE_PULSE2 | APU_STATUS_ENABLE_TRIANGLE | APU_STATUS_ENABLE_NOISE )
@@ -224,11 +257,34 @@ APU_DMC_OUTPUT_UNIT     =APU_DMC + 3
 ;
 .proc apu_update
 
-    ; copy output buffer into apu registers
-    .repeat APU_OUTPUT_BUFFER_LENGTH, I
-    lda APU_OUTPUT_BUFFER+I
-    sta APU_BASE_REG+I
-    .endrepeat
+    ;; copy output buffer into apu registers
+    ;.repeat APU_OUTPUT_BUFFER_LENGTH, I
+    ;lda APU_OUTPUT_BUFFER+I
+    ;sta APU_BASE_REG+I
+    ;.endrepeat
+
+    rts
+
+.endproc
+
+; Play music at index A
+.proc apu_play_music
+
+.endproc
+
+; Play SFX at index A
+.proc apu_play_sfx
+
+    ; NOTE: temp sound to see that it's working
+    lda_apu_pulse_volume 0, 1, 1, 15
+    sta APU_PULSE1_VOLUME
+
+    lda_apu_pulse_sweep 1, 0, 2, 3
+    sta APU_PULSE1_SWEEP
+
+    ldax_apu_pulse_timer 46000, 10
+    sta APU_PULSE1_TIMER_LO
+    stx APU_PULSE1_TIMER_HI
 
     rts
 

@@ -8,6 +8,7 @@
 #include "game_state.h"
 #include "game_flow.h"
 #include "game_data.h"
+#include "apu.h"
 
 extern ptr_t shadow_font;
 
@@ -81,6 +82,11 @@ void __fastcall__ game_state_title_update()
                 b = -1;
                 break;
         }
+    }
+
+    if(GAMEPAD_PRESSED(0, GAMEPAD_L))
+    {
+        apu_play_sfx(0);
     }
 
     switch( t )
