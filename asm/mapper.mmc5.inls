@@ -92,6 +92,38 @@ MMC5_MUL_UINT8_RH                   =$5206
 MMC5_MUL_UINT16_LO                  =$5205
 MMC5_MUL_UINT16_HI                  =$5206
 
+;
+.macro _make_nametable_mapping  nt20, nt24, nt28, nt2C
+
+    .local _nt20, _nt24, _nt28, _nt2C
+
+    .ifnblank nt20
+    _nt20 = nt20 & $03
+    .else
+    _nt20 = 0
+    .endif
+
+    .ifnblank nt24
+    _nt24 = (nt24 & $03) << 2
+    .else
+    _nt24 = 0
+    .endif
+
+    .ifnblank nt28
+    _nt28 = (nt28 & $03) << 4
+    .else
+    _nt28 = 0
+    .endif
+
+    .ifnblank nt2C
+    _nt2C = (nt2C & $03) << 6
+    .else
+    _nt2C = 0
+    .endif
+
+    lda #( _nt2C | _nt28 | _nt24 | _nt20 )
+
+.endmacro
 
 ;
 ; Mapper Interface
@@ -131,12 +163,18 @@ MMC5_MUL_UINT16_HI                  =$5206
     lda MMC5_CHR_MODE_0
     sta MMC5_CHR_MODE
 
+    ;lda #1
+    ;sta MMC5_CHR_ROM_BANK0
+    ;sta MMC5_CHR_ROM_BANK1
+    ;sta MMC5_CHR_ROM_BANK2
+    ;sta MMC5_CHR_ROM_BANK3
+
     ; use extended RAM mode
-    lda MMC5_EXT_RAM_MODE_1
+    lda MMC5_EXT_RAM_MODE_0
     sta MMC5_EXT_RAM_MODE
 
     ; mapping
-    lda #0
+    _make_nametable_mapping 0, 1, 2, 3
     sta MMC5_NAMETABLE_MAPPING
 
     ;

@@ -144,27 +144,27 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 
 .segment "ZEROPAGE"
 
-    NMI_LOCK:               .res 1 ;
-    NMI_COUNT:              .res 1 ;
-    NMI_READY:              .res 1 ;
-    NMI_NAMETABLE_UPDATE_COUNT:    .res 1 ;
-    PPU_CTRL_BUFFER:        .res 1 ;
-    PPU_MASK_BUFFER:        .res 1 ;
-    NAMETABLE_UPDATE_LEN:   .res 1 ;
-    NAMETABLE_UPDATE_POS:   .res 1 ;
-    PALETTE_UPDATE_LEN:     .res 1 ;
-    OAM_UPDATE_LEN:         .res 1 ;
-    SCROLL_X:               .res 1 ;
-    SCROLL_Y:               .res 1 ;
-    _PPU_ARGS:              .res 8 ;
-    TILE_BATCH_INDEX:       .res 1 ;
-    META_SPRITE_LEN:        .res 1 ;
-    META_SPRITE_ATTR:       .res 1 ;
-    META_SPRITE_TILE:       .res 1 ;
-    META_SPRITE_ADDR:       .res 2 ;
-    CHR_UPLOAD_ADDR:        .res 2 ;
-    FADE_FRAME_INTERAL:     .res 1 ;
-    FADE_INDEX:             .res 1 ;
+    NMI_LOCK:                   .res 1 ;
+    NMI_COUNT:                  .res 1 ;
+    NMI_READY:                  .res 1 ;
+    NMI_NAMETABLE_UPDATE_COUNT: .res 1 ;
+    PPU_CTRL_BUFFER:            .res 1 ;
+    PPU_MASK_BUFFER:            .res 1 ;
+    NAMETABLE_UPDATE_LEN:       .res 1 ;
+    NAMETABLE_UPDATE_POS:       .res 1 ;
+    PALETTE_UPDATE_LEN:         .res 1 ;
+    OAM_UPDATE_LEN:             .res 1 ;
+    SCROLL_X:                   .res 1 ;
+    SCROLL_Y:                   .res 1 ;
+    TILE_BATCH_INDEX:           .res 1 ;
+    META_SPRITE_LEN:            .res 1 ;
+    META_SPRITE_ATTR:           .res 1 ;
+    META_SPRITE_TILE:           .res 1 ;
+    META_SPRITE_ADDR:           .res 2 ;
+    CHR_UPLOAD_ADDR:            .res 2 ;
+    PALETTE_TINT_OAM_PTR:       .res 2 ;
+    PALETTE_TINT_BACKGROUND_PTR:.res 2 ;
+    _PPU_ARGS:                  .res 8 ;
 
 .export _PPU_ARGS
 
@@ -224,8 +224,10 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_write_chr_ram_internal
 .export _ppu_end_write_chr_ram_internal
 
-.export _ppu_fade_to_internal
-.export _ppu_fade_from_internal
+.export _ppu_tint_palellete_oam_internal
+.export _ppu_tint_palellete_background_internal
+.export _ppu_tint_palelletes_internal
+.export _ppu_tint_reset_internal
 
 .segment "LOWCODE"
 
@@ -237,19 +239,31 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .endproc
 
 ; ppu_init: initialize PPU ( assumes X == 0)
-ppu_init:
+.proc ppu_init
+
+    ; clear internal buffers
     stx SCROLL_X
     stx SCROLL_Y
 
+    stx PPU_CTRL_BUFFER
+    stx PPU_MASK_BUFFER
+
+    ; clear PPU values
     stx PPU_SCROLL
     stx PPU_SCROLL
 
     stx PPU_CTRL    ; disable NMI
     stx PPU_MASK    ; disable rendering
 
-    stx PPU_CTRL_BUFFER
-    stx PPU_MASK_BUFFER
+    ; clear palette tint pointers
+    stx PALETTE_TINT_BACKGROUND_PTR+0
+    stx PALETTE_TINT_BACKGROUND_PTR+1
+
+    stx PALETTE_TINT_OAM_PTR+0
+    stx PALETTE_TINT_OAM_PTR+1
+
     rts
+.endproc
 
 ; ppu_wait_vblank: waits for the next vblank
 ppu_wait_vblank:
@@ -629,7 +643,8 @@ _ppu_clear_palette:
         dex
         bne :-
 
-    stx PALETTE_UPDATE_LEN
+    ; mark palette as dirty
+    inc PALETTE_UPDATE_LEN
 
     rts
 .endproc
@@ -661,6 +676,9 @@ _ppu_set_palette_internal:
 ; Set the background for all palettes
 _ppu_set_palette_background_internal:
 
+.proc ppu_set_palette_background
+
+    ; clear color
     lda _PPU_ARGS+0;
 
     ; nametable backgroupds
@@ -679,11 +697,13 @@ _ppu_set_palette_background_internal:
     inc PALETTE_UPDATE_LEN
 
     rts
+.endproc
 
 ; fill nametable at $ARGS+0/ARGS+1 with table ARGS+2 and attr ARGS+3
 _ppu_fill_nametable_attr:
 
-ppu_fill_nametable_attr:
+.proc ppu_fill_nametable_attr
+
     ; reset latch
     bit PPU_STATUS
 
@@ -712,6 +732,7 @@ ppu_fill_nametable_attr:
         bne :-
 
     rts
+.endproc
 
 ; fill attr byte in range
 .proc _ppu_set_nametable_attr_internal
@@ -1112,8 +1133,8 @@ ppu_clear_chr_ram:
 ; ppu_upload_palette: uploads palette while PPU is off
 .proc _ppu_upload_palette
 
-    ; palette update
-    ldx PALETTE_UPDATE_LEN
+    ; perform palette update if needed
+    lda PALETTE_UPDATE_LEN
     beq @end
 
     ; reset latch
@@ -1135,6 +1156,7 @@ ppu_clear_chr_ram:
         cpx PALETTE_BYTE_COUNT
         bcc :-
 
+    ; clear palette update
     lda #0
     sta PALETTE_UPDATE_LEN
 
@@ -1238,87 +1260,78 @@ ppu_clear_chr_ram:
     rts
 .endproc
 
-; ppu_fade_to: adjust palettes while fading to ARG[0] with frame interval ARG[1]
-.proc _ppu_fade_to_internal
+;
+_ppu_tint_palellete_oam_internal:
+.proc ppu_tint_palellete_oam
 
-    lda _PPU_ARGS+1
-    sta FADE_FRAME_INTERAL
-    sta FADE_INDEX
-
-    ;
-    ; phase 0: update background color
+    ; load tint
     lda _PPU_ARGS+0
+    tax
 
-    ; nametable backgroupds
-    sta PALETTE_UPDATE+0
-    sta PALETTE_UPDATE+4
-    sta PALETTE_UPDATE+8
-    sta PALETTE_UPDATE+12
+    ; load ptr from remap table
+    lda palette_tint_remap_table+0, X
+    sta PALETTE_TINT_OAM_PTR+0
 
-    ; sprite backgrouds
-    sta PALETTE_UPDATE+16
-    sta PALETTE_UPDATE+20
-    sta PALETTE_UPDATE+24
-    sta PALETTE_UPDATE+28
+    lda palette_tint_remap_table+1, X
+    sta PALETTE_TINT_OAM_PTR+1
 
-    ; mark palette update
+    ; mark palette as dirty
     inc PALETTE_UPDATE_LEN
-
-    ; loop for a number of frames
-    :
-        jsr _ppu_update
-
-        dec FADE_INDEX
-        bne :-
-
-    ;
-    ; phase 1: shift palettes
-    .repeat 3, I
-
-    ; nametable backgrouds
-    .repeat 4, P
-    lda PALETTE_UPDATE+2+(P*4)
-    sta PALETTE_UPDATE+3+(P*4)
-    lda PALETTE_UPDATE+1+(P*4)
-    sta PALETTE_UPDATE+2+(P*4)
-    lda PALETTE_UPDATE+0+(P*4)
-    sta PALETTE_UPDATE+1+(P*4)
-    .endrepeat
-
-    ; sprite backgrouds
-    .repeat 4, P
-    lda PALETTE_UPDATE+2+((P+4)*4)
-    sta PALETTE_UPDATE+3+((P+4)*4)
-    lda PALETTE_UPDATE+1+((P+4)*4)
-    sta PALETTE_UPDATE+2+((P+4)*4)
-    lda PALETTE_UPDATE+0+((P+4)*4)
-    sta PALETTE_UPDATE+1+((P+4)*4)
-    .endrepeat
-
-    ; mark palette update
-    inc PALETTE_UPDATE_LEN
-
-    lda FADE_FRAME_INTERAL
-    sta FADE_INDEX
-
-    ; loop for a number of frames
-    :
-        jsr _ppu_update
-
-        dec FADE_INDEX
-        bne :-
-
-    .endrepeat
 
     rts
 .endproc
 
 ;
-.proc _ppu_fade_from_internal
+_ppu_tint_palellete_background_internal:
+.proc ppu_tint_palellete_background
+
+    ; load tint
+    lda _PPU_ARGS+0
+    tax
+
+    ; load ptr from remap table
+    lda palette_tint_remap_table+0, X
+    sta PALETTE_TINT_BACKGROUND_PTR+0
+
+    lda palette_tint_remap_table+1, X
+    sta PALETTE_TINT_BACKGROUND_PTR+1
+
+    ; mark palette as dirty
+    inc PALETTE_UPDATE_LEN
 
     rts
 .endproc
 
+;
+_ppu_tint_palelletes_internal:
+.proc ppu_tint_palelletes
+
+    ; update each palette
+    jsr ppu_tint_palellete_oam
+    jsr ppu_tint_palellete_background
+
+    rts
+.endproc
+
+;
+_ppu_tint_reset_internal:
+.proc ppu_tint_reset
+
+    lda #0
+
+    ; clear oam ptr
+    sta PALETTE_TINT_OAM_PTR+0
+    sta PALETTE_TINT_OAM_PTR+1
+
+    ; clear background ptr
+    sta PALETTE_TINT_BACKGROUND_PTR+0
+    sta PALETTE_TINT_BACKGROUND_PTR+1
+
+    ; mark palette as dirty
+    inc PALETTE_UPDATE_LEN
+
+    rts
+.endproc
 
 ;
 ; nmi
@@ -1374,9 +1387,18 @@ ppu_clear_chr_ram:
     sta PPU_OAM_DMA
 
 @update_palette:
-    ; palette update
-    ldx PALETTE_UPDATE_LEN
-    beq @update_nametable
+    ; if there are no palette updates, skip to nametable updates
+    lda PALETTE_UPDATE_LEN
+    bne @update_palette_start
+
+    ; no palette updates, jump to name table updates
+    ; NOTE: there's too much code for a beq to branch so a jmp is needed
+    jmp @update_nametable
+
+@update_palette_start:
+    ; reset palette dirty flag
+    lda #0
+    sta PALETTE_UPDATE_LEN
 
     ; reset latch
     bit PPU_STATUS
@@ -1387,24 +1409,92 @@ ppu_clear_chr_ram:
     lda #(<PALETTE_BASE_ADDR)
     sta PPU_ADDR
 
+@update_palette_background:
+
+    ; if there is no tint ptr, do raw background palette upload
+    lda PALETTE_TINT_BACKGROUND_PTR
+    beq @update_palette_background_raw
+
+@update_palette_background_tint:
+    ; map each background color using the tint ptr
+.repeat 4, I
+    ; don't map "transparent" color
+    lda PALETTE_UPDATE+0+(I*4)
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+1+(I*4)
+    lda (PALETTE_TINT_BACKGROUND_PTR), Y
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+2+(I*4)
+    lda (PALETTE_TINT_BACKGROUND_PTR), Y
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+3+(I*4)
+    lda (PALETTE_TINT_BACKGROUND_PTR), Y
+    sta PPU_DATA
+.endrepeat
+
+    ; update OAM palette
+    jmp @update_palette_oam
+
+@update_palette_background_raw:
+    ; copy background palette
     ldx #0
     :
-        lda PALETTE_UPDATE, x
+        lda PALETTE_UPDATE+0, X
         sta PPU_DATA
+
         inx
+        cmp #16
+        bne :-
 
-        ; fill all palette data
-        cpx PALETTE_BYTE_COUNT
-        bcc :-
+@update_palette_oam:
 
-    lda #0
-    sta PALETTE_UPDATE_LEN
+    ; if there is no tint ptr, do raw OAM palette upload
+    lda PALETTE_TINT_OAM_PTR
+    beq @update_palette_oam_raw
 
-    ; if there has been a palette update, skip nametable updates this frame
-    jmp @ppu_scroll
+@update_palette_oam_tint:
+    ; map each OAM color using tint ptr
+.repeat 4, I
+    ; don't map "transparent" color
+    lda PALETTE_UPDATE+16+0+(I*4)
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+16+1+(I*4)
+    lda (PALETTE_TINT_OAM_PTR), Y
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+16+2+(I*4)
+    lda (PALETTE_TINT_OAM_PTR), Y
+    sta PPU_DATA
+
+    ldy PALETTE_UPDATE+16+3+(I*4)
+    lda (PALETTE_TINT_OAM_PTR), Y
+    sta PPU_DATA
+.endrepeat
+
+    ; end of palette updates
+    jmp @update_palette_end
+
+@update_palette_oam_raw:
+    ; copy OAM palette
+    ldx #0
+    :
+        lda PALETTE_UPDATE+16, X
+        sta PPU_DATA
+
+        inx
+        cmp #16
+        bne :-
+
+@update_palette_end:
+    ;; if there has been a palette update, skip nametable updates this frame
+    ;jmp @ppu_scroll
 
 @update_nametable:
-    ; nametable update
+    ; if there are no nametable updates, skip to scrolling
     ldx NAMETABLE_UPDATE_POS
     cpx NAMETABLE_UPDATE_LEN
     beq @ppu_scroll
@@ -1430,6 +1520,7 @@ ppu_clear_chr_ram:
     ; store processor state because the load dictates where to go next
     php
 
+    ; increment to next byte
     inx
 
     ; restore processor state from last load
@@ -1549,3 +1640,51 @@ ppu_clear_chr_ram:
     pop_reg
     rti
 .endproc
+
+.segment "RODATA"
+
+; remap table
+palette_tint_remap_table:
+
+    .addr palette_tink_remap_0
+    .addr palette_tink_remap_1
+    .addr palette_tink_remap_2
+    .addr palette_tink_remap_3
+    .addr palette_tink_remap_4
+    .addr palette_tink_remap_5
+    .addr palette_tink_remap_6
+    .addr palette_tink_remap_7
+    .addr palette_tink_remap_8
+
+; black
+palette_tink_remap_0:
+    .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
+
+palette_tink_remap_1:
+    .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
+
+palette_tink_remap_2:
+    .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
+
+palette_tink_remap_3:
+    .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
+
+; normal colors
+palette_tink_remap_4:
+    .byte $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0F, $0F, $0F
+
+palette_tink_remap_5:
+    .byte $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $1A, $1B, $1C, $00, $00, $00
+
+palette_tink_remap_6:
+    .byte $10, $21, $22, $23, $24, $25, $26, $27, $28, $29, $2A, $2B, $2C, $10, $10, $10
+
+palette_tink_remap_7:
+    .byte $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $3A, $3B, $3C, $20, $20, $20
+
+; white
+palette_tink_remap_8:
+    .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30
+    .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30
+    .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30
+    .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30

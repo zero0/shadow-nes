@@ -34,6 +34,7 @@ void __fastcall__ game_state_playing_enter()
     ppu_clear_palette();
     ppu_clear_oam();
 
+    ppu_tint_reset();
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white

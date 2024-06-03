@@ -26,6 +26,7 @@ void __fastcall__ game_state_title_enter()
     ppu_write_chr_ram( 0,0,0,0, 0,0,0,0);
     ppu_end_write_chr_ram();
 
+    ppu_tint_reset();
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
@@ -62,7 +63,7 @@ void __fastcall__ game_state_title_update()
     gamepad_poll( 0 );
 
     timer_tick( game_state_timer );
-    if( timer_is_done( game_state_timer ) )
+    if( 0 && timer_is_done( game_state_timer ) )
     {
         timer_set( game_state_timer, 10 );
         ++b;

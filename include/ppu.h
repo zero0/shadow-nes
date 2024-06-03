@@ -276,22 +276,48 @@ void __fastcall__ ppu_end_write_chr_ram_internal(void);
 //
 //
 
-#define ppu_fade_to(c)          \
-    PPU_ARGS[0] = (c);          \
-    PPU_ARGS[1] = 3;            \
-    ppu_fade_to_internal()
+enum
+{
+    PPU_PALETTE_TINT_0,
+    PPU_PALETTE_TINT_1,
+    PPU_PALETTE_TINT_2,
+    PPU_PALETTE_TINT_3,
+    PPU_PALETTE_TINT_4,
+    PPU_PALETTE_TINT_5,
+    PPU_PALETTE_TINT_6,
+    PPU_PALETTE_TINT_7,
+    PPU_PALETTE_TINT_8,
+    _PPU_PALETTE_TINT_COUNT,
 
-#define ppu_fade_to_black()     ppu_fade_to( 0 )
+    PPU_PALETTE_TINT_BLACK      = PPU_PALETTE_TINT_0,
+    PPU_PALETTE_TINT_DARKEST    = PPU_PALETTE_TINT_1,
+    PPU_PALETTE_TINT_DARKER     = PPU_PALETTE_TINT_2,
+    PPU_PALETTE_TINT_DARK       = PPU_PALETTE_TINT_3,
+    PPU_PALETTE_TINT_DEFAULT    = PPU_PALETTE_TINT_4,
+    PPU_PALETTE_TINT_LIGHT      = PPU_PALETTE_TINT_5,
+    PPU_PALETTE_TINT_LIGHTER    = PPU_PALETTE_TINT_6,
+    PPU_PALETTE_TINT_LIGHTEST   = PPU_PALETTE_TINT_7,
+    PPU_PALETTE_TINT_WHITE      = PPU_PALETTE_TINT_8,
+};
 
-void __fastcall__ ppu_fade_to_internal(void);
+void __fastcall__ ppu_tint_palellete_oam_internal(void);
+void __fastcall__ ppu_tint_palellete_background_internal(void);
+void __fastcall__ ppu_tint_palelletes_internal(void);
+void __fastcall__ ppu_tint_reset_internal(void);
 
-#define ppu_fade_from(c)        \
-    PPU_ARGS[0] = (c);          \
-    PPU_ARGS[1] = 3;            \
-    ppu_fade_from_internal()
+#define ppu_tint_palellete_oam(t)          \
+    PPU_ARGS[0] = (t);                     \
+    ppu_tint_palellete_oam_internal()
 
-#define ppu_fade_from_black()   ppu_fade_from( 0 )
+#define ppu_tint_palellete_background(t)        \
+    PPU_ARGS[0] = (t);                          \
+    ppu_tint_palellete_background_internal()
 
-void __fastcall__ ppu_fade_from_internal(void);
+#define ppu_tint_palelletes(t)      \
+    PPU_ARGS[0] = (t);              \
+    ppu_tint_palelletes_internal()
+
+#define ppu_tint_reset()        \
+    ppu_tint_reset_internal()
 
 #endif // PPU_H

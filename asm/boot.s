@@ -53,6 +53,7 @@ PAL_BUF             =$01c0
 _ARGS:              .res 8
 TEMP:               .res 2
 IRQ_PTR:            .res 2
+IRQ_WAIT:           .res 1
 
 .exportzp _ARGS
 .exportzp TEMP
@@ -126,9 +127,17 @@ _set_irq:
 .endproc
 
 ;
+_wait_irq:
 .proc wait_irq
 
+    lda #$FF
+    sta IRQ_WAIT
 
+    :
+        bit IRQ_WAIT
+        bmi :-
+
+    rts
 
 .endproc
 
@@ -286,7 +295,7 @@ _set_irq:
     ; enable interupts
     cli
 
-    ;
+    ; disable IRQ scanline
     lda #0
     jsr set_irq
 
