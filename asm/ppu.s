@@ -240,29 +240,31 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     rts
 .endproc
 
-; ppu_init: initialize PPU ( assumes X == 0)
+; ppu_init: initialize PPU
 .proc ppu_init
 
-    ; clear internal buffers
-    stx SCROLL_X
-    stx SCROLL_Y
+    lda #0
 
-    stx PPU_CTRL_BUFFER
-    stx PPU_MASK_BUFFER
+    ; clear internal buffers
+    sta SCROLL_X
+    sta SCROLL_Y
+
+    sta PPU_CTRL_BUFFER
+    sta PPU_MASK_BUFFER
 
     ; clear PPU values
-    stx PPU_SCROLL
-    stx PPU_SCROLL
+    sta PPU_SCROLL
+    sta PPU_SCROLL
 
-    stx PPU_CTRL    ; disable NMI
-    stx PPU_MASK    ; disable rendering
+    sta PPU_CTRL    ; disable NMI
+    sta PPU_MASK    ; disable rendering
 
     ; clear palette tint pointers
-    stx PALETTE_TINT_BACKGROUND_PTR+0
-    stx PALETTE_TINT_BACKGROUND_PTR+1
+    sta PALETTE_TINT_BACKGROUND_PTR+0
+    sta PALETTE_TINT_BACKGROUND_PTR+1
 
-    stx PALETTE_TINT_OAM_PTR+0
-    stx PALETTE_TINT_OAM_PTR+1
+    sta PALETTE_TINT_OAM_PTR+0
+    sta PALETTE_TINT_OAM_PTR+1
 
     rts
 .endproc

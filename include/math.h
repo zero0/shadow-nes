@@ -29,4 +29,14 @@ do                                      \
     __asm__("sta %v", lh);              \
 } while( 0 )
 
+//
+//
+//
+
+extern void rand_seed8(uint8_t seed);
+
+extern void rand_seed_mask8(uint8_t seed, uint8_t mask);
+
+extern uint8_t rand_next8(void);
+
 #endif // MATH_H

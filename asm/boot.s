@@ -32,6 +32,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import mapper_set_prg_bank
 .import mapper_reset_irq
 .import mapper_set_scanline_irq
+.import rand_init
 .include "zeropage.inc"
 .export reset, irq
 
@@ -195,11 +196,29 @@ _wait_irq:
     stx APU_SOUND   ; disable APU sound
     stx DMC_FREQ    ; disable DMC IRQ
 
+    ; clear ram
+    lda #0
+    ldx #0
+    :
+        sta $0000, x ; zero page
+        sta $0100, x
+        sta $0200, x
+        sta $0300, x
+        sta $0400, x
+        sta $0500, x
+        sta $0600, x
+        sta $0700, x
+        inx
+        bne :-
+
     ; init ppu
     jsr ppu_init
 
     ; init apu
     jsr apu_init
+
+    ; init rand
+    jsr rand_init
 
     ; wait for first vblank
     jsr ppu_wait_vblank
@@ -271,21 +290,6 @@ _wait_irq:
     sta _PPU_ARGS+0
     jsr ppu_clear_chr_ram
 .endif
-
-    ; clear ram
-    lda #0
-    ldx #0
-    :
-        sta $0000, x
-        sta $0100, x
-        sta $0200, x
-        sta $0300, x
-        sta $0400, x
-        sta $0500, x
-        sta $0600, x
-        sta $0700, x
-        inx
-        bne :-
 
     ; wait for second vblank
     jsr ppu_wait_vblank
