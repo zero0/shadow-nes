@@ -94,6 +94,11 @@ static void __fastcall__ draw_cutscene_part(void)
 
 void __fastcall__ game_state_cutscene_enter(void)
 {
+    // turn off ppu
+    ppu_wait_vblank();
+
+    ppu_off();
+
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
@@ -116,6 +121,11 @@ void __fastcall__ game_state_cutscene_enter(void)
 
     // draw the first cutscene
     draw_cutscene_part();
+
+    // turn on ppu
+    ppu_wait_vblank();
+
+    ppu_on();
 }
 
 void __fastcall__ game_state_cutscene_leave(void)

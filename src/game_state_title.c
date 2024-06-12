@@ -12,8 +12,13 @@
 
 extern ptr_t shadow_font;
 
-void __fastcall__ game_state_title_enter()
+void __fastcall__ game_state_title_enter(void)
 {
+    // turn off ppu
+    ppu_wait_vblank();
+
+    ppu_off();
+
     // clear ppu to known state
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
@@ -53,18 +58,23 @@ void __fastcall__ game_state_title_enter()
     t = 0;
     game_state_internal = 0;
     timer_set( game_state_timer, 10 );
+
+    // turn on ppu
+    ppu_wait_vblank();
+
+    ppu_on();
 }
 
-void __fastcall__ game_state_title_leave()
+void __fastcall__ game_state_title_leave(void)
 {
 }
 
-void __fastcall__ game_state_title_update()
+void __fastcall__ game_state_title_update(void)
 {
     gamepad_poll( 0 );
 
     timer_tick( game_state_timer );
-    if( 0 && timer_is_done( game_state_timer ) )
+    if( timer_is_done( game_state_timer ) )
     {
         timer_set( game_state_timer, 10 );
         ++b;

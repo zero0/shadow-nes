@@ -27,6 +27,7 @@ enum
     GAME_FLOW_TYPE_STORE,
     GAME_FLOW_TYPE_CHECKPOINT,
     GAME_FLOW_TYPE_BOSS,
+    GAME_FLOW_TYPE_MAIN_MENU,
     _GAME_FLOW_TYPE_COUNT,
 };
 
@@ -89,6 +90,8 @@ const static uint8_t game_flow_steps[] = {
     GAME_FLOW_TYPE_CUTSCENE, CUTSCENE_110_BOSS_0,
 
     GAME_FLOW_TYPE_CUTSCENE, CUTSCENE_999_CREDITS,
+
+    GAME_FLOW_TYPE_MAIN_MENU,
 };
 STATIC_ASSERT( ARRAY_SIZE(game_flow_steps) < 0xFF );
 
@@ -163,6 +166,15 @@ void __fastcall__ advance_game_flow(void)
             set_next_game_state_arg( GAME_STATE_PLAYING, game_flow_steps[ g_current_game_data.current_game_flow ] );
 
             g_current_game_data.current_game_flow++;
+        }
+            break;
+
+        case GAME_FLOW_TYPE_MAIN_MENU:
+        {
+            g_current_game_data.current_game_flow = 0;
+            g_current_game_data.current_game_flow_last_checkpoint = 0;
+
+            set_next_game_state( GAME_STATE_TITLE );
         }
             break;
 

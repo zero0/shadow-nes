@@ -26,6 +26,8 @@ STATIC_ASSERT(ARRAY_SIZE(game_data_migrations) == CURRENT_GAME_DATA_VERSION);
 
 void __fastcall__ load_game_data_for_new_game(void)
 {
+    memset(g_current_game_data, 0, sizeof(game_data_t));
+
     g_current_game_data.version = CURRENT_GAME_DATA_VERSION;
 }
 

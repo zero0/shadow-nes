@@ -1651,44 +1651,44 @@ _ppu_tint_reset_internal:
 ; remap table
 palette_tint_remap_table:
 
-    .addr palette_tink_remap_0
-    .addr palette_tink_remap_1
-    .addr palette_tink_remap_2
-    .addr palette_tink_remap_3
-    .addr palette_tink_remap_4
-    .addr palette_tink_remap_5
-    .addr palette_tink_remap_6
-    .addr palette_tink_remap_7
-    .addr palette_tink_remap_8
+    .addr palette_tint_remap_0
+    .addr palette_tint_remap_1
+    .addr palette_tint_remap_2
+    .addr palette_tint_remap_3
+    .addr palette_tint_remap_4
+    .addr palette_tint_remap_5
+    .addr palette_tint_remap_6
+    .addr palette_tint_remap_7
+    .addr palette_tint_remap_8
 
 ; black
-palette_tink_remap_0:
+palette_tint_remap_0:
     .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
 
-palette_tink_remap_1:
+palette_tint_remap_1:
     .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
 
-palette_tink_remap_2:
+palette_tint_remap_2:
     .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
 
-palette_tink_remap_3:
+palette_tint_remap_3:
     .byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F
 
 ; normal colors
-palette_tink_remap_4:
+palette_tint_remap_4:
     .byte $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0F, $0F, $0F
 
-palette_tink_remap_5:
+palette_tint_remap_5:
     .byte $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $1A, $1B, $1C, $00, $00, $00
 
-palette_tink_remap_6:
+palette_tint_remap_6:
     .byte $10, $21, $22, $23, $24, $25, $26, $27, $28, $29, $2A, $2B, $2C, $10, $10, $10
 
-palette_tink_remap_7:
+palette_tint_remap_7:
     .byte $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $3A, $3B, $3C, $20, $20, $20
 
 ; white
-palette_tink_remap_8:
+palette_tint_remap_8:
     .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30
     .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30
     .byte $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30, $30

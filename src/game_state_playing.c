@@ -24,6 +24,11 @@ extern ptr_t shadow_font;
 
 void __fastcall__ game_state_playing_enter()
 {
+    // turn off ppu
+    ppu_wait_vblank();
+
+    ppu_off();
+
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
     ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
@@ -73,6 +78,11 @@ void __fastcall__ game_state_playing_enter()
 
     // start boss
     boss_init(next_game_state_arg);
+
+    // turn on ppu
+    ppu_wait_vblank();
+
+    ppu_on();
 }
 
 void __fastcall__ game_state_playing_leave()
