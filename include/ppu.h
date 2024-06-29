@@ -36,11 +36,11 @@
 #define SCREEN_WIDTH            (uint8_t)( NAMETABLE_COLS )
 #define SCREEN_HEIGH            (uint8_t)( NAMETABLE_ROWS )
 
-#define ALIGN_SCREEN_WIDTH_LEFT(w)      (uint8_t)0
+#define ALIGN_SCREEN_WIDTH_LEFT(w)      (uint8_t)w
 #define ALIGN_SCREEN_WIDTH_CENTER(w)    (uint8_t)( ( SCREEN_WIDTH / 2 ) - ( (w) / 2 ) )
 #define ALIGN_SCREEN_WIDTH_RIGHT(w)     (uint8_t)( SCREEN_WIDTH - (w) )
 
-#define ALIGN_SCREEN_HEIGHT_TOP(h)      (uint8_t)0
+#define ALIGN_SCREEN_HEIGHT_TOP(h)      (uint8_t)h
 #define ALIGN_SCREEN_HEIGHT_CENTER(h)   (uint8_t)( ( SCREEN_HEIGH / 2 ) - ( (h) / 2 ) )
 #define ALIGN_SCREEN_HEIGHT_BOTTOM(h)   (uint8_t)( SCREEN_HEIGH - (h) )
 

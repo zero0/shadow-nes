@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Cache;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -153,10 +154,20 @@ namespace img2chr
             public int attr;
         }
 
-        [Conditional("DEBUG")]
+        #region Logging
+        const char esc = (char)27;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void LogMessage(string msg)
+        {
+            Console.Out.WriteLine($"{esc}[92m{msg}{esc}[0m");
+        }
+
+        //[Conditional("DEBUG")]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void LogInfo(string msg)
         {
-            Console.WriteLine(msg);
+            Console.Out.WriteLine(msg);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -172,24 +183,47 @@ namespace img2chr
             }
         }
 
-        static void LogError(string msg)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void LogWarning(string msg, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
         {
-            Console.Error.WriteLine(msg);
+            Console.Out.WriteLine($"{esc}[93m{filepath}({line}): {msg}{esc}[0m");
         }
 
-        static bool Assert(bool condition, string msg = null, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void LogError(string msg, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
+        {
+            Console.Error.WriteLine($"{esc}[91m{filepath}({line}): {msg}{esc}[0m");
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool AssertWarn(bool condition, string msg = null, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
         {
             if (!condition)
             {
-                Console.Error.WriteLine($"Assert failed {filepath}:{line}{(msg == null ? "" : $": {msg}")}");
+                LogWarning(string.IsNullOrEmpty(msg) ? "Assertion failed" : msg, filepath, memberName, line);
             }
             return !condition;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool Assert(bool condition, string msg = null, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
+        {
+            if (!condition)
+            {
+                ExitCode = 1;
+                LogError(string.IsNullOrEmpty(msg) ? "Assertion failed" : msg, filepath, memberName, line);
+            }
+            return !condition;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void InvalidCodePath(string msg = null, [CallerFilePath] string filepath = "", [CallerMemberName] string memberName = "", [CallerLineNumber] int line = 0)
         {
-            Console.Error.WriteLine($"Invalid code path {filepath}:{line}{(msg == null ? "" : $": {msg}")}");
+            ExitCode = 1;
+            LogError(string.IsNullOrEmpty(msg) ? "Invalid code path" : msg, filepath, memberName, line);
         }
+        #endregion
 
         static bool TryGetFileParamters(string srcFilename, string parameterFileExt, out Dictionary<string, string> parameters)
         {
@@ -2179,7 +2213,7 @@ namespace img2chr
         {
             TryGetFileParamters(textFilename, "tr", out var remapCharsParameters);
 
-            static bool ParseElements(string line, out List<string> values)
+            static bool ParseCSVElements(StreamReader sr, out List<string> values)
             {
                 bool ok = true;
 
@@ -2188,78 +2222,109 @@ namespace img2chr
 
                 bool inQuote = false;
                 bool inVerbatum = false;
-                for (int i = 0; i < line.Length; i++)
+
+                // trim initial line read
+                string line = sr.ReadLine()?.TrimStart() ?? string.Empty;
+
+                do
                 {
-                    char c = line[i];
-                    switch (c)
+                    for (int i = 0; i < line.Length; i++)
                     {
-                        case '\\':
-                            ++i;
-                            if (i < line.Length)
-                            {
-                                c = line[i];
-                                switch (c)
-                                {
-                                    case '\\': sb.Append('\\'); break;
-                                    case 'n': sb.Append('\n'); break;
-                                    case 'r': sb.Append('\r'); break;
-                                    case 't': sb.Append('\t'); break;
-                                    case '\'': sb.Append('\''); break;
-                                    case '"': sb.Append('"'); break;
-                                    case '%': sb.Append('%'); break;
-                                    default: InvalidCodePath($"Unkown switch command \\{c}"); break;
-                                }
-                            }
-                            break;
+                        char c = line[i];
 
-                        case '%':
-                            inVerbatum = !inVerbatum;
-                            sb.Append(c);
+                        // skip comments
+                        if (i == 0 && c == '#' && !inQuote)
+                        {
                             break;
+                        }
 
-                        case '"':
-                            if (inQuote)
-                            {
-                                if ((i + 1) < line.Length && line[i + 1] == '"')
+                        switch (c)
+                        {
+                            case '\\':
+                                ++i;
+                                if (i < line.Length)
                                 {
-                                    if (inVerbatum)
+                                    c = line[i];
+                                    switch (c)
                                     {
-                                        sb.Append('"');
+                                        case '\\': sb.Append('\\'); break;
+                                        case 'n': sb.Append('\n'); break;
+                                        case 'r': sb.Append('\r'); break;
+                                        case 't': sb.Append('\t'); break;
+                                        case '\'': sb.Append('\''); break;
+                                        case '"': sb.Append('"'); break;
+                                        case '%': sb.Append('%'); break;
+                                        default: InvalidCodePath($"Unkown switch command \\{c}"); break;
+                                    }
+                                }
+                                break;
+
+                            case '%':
+                                inVerbatum = !inVerbatum;
+                                sb.Append(c);
+                                break;
+
+                            case '"':
+                                if (inQuote)
+                                {
+                                    if ((i + 1) < line.Length && line[i + 1] == '"')
+                                    {
+                                        if (inVerbatum)
+                                        {
+                                            sb.Append('"');
+                                        }
+                                        else
+                                        {
+                                            sb.Append("\\\"");
+                                        }
+                                        ++i;
                                     }
                                     else
                                     {
-                                        sb.Append("\\\"");
+                                        inQuote = false;
                                     }
-                                    ++i;
                                 }
                                 else
                                 {
-                                    inQuote = false;
+                                    inQuote = true;
                                 }
-                            }
-                            else
-                            {
-                                inQuote = true;
-                            }
-                            break;
+                                break;
 
-                        case ',':
-                            if (inQuote)
-                            {
+                            case ',':
+                                if (inQuote || inVerbatum)
+                                {
+                                    sb.Append(c);
+                                }
+                                else
+                                {
+                                    values.Add(sb.ToString());
+                                    sb.Clear();
+                                }
+                                break;
+
+                            default:
                                 sb.Append(c);
-                            }
-                            else
-                            {
-                                values.Add(sb.ToString());
-                                sb.Clear();
-                            }
-                            break;
-
-                        default:
-                            sb.Append(c);
-                            break;
+                                break;
+                        }
                     }
-                }
+
+                    // continue processing lines if we're still in a quote
+                    if (inQuote)
+                    {
+                        // read next line, don't trim since there could be spaces needed
+                        line = sr.ReadLine();
+
+                        // if there are still lines, add a new line to the string buffer
+                        if (line != null)
+                        {
+                            sb.Append("\\n");
+                        }
+                    }
+                    else
+                    {
+                        line = null;
+                    }
+                } while (line != null);
 
                 if (sb.Length > 0)
                 {
@@ -2267,7 +2332,7 @@ namespace img2chr
                     sb.Clear();
                 }
 
-                return ok;
+                return values.Count > 0;
             }
 
             static bool IsVerbatumString(string str)
@@ -2281,11 +2346,9 @@ namespace img2chr
                 Access = FileAccess.Read
             };
 
-            using var fr = new StreamReader(new FileStream(textFilename, fileOptions));
+            using var sr = new StreamReader(new FileStream(textFilename, fileOptions));
 
-            string line = fr.ReadLine();
-
-            ParseElements(line, out var headers);
+            ParseCSVElements(sr, out var headers);
             // language -> key -> value
 
             Dictionary<string, Dictionary<string, string>> textMap = new();
@@ -2298,13 +2361,9 @@ namespace img2chr
             }
 
             // parse each line into textMap
-            while ((line = fr.ReadLine()) != null)
+            while (!sr.EndOfStream)
             {
-                if (line.Length == 0 || line.TrimStart().StartsWith('#'))
-                {
-                    continue;
-                }
-                else if (ParseElements(line, out var values))
+                if (ParseCSVElements(sr, out var values))
                 {
                     string key = values[0];
                     for (int i = 1; i < values.Count; i++)
@@ -2376,7 +2435,8 @@ namespace img2chr
 
                     if (value.Length > kMaxStringWidth && !IsVerbatumString(value))
                     {
-                        string[] lines = value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                        // split on "new line" sequence
+                        string[] lines = value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
 
                         bool allLinesShort = true;
                         foreach (string l in lines)
@@ -2492,11 +2552,11 @@ namespace img2chr
                     string tr = $"{kv.Key}:";
                     if (IsVerbatumString(kv.Value))
                     {
-                        sb.AppendLine($"{tr,-32} TR {kv.Value[1..^1]}");
+                        sb.AppendLine($"{tr,-64} TR {kv.Value[1..^1]}");
                     }
                     else
                     {
-                        sb.AppendLine($"{tr,-32} TR \"{kv.Value}\"");
+                        sb.AppendLine($"{tr,-64} TR \"{kv.Value}\"");
                     }
                 }
 
@@ -2504,10 +2564,23 @@ namespace img2chr
                 LogInfo($"Converted {textFilename} -> {sFilename}");
             }
 
+            const string str_t = "str_t";
+            const string uint8_t = "uint8_t";
+
+            static StringBuilder Indent(StringBuilder sb, int indentLevel = 1, string tab = "    ")
+            {
+                for (int i = 0; i < indentLevel; ++i)
+                {
+                    sb.Append(tab);
+                }
+
+                return sb;
+            }
+
             // generate each language header files
             foreach (var langToMap in textMap)
             {
-                string lang = langToMap.Key;
+                string lang = langToMap.Key.ToLower();
                 string hFilename = Path.Combine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.{lang}.h");
 
                 string defineGuard = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
@@ -2522,16 +2595,82 @@ namespace img2chr
                 sb.AppendLine($"#define {defineGuard}");
                 sb.AppendLine();
 
-                sb.AppendLine($"#define LANGUAGE \"{lang}\"");
+                sb.AppendLine($"#define LANGUAGE_{lang.ToUpper()} \"{lang}\"");
                 sb.AppendLine();
+
+                sb.AppendLine("// string keys");
+                sb.AppendLine("enum");
+                sb.AppendLine("{");
 
                 int i = 0;
+                // output string keys
+                // TODO: update this so there's not an implicit cap
                 foreach (var kv in langToMap.Value)
                 {
-                    sb.AppendLine($"#define {kv.Key,-32} (str_t)({i++} << 1)");
+                    Indent(sb).Append($"{kv.Key,-64} = ({i++} << 1)").AppendLine(",");
                 }
 
+                sb.AppendLine("};");
                 sb.AppendLine();
+
+                sb.AppendLine("// string lengths");
+                sb.AppendLine("enum");
+                sb.AppendLine("{");
+
+                // output string lengths
+                foreach (var kv in langToMap.Value)
+                {
+                    string key = $"{kv.Key}_length";
+                    Indent(sb).Append($"{key,-64} = {kv.Value.Length}").AppendLine(",");
+                }
+
+                sb.AppendLine("};");
+                sb.AppendLine();
+
+                sb.AppendLine("// string 'width' (max characters per line)");
+                sb.AppendLine("enum");
+                sb.AppendLine("{");
+
+                // output string "width" (max characters per line)
+                foreach (var kv in langToMap.Value)
+                {
+                    string[] lines = kv.Value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+
+                    int maxWidth = -1;
+                    foreach (var line in lines)
+                    {
+                        maxWidth = Math.Max(maxWidth, line.Length);
+                    }
+                    Assert(maxWidth > 0);
+
+                    Indent(sb).Append($"{$"{kv.Key}_width",-64} = {maxWidth}").AppendLine(",");
+                }
+
+                sb.AppendLine("};");
+                sb.AppendLine();
+
+                sb.AppendLine("// string 'height' (number of lines)");
+                sb.AppendLine("enum");
+                sb.AppendLine("{");
+
+                // output string "width" (max characters per line)
+                foreach (var kv in langToMap.Value)
+                {
+                    string[] lines = kv.Value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+
+                    int maxWidth = -1;
+                    foreach (var line in lines)
+                    {
+                        maxWidth = Math.Max(maxWidth, line.Length);
+                    }
+                    Assert(maxWidth > 0);
+
+                    Indent(sb).Append($"{$"{kv.Key}_height",-64} = {lines.Length}").AppendLine(",");
+                }
+
+                sb.AppendLine("};");
+                sb.AppendLine();
+
                 sb.AppendLine($"#endif // {defineGuard}");
 
                 File.WriteAllText(hFilename, sb.ToString(), UTF8);
@@ -2674,7 +2813,9 @@ namespace img2chr
             public int order;
         }
 
-        static void Main(string[] args)
+        static int ExitCode = 0;
+
+        static int Main(string[] args)
         {
 #if DEBUG
             if (Debugger.IsAttached)
@@ -2682,6 +2823,8 @@ namespace img2chr
                 args = new[] { @"assets\" };
             }
 #endif
+            ExitCode = 0;
+
             ConvertOptions options = new()
             {
                 defaultGeneratedAssetFolder = "generated"
@@ -2696,10 +2839,11 @@ namespace img2chr
                 { ".tga", new() { convertFunc = ConvertImageFile, order = 0 } },
 
                 { ".txt", new() { convertFunc = ConvertTextFile, order = 0 } },
+                { ".csv", new() { convertFunc = ConvertTextFile, order = 0 } },
 
                 { ".layout", new() {convertFunc = ConvertLayoutFile, order = int.MaxValue } },
 
-                { ".aseprite", new(){ convertFunc = ConverteAsepriteFile, order = 0 } },
+                //{ ".aseprite", new(){ convertFunc = ConverteAsepriteFile, order = 0 } },
             };
 
             List<CompileTask> compilerTasks = new();
@@ -2711,6 +2855,8 @@ namespace img2chr
 #if DEBUG
             forceReimport |= Debugger.IsAttached;
 #endif
+            string cwd = Directory.GetCurrentDirectory();
+            LogInfo($"{nameof(cwd)} {cwd}");
 
             // process commandline args
             for (int i = 0; i < args.Length; ++i)
@@ -2722,7 +2868,7 @@ namespace img2chr
                     {
                         case "-h":
                         case "--help":
-                            return;
+                            return ExitCode;
 
                         case "-f":
                         case "--force-reimport":
@@ -2741,9 +2887,12 @@ namespace img2chr
                 }
                 else
                 {
-                    if (Directory.Exists(arg))
+                    string argPath = Path.Combine(cwd, arg);
+                    LogInfo($"{nameof(argPath)} {argPath}");
+                    if (Directory.Exists(argPath))
                     {
-                        if (!TryGetFileParamters(Path.Combine(arg, ""), "library", out var libraryParameters) || forceReimport)
+                        LogInfo($"Process directory {argPath}...");
+                        if (!TryGetFileParamters(Path.Combine(argPath, ""), "library", out var libraryParameters) || forceReimport)
                         {
                             libraryParameters = new Dictionary<string, string>();
                         }
@@ -2758,7 +2907,7 @@ namespace img2chr
 
                         bool updateLibrary = false;
 
-                        var files = Directory.GetFiles(arg);
+                        var files = Directory.GetFiles(argPath);
                         foreach (var file in files)
                         {
                             var ext = Path.GetExtension(file);
@@ -2780,12 +2929,13 @@ namespace img2chr
 
                         if (updateLibrary)
                         {
-                            WriteParametersToFile(libraryParameters, Path.Combine(arg, ".library"));
+                            WriteParametersToFile(libraryParameters, Path.Combine(argPath, ".library"));
                         }
                     }
-                    else if (File.Exists(arg))
+                    else if (File.Exists(argPath))
                     {
-                        if (!TryGetFileParamters(Path.Combine(Path.GetDirectoryName(arg), ""), "library", out var libraryParameters) || forceReimport)
+                        LogInfo($"Process file {argPath}...");
+                        if (!TryGetFileParamters(Path.Combine(Path.GetDirectoryName(argPath), ""), "library", out var libraryParameters) || forceReimport)
                         {
                             libraryParameters = new Dictionary<string, string>();
                         }
@@ -2800,25 +2950,25 @@ namespace img2chr
 
                         bool updateLibrary = false;
 
-                        var ext = Path.GetExtension(arg);
+                        var ext = Path.GetExtension(argPath);
                         if (formatMap.TryGetValue(ext, out var supportedFormat))
                         {
-                            string modtimeKey = $"{Path.GetFileName(arg)}.modtime";
+                            string modtimeKey = $"{Path.GetFileName(argPath)}.modtime";
                             long modtime = GetLongParameter(libraryParameters, modtimeKey);
-                            long fileModtime = File.GetLastWriteTimeUtc(arg).Ticks;
+                            long fileModtime = File.GetLastWriteTimeUtc(argPath).Ticks;
 
                             if (modtime != fileModtime)
                             {
                                 SetParameter(libraryParameters, modtimeKey, fileModtime);
                                 updateLibrary = true;
 
-                                compilerTasks.Add(new() { inputFileName = arg, convertFunc = supportedFormat.convertFunc, order = supportedFormat.order });
+                                compilerTasks.Add(new() { inputFileName = argPath, convertFunc = supportedFormat.convertFunc, order = supportedFormat.order });
                             }
                         }
 
                         if (updateLibrary)
                         {
-                            WriteParametersToFile(libraryParameters, Path.Combine(Path.GetDirectoryName(arg), ".library"));
+                            WriteParametersToFile(libraryParameters, Path.Combine(Path.GetDirectoryName(argPath), ".library"));
                         }
                     }
                 }
@@ -2842,6 +2992,10 @@ namespace img2chr
                     Directory.CreateDirectory(Path.Combine(dir, "include"));
                 }
             }
+            else
+            {
+                LogWarning($"No compiler tasks generated: {string.Join(',', args)}");
+            }
 
             // sort compiler tasks
             compilerTasks.Sort((x, y) => x.order.CompareTo(y.order));
@@ -2852,6 +3006,8 @@ namespace img2chr
             {
                 task.convertFunc(task.inputFileName, outputChrData, options);
             }
+
+            return ExitCode;
         }
     }
 }

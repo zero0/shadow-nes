@@ -48,7 +48,7 @@ if exist obj (del /Q obj) else md obj
 
 rem Run img2chr tool to generate .s files from images
 pushd tools\img2chr\
-dotnet run -c Release -- ..\..\assets\ || goto :fail_assetbuild
+dotnet run -c Release -- assets || goto :fail_assetbuild
 popd
 
 set "GAME_ASSETS_INCLUDE=assets/generated/include"

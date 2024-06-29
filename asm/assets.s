@@ -39,7 +39,7 @@ _temp_text_table:   .res  2 ;
 
 include_asset "shadow-font.font.s"
 
-.feature string_escapes -
+.feature string_escapes +
 
 .if .defined(DEBUG_BUILD)
 .define BUILD_TYPE      "d"
