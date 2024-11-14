@@ -19,30 +19,39 @@ void __fastcall__ game_state_title_enter(void)
 
     ppu_off();
 
-    // clear ppu to known state
-    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
-    ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
-
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
     ppu_clear_oam();
 
-    ppu_begin_write_chr_ram_index( 0x10, 0x33 );
-    ppu_write_chr_ram( 0x55,0x55,0x55,0x55, 0x55,0x55,0x55,0x55);
-    ppu_write_chr_ram( 0,0,0,0, 0,0,0,0);
-    ppu_end_write_chr_ram();
+    // clear ppu to known state
+    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_B, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_C, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_D, 0xFF, 0 );
+
+    // CHR RAM does not work
+    //ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(SPRITE_0,0,0), 16*4+13 );
+
+    // write "clear" tile
+    //ppu_begin_write_chr_ram_index( TILE_SPRITE_ADDR, 0x33 );
+    //ppu_write_chr_ram( 0,0,0,0, 0,0,0,0); //0x55,0x55,0x55,0x55, 0x55,0x55,0x55,0x55);
+    //ppu_write_chr_ram( 0,0,0,0, 0,0,0,0);
+    //ppu_end_write_chr_ram();
 
     ppu_tint_reset();
+
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
     ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
+    ppu_set_palette( PALETTE_SPRITE_1, 0x00, 0x10, 0x20 );
+    ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
     // draw title screen
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
 
-    ppu_set_nametable_attr( NAMETABLE_A_ATTR, 0, 5,  2, 2, 2, 2,  TILE_TO_ATTR(SCREEN_WIDTH) );
+    ppu_set_nametable_attr( NAMETABLE_A_ATTR,  0, ALIGN_SCREEN_HEIGHT_TOP(5),  PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_new_game_width), ALIGN_SCREEN_HEIGHT_TOP(13), PALETTE_BACKGROUND_0, tr_new_game );
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(16), PALETTE_BACKGROUND_0, tr_continue );

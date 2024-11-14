@@ -2728,7 +2728,7 @@ namespace img2chr
             sb.AppendLine($".segment \"{chrSegment}\"");
             sb.AppendLine();
 
-            for (offset = 0; offset < 0xFF;)
+            for (offset = 0; offset <= 0xFF;)
             {
                 int chrIndex = chrRomLayouts.FindIndex(x => offset >= x.offset && offset < (x.offset + x.length));
                 if (chrIndex >= 0)

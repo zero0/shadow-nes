@@ -37,6 +37,7 @@ void __fastcall__ load_game_data_from_save_slot(uint8_t saveSlot)
     ASSERT(saveSlot < _SAVE_SLOT_COUNT);
 
     // TODO: load game data from save ram
+    memset(g_current_game_data, 0, sizeof(game_data_t));
 
     // perform data migration
     ASSERT(g_current_game_data.version <= CURRENT_GAME_DATA_VERSION );

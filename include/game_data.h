@@ -15,6 +15,8 @@ enum
 };
 
 typedef struct {
+    uint8_t version;
+
     uint8_t player_level;
     uint8_t player_type;
 
@@ -30,8 +32,6 @@ typedef struct {
 
     uint8_t name_len;
     uint8_t name[15];
-
-    uint8_t version;
 } game_data_t;
 
 extern game_data_t g_current_game_data;

@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "ppu.h"
+#include "apu.h"
 #include "timer.h"
 
 #include "game_state.h"
@@ -78,6 +79,9 @@ void main(void)
         {
             game_state_update_func[game_state]();
         }
+
+        // update APU mixer
+        apu_update_mixer();
 
         // wait for ppu
         ppu_update();

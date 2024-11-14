@@ -23,17 +23,20 @@ enum
 
 enum
 {
-    CUTSCENE_V_ALIGN_MIDDLE =   0,
-    CUTSCENE_V_ALIGN_TOP =      1 << 0,
-    CUTSCENE_V_ALIGN_BOTTOM =   1 << 1,
+    CUTSCENE_V_ALIGN_MIDDLE,
+    CUTSCENE_V_ALIGN_TOP,
+    CUTSCENE_V_ALIGN_BOTTOM,
 };
 
-#define MAKE_CUTSCENE_ATTR( t, a )                      (uint8_t)( ( ( (a) << 4 ) & 0xF0 ) | ( (t) & 0x0F ) )
+#define MAKE_CUTSCENE_ATTR( t, a, c )                   (uint8_t)( ( (t) & 0x03 ) << 6 ) | ( ( (a) & 0x03 ) << 4 ) | ( ((c - 1) & 0x03) << 2 ) // need to subtract 1 since it's base 0
 #define MAKE_CUTSCENE_PALETTE_4( p0, p1, p2, p3 )       (uint8_t)( ( (p3) & 0x03 ) << 6 | ( (p2) & 0x03 ) << 4 | ( (p1) & 0x03 ) << 2 | ( (p0) & 0x03 ) )
 #define MAKE_CUTSCENE_PALETTE_2_DIALOG( c, d )          MAKE_CUTSCENE_PALETTE_4( c, d, c, d )
 #define MAKE_CUTSCENE_PALETTE( p )                      MAKE_CUTSCENE_PALETTE_4( p, p, p, p )
 
-#define GET_CUTSCENE_ATTR_TYPE( a )                     (uint8_t)( (a) & 0x0F )
+#define GET_CUTSCENE_ATTR_TYPE( a )                     (uint8_t)( ( (a) >> 6 ) & 0x03 )
+#define GET_CUTSCENE_ATTR_ALIGNMENT( a )                (uint8_t)( ( (a) >> 4 ) & 0x03 )
+#define GET_CUTSCENE_ATTR_COUNT( a )                    (uint8_t)( ( ( (a) >> 2 ) & 0x03 ) + 1 ) // need to add 1 since it's base 0
+
 #define GET_CUTSCENE_PALLETE( p, i )                    (uint8_t)( ( (p) >> ( (i) << 2 ) ) & 0x03 )
 
 typedef struct
@@ -44,12 +47,12 @@ typedef struct
 } cutscene_desc_t;
 
 static const cutscene_desc_t all_cutscenes[] = {
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
 
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
 
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 3 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
 };
 STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
 
@@ -100,17 +103,20 @@ void __fastcall__ game_state_cutscene_enter(void)
     ppu_off();
 
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
-    ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
     ppu_clear_oam();
+
+    //ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white
     ppu_set_palette( PALETTE_BACKGROUND_2, 0x1A, 0x2A, 0x30 ); // green, light green, white
     ppu_set_palette( PALETTE_SPRITE_0, 0x0A, 0x1A, 0x2A );
+    ppu_set_palette( PALETTE_SPRITE_1, 0x0A, 0x1A, 0x2A );
+    ppu_set_palette( PALETTE_SPRITE_2, 0x0A, 0x1A, 0x2A );
 
     current_cutscene_index = next_game_state_arg;
     current_cutscene_step = 0;
@@ -155,7 +161,7 @@ static void __fastcall__ advance_cutscene(void)
     }
 
     // if it's the last step, end the cutscene
-    if( current_cutscene_step >= (uint8_t)MAX_CUTSCENE_TEXTS )
+    if( current_cutscene_step >= GET_CUTSCENE_ATTR_COUNT( all_cutscenes[ current_cutscene_index ].attr ) )
     {
         end_cutscene();
     }

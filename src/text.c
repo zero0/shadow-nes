@@ -10,6 +10,57 @@
 #define CHAR_CARAGE_RETURN  79
 #define CHAR_TAB            80
 
+// draw string directly to nametable while nmi is off
+void __fastcall__ text_draw_string_direct_impl(void)
+{
+    x = ARGS[0];
+    y = ARGS[1];
+
+    text_begin_str_at(ARGS[3]);
+    for( i = 0, imax = text_strlen() ; i < imax ; ++i )
+    {
+        c = text_str_at( i );
+        if( c == CHAR_SPACE )
+        {
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ++x;
+            continue;
+        }
+        if( c == CHAR_NEW_LINE )
+        {
+            ppu_end_tile_batch();
+
+            x = ARGS[0];
+            ++y;
+
+            ppu_begin_tile_batch( x, y );
+            continue;
+        }
+        if( c == CHAR_CARAGE_RETURN )
+        {
+            ppu_end_tile_batch();
+
+            x = ARGS[0];
+            y = ARGS[1];
+            ++y;
+
+            ppu_begin_tile_batch( x, y );
+            continue;
+        }
+        if( c == CHAR_TAB )
+        {
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            x += 3;
+            continue;
+        }
+
+        ppu_push_tile_batch( c );
+        ++x;
+    }
+}
+
 void __fastcall__ text_draw_string_impl(void)
 {
     x = ARGS[0];

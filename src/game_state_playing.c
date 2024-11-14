@@ -26,20 +26,23 @@ void __fastcall__ game_state_playing_enter()
 {
     // turn off ppu
     ppu_wait_vblank();
-
     ppu_off();
 
     ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
-    ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
+    ppu_clear_nametable( NAMETABLE_B, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_C, 0xFF, 0 );
+    ppu_clear_nametable( NAMETABLE_D, 0xFF, 0 );
+    //ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
     // upload progress bar
-    ppu_upload_chr_ram( progress_bar, MAKE_CHR_PTR(0, 8, 0), 9);
+    //ppu_upload_chr_ram( progress_bar, MAKE_CHR_PTR(0, 8, 0), 9);
 
     ppu_set_scroll( 0, 0 );
     ppu_clear_palette();
     ppu_clear_oam();
 
     ppu_tint_reset();
+
     ppu_set_palette_background( 0x0F );
     ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
     ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white
@@ -51,6 +54,7 @@ void __fastcall__ game_state_playing_enter()
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 2);
     ppu_end_tile_batch();
 
+#if 0
     ppu_begin_tile_batch(0,2);
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
@@ -67,6 +71,7 @@ void __fastcall__ game_state_playing_enter()
     ppu_begin_tile_batch(0,SCREEN_HEIGH-3);
     ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
+#endif
 
     game_state_internal = GAME_STATE_PLAYING_INTRO;
 
@@ -81,7 +86,6 @@ void __fastcall__ game_state_playing_enter()
 
     // turn on ppu
     ppu_wait_vblank();
-
     ppu_on();
 }
 
@@ -95,21 +99,23 @@ static void __fastcall__ game_state_playing_paused_enter(void)
 {
     ppu_off();
 
-    ppu_set_scroll(0, SCREEN_HEIGH);
+    ppu_clear_nametable( NAMETABLE_C, 0xFF, 0 );
 
-    ppu_wait_vblank();
+    ppu_set_scroll(0, SCREEN_HEIGH_PIXELS);
+
+    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_paused_width), SCREEN_HEIGH + ALIGN_SCREEN_HEIGHT_CENTER(tr_paused_height), PALETTE_BACKGROUND_0, tr_paused );
 
     ppu_on();
 }
 
 static void __fastcall__ game_state_playing_paused_leave(void)
 {
-
+    ppu_set_scroll(0, 0);
 }
 
 static void __fastcall__ game_state_playing_paused_update(void)
 {
-    ppu_set_scroll(0, 0);
+
 }
 
 void __fastcall__ game_state_playing_update()

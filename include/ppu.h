@@ -14,6 +14,9 @@
 #define NAMETABLE_2_ADDR        (ptr_t)0x2800
 #define NAMETABLE_3_ADDR        (ptr_t)0x2C00
 
+#define TILE_NAMETABLE_ADDR     (ptr_t)0x0000
+#define TILE_SPRITE_ADDR        (ptr_t)0x1000
+
 #define PALETTE_BACKGROUND_0    (uint8_t)0
 #define PALETTE_BACKGROUND_1    (uint8_t)1
 #define PALETTE_BACKGROUND_2    (uint8_t)2
@@ -44,7 +47,7 @@
 #define ALIGN_SCREEN_HEIGHT_CENTER(h)   (uint8_t)( ( SCREEN_HEIGH / 2 ) - ( (h) / 2 ) )
 #define ALIGN_SCREEN_HEIGHT_BOTTOM(h)   (uint8_t)( SCREEN_HEIGH - (h) )
 
-#define MAKE_CHR_PTR(p, r, c)   (ptr_t)( ( ( (ptr_t)(p) << 8 ) | ( (ptr_t)(r) << 4 ) | ((ptr_t)(c) & 0x0F ) ) << 4 )
+#define MAKE_CHR_PTR(p, r, c)   (ptr_t)( ( ( (ptr_t)(p) << 8 ) | ( (ptr_t)(r) << 4 ) | ( (ptr_t)(c) & 0x0F ) ) << 4 )
 
 #define NAMETABLE_SIZE_BYTES    (ptrdiff_t)( NAMETABLE_ROWS * NAMETABLE_COLS )
 
@@ -78,6 +81,7 @@ extern ptr_t NAMETABLE_D_ATTR;
     (arg)[(i) + 0] = 0xFF & ((ptr_t)&(ptr) >> 8);   \
     (arg)[(i) + 1] = 0xFF & (ptr_t)&(ptr)
 
+extern ptr_t PPU_ADDR;
 extern ptr_t PPU_DATA;
 
 extern uint8_t PPU_ARGS[8];
@@ -102,7 +106,16 @@ void __fastcall__ ppu_skip(void);
 
 void __fastcall__ ppu_set_scroll_internal(void);
 
-void __fastcall__ ppu_address_tile( uint8_t x, uint8_t y );
+#define ppu_set_address_tile( tx, ty )  \
+    PPU_ARGS[0] = (tx);                 \
+    PPU_ARGS[1] = (ty);                 \
+    ppu_set_address_tile_internal()
+
+void __fastcall__ ppu_set_address_tile_internal(void);
+
+#define ppu_write_address_byte( b ) \
+    __asm__("lda %v", b);           \
+    __asm__("sta %v", PPU_DATA)
 
 #define ppu_update_tile( px, py, t )    \
     PPU_ARGS[0] = (px);                 \

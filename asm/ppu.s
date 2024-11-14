@@ -6,7 +6,7 @@
 .importzp TEMP
 .importzp sp
 
-.import apu_update
+.import apu_update_from_nmi
 
 PPU_CTRL            =$2000
 PPU_MASK            =$2001
@@ -18,8 +18,8 @@ PPU_ADDR            =$2006
 PPU_DATA            =$2007
 PPU_OAM_DMA         =$4014
 
-_PPU_DATA           =PPU_DATA
-.export _PPU_DATA
+.export _PPU_ADDR           =PPU_ADDR
+.export _PPU_DATA           =PPU_DATA
 
 ; nametable addresses
 .define NAMETABLE_ROWS                  #30
@@ -197,7 +197,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_off, _ppu_on
 .export _ppu_skip
 
-.export _ppu_address_tile
+.export _ppu_set_address_tile_internal
 .export _ppu_update_tile_internal
 
 .export _ppu_begin_tile_batch_internal
@@ -358,7 +358,7 @@ _ppu_skip:
 .endproc
 
 ; ppu_set_scroll: sets the (x,y) scroll position from PPU_ARGS 0 & 1
-_ppu_set_scroll_internal:
+.proc _ppu_set_scroll_internal
 
     lda _PPU_ARGS+0
     sta SCROLL_X
@@ -366,25 +366,21 @@ _ppu_set_scroll_internal:
     sta SCROLL_Y
 
     rts
+.endproc
 
-; ppu_address_tile: use with rendering off, sets memory address to tile at X/Y, ready for a $2007 (PPU_DATA) write
+; ppu_set_address_tile: use with rendering off, sets memory address to tile at X/Y, ready for a $2007 (PPU_DATA) write
 ;   Y =  0- 31 nametable $2000
 ;   Y = 32- 63 nametable $2400
 ;   Y = 64- 95 nametable $2800
 ;   Y = 96-127 nametable $2C00
-_ppu_address_tile:
-    sta TEMP ; y -> temp
-    ldy #0
-    popa
-    tax ; A -> x
-    ldy TEMP ; temp -> y
-
-ppu_address_tile:
+.proc _ppu_set_address_tile_internal
     ; reset latch
     bit PPU_STATUS
 
+    ; load Y
+    lda _PPU_ARGS+1
+
     ; shift Y >> 3
-    tya
     lsr
     lsr
     lsr
@@ -394,7 +390,7 @@ ppu_address_tile:
     sta PPU_ADDR
 
     ; shift Y << 5
-    tya
+    lda _PPU_ARGS+1
     asl
     asl
     asl
@@ -402,15 +398,14 @@ ppu_address_tile:
     asl
 
     ; ( Y << 5 ) | X
-    sta TEMP
-    txa
-    ora TEMP
+    ora _PPU_ARGS+0
 
     ; low bits of ( Y << 5 ) | X
     sta PPU_ADDR
     rts
+.endproc
 
-; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_address_tile)
+; ppu_update_tile: can be used with rendering on, sets the tile at X/Y to tile A next time you call _ppu_update (see ppu_set_address_tile)
 _ppu_update_tile_internal:
 
     ; load Y
@@ -1634,8 +1629,8 @@ _ppu_tint_reset_internal:
     sta NMI_READY
 
 @ppu_update_end:
-    ; TODO: play sound/music
-    jsr apu_update
+    ; update APU from NMI
+    jsr apu_update_from_nmi
 
     ; unlock NMI
     lda #0

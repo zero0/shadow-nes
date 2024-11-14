@@ -29,7 +29,7 @@ APU_TRIANGLE_LINEAR     =APU_TRIANGLE + 0
 APU_TRIANGLE_TIMER_LO   =APU_TRIANGLE + 2
 APU_TRIANGLE_TIMER_HI   =APU_TRIANGLE + 3
 
-APU_NOISE_VOLUM         =APU_NOISE + 0
+APU_NOISE_VOLUME        =APU_NOISE + 0
 APU_NOISE_NOISE         =APU_NOISE + 2
 APU_NOISE_LENGTH        =APU_NOISE + 3
 
@@ -153,40 +153,61 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     APU_STATUS_BUFF:            .res 1 ;
     APU_MUSIC_SPEED:            .res 1 ;
     APU_SFX_SPEED:              .res 1 ;
+    APU_MUSIC_TABLE_PTR:        .res 2 ;
+    APU_SFX_TABLE_PTR:          .res 2 ;
+    _APU_ARGS:                  .res 4 ;
 
 ;
 ;
 ;
 
 .define APU_OUTPUT_BUFFER_LENGTH    14
+.define APU_OUTPUT_TIMER_LEGNTH     4
+
 .segment "BSS"
 
-    APU_OUTPUT_BUFFER:         .res APU_OUTPUT_BUFFER_LENGTH ;
+    APU_OUTPUT_BUFFER:          .res APU_OUTPUT_BUFFER_LENGTH ;
+    APU_OUTPUT_TIMERS:          .res APU_OUTPUT_TIMER_LEGNTH ;
 
-APU_OUT_PULSE1_TIMER        =APU_OUTPUT_BUFFER + 0
-APU_OUT_PULSE1_LENGTH       =APU_OUTPUT_BUFFER + 1
-APU_OUT_PULSE1_ENVELOPE     =APU_OUTPUT_BUFFER + 2
-APU_OUT_PULSE1_SWEEP        =APU_OUTPUT_BUFFER + 3
-APU_OUT_PULSE2_TIMER        =APU_OUTPUT_BUFFER + 4
-APU_OUT_PULSE2_LENGTH       =APU_OUTPUT_BUFFER + 5
-APU_OUT_PULSE2_ENVELOPE     =APU_OUTPUT_BUFFER + 6
-APU_OUT_PULSE2_SWEEP        =APU_OUTPUT_BUFFER + 7
-APU_OUT_TRIANGLE_TIMER      =APU_OUTPUT_BUFFER + 8
-APU_OUT_TRIANGLE_LENGTH     =APU_OUTPUT_BUFFER + 9
-APU_OUT_TRIANGLE_LINEAR     =APU_OUTPUT_BUFFER + 10
-APU_OUT_NOISE_TIMER         =APU_OUTPUT_BUFFER + 11
-APU_OUT_NOISE_LENGTH        =APU_OUTPUT_BUFFER + 12
-APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
+APU_OUT_PULSE1_VOLUME       =APU_OUTPUT_BUFFER + 0
+APU_OUT_PULSE1_SWEEP        =APU_OUTPUT_BUFFER + 1
+APU_OUT_PULSE1_TIMER_LO     =APU_OUTPUT_BUFFER + 2
+APU_OUT_PULSE1_TIMER_HI     =APU_OUTPUT_BUFFER + 3
 
+APU_OUT_PULSE2_VOLUME       =APU_OUTPUT_BUFFER + 4
+APU_OUT_PULSE2_SWEEP        =APU_OUTPUT_BUFFER + 5
+APU_OUT_PULSE2_TIMER_LO     =APU_OUTPUT_BUFFER + 6
+APU_OUT_PULSE2_TIMER_HI     =APU_OUTPUT_BUFFER + 7
+
+APU_OUT_TRIANGLE_LINEAR     =APU_OUTPUT_BUFFER + 8
+APU_OUT_TRIANGLE_TIMER_LO   =APU_OUTPUT_BUFFER + 9
+APU_OUT_TRIANGLE_TIMER_HI   =APU_OUTPUT_BUFFER + 10
+
+APU_OUT_NOISE_VOLUME        =APU_OUTPUT_BUFFER + 11
+APU_OUT_NOISE_NOISE         =APU_OUTPUT_BUFFER + 12
+APU_OUT_NOISE_LENGTH        =APU_OUTPUT_BUFFER + 13
+
+APU_OUT_PULSE1              =APU_OUT_PULSE1_VOLUME
+APU_OUT_PULSE2              =APU_OUT_PULSE2_VOLUME
+APU_OUT_TRIANGLE            =APU_OUT_TRIANGLE_LINEAR
+APU_OUT_NOISE               =APU_OUT_NOISE_VOLUME
+
+APU_OUTPUT_TIMER_PULSE1     =APU_OUTPUT_TIMERS + 0
+APU_OUTPUT_TIMER_PULSE2     =APU_OUTPUT_TIMERS + 1
+APU_OUTPUT_TIMER_TRIANGLE   =APU_OUTPUT_TIMERS + 2
+APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 ;
 ;
 ;
 
 .export apu_init
-.export apu_update
+.export apu_update_from_nmi
+.export apu_update_mixer
 .export apu_enable_all, apu_disable_all
 .export apu_enable_dmc, apu_disable_dmc
+
+.export _apu_update_mixer = apu_update_mixer
 .export _apu_play_music = apu_play_music
 .export _apu_play_sfx = apu_play_sfx
 
@@ -203,6 +224,12 @@ APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
     ; set step sequence
     lda #(APU_FRAME_COUNTER_4_STEP_SEQ)
     sta APU_FRAME_COUNTER
+
+    ; clear output timers
+    lda #0
+    .repeat APU_OUTPUT_TIMER_LEGNTH, I
+    sta APU_OUTPUT_TIMERS+I
+    .endrepeat
 
     rts
 
@@ -254,14 +281,120 @@ APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
 
 .endproc
 
-;
-.proc apu_update
+; Update APU during NMI which just copies buffered data into APU registers
+.proc apu_update_from_nmi
 
-    ;; copy output buffer into apu registers
-    ;.repeat APU_OUTPUT_BUFFER_LENGTH, I
-    ;lda APU_OUTPUT_BUFFER+I
-    ;sta APU_BASE_REG+I
-    ;.endrepeat
+@update_pulse1:
+
+    ; load pulse1 timer
+    ldx APU_OUTPUT_TIMER_PULSE1
+
+    ; if timer == 0, skip
+    beq @update_pulse2
+
+    ; copy buffer to registers
+    .repeat 4, I
+    lda APU_OUT_PULSE1+I
+    sta APU_PULSE1+I
+    .endrepeat
+
+    ; decrement timer
+    dex
+    stx APU_OUTPUT_TIMER_PULSE1
+
+    ; if timer == 0, clear buffer
+    ;bne :+
+    ;    lda #0
+    ;    .repeat 4, I
+    ;    lda APU_OUT_PULSE1+I
+    ;    .endrepeat
+    ;    :
+;
+@update_pulse2:
+
+    ; load pulse2 timer
+    ldx APU_OUTPUT_TIMER_PULSE2
+
+    ; if timer == 0, skip
+    beq @update_triangle
+
+    ; copy buffer to registers
+    .repeat 4, I
+    lda APU_OUT_PULSE2+I
+    sta APU_PULSE2+I
+    .endrepeat
+
+    ; decrement timer
+    dex
+    stx APU_OUTPUT_TIMER_PULSE2
+
+    ; if timer == 0, clear buffer
+    ;bne :+
+    ;    lda #0
+    ;    .repeat 4, I
+    ;    lda APU_OUT_PULSE2+I
+    ;    .endrepeat
+    ;    :
+
+@update_triangle:
+
+    ; load triangle timer
+    ldx APU_OUTPUT_TIMER_TRIANGLE
+
+    ; if timer == 0, skip
+    beq @update_noise
+
+    ; copy buffer to registers
+    .repeat 3, I
+    lda APU_OUT_TRIANGLE+I
+    sta APU_TRIANGLE+I
+    .endrepeat
+
+    ; decrement timer
+    dex
+    stx APU_OUTPUT_TIMER_TRIANGLE
+
+    ; if timer == 0, clear buffer
+    ;bne :+
+    ;    lda #0
+    ;    .repeat 3, I
+    ;    lda APU_OUT_TRIANGLE+I
+    ;    .endrepeat
+    ;    :
+
+@update_noise:
+
+    ; load noise timer
+    ldx APU_OUTPUT_TIMER_NOISE
+
+    ; if timer == 0, skip
+    beq @update_end
+
+    ; copy buffer to registers
+    .repeat 3, I
+    lda APU_OUT_NOISE+I
+    sta APU_NOISE+I
+    .endrepeat
+
+    ; decrement timer
+    dex
+    stx APU_OUTPUT_TIMER_NOISE
+
+    ; if timer == 0, clear buffer
+    ;bne :+
+    ;    lda #0
+    ;    .repeat 3, I
+    ;    lda APU_OUT_TRIANGLE+I
+    ;    .endrepeat
+    ;    :
+
+@update_end:
+    rts
+
+.endproc
+
+; Update APU mixer
+.proc apu_update_mixer
 
     rts
 
@@ -270,6 +403,8 @@ APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
 ; Play music at index A
 .proc apu_play_music
 
+    rts
+
 .endproc
 
 ; Play SFX at index A
@@ -277,14 +412,21 @@ APU_OUT_NOISE_ENVELOPE      =APU_OUTPUT_BUFFER + 13
 
     ; NOTE: temp sound to see that it's working
     lda_apu_pulse_volume 0, 1, 1, 15
-    sta APU_PULSE1_VOLUME
+    ;sta APU_PULSE1_VOLUME
+    sta APU_OUT_PULSE1_VOLUME
 
     lda_apu_pulse_sweep 1, 0, 2, 3
-    sta APU_PULSE1_SWEEP
+    ;sta APU_PULSE1_SWEEP
+    sta APU_OUT_PULSE1_SWEEP
 
     ldax_apu_pulse_timer 46000, 10
-    sta APU_PULSE1_TIMER_LO
-    stx APU_PULSE1_TIMER_HI
+    ;sta APU_PULSE1_TIMER_LO
+    ;stx APU_PULSE1_TIMER_HI
+    sta APU_OUT_PULSE1_TIMER_LO
+    stx APU_OUT_PULSE1_TIMER_HI
+
+    lda #10
+    sta APU_OUTPUT_TIMERS+0
 
     rts
 
