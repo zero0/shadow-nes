@@ -74,7 +74,7 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 .define APU_PULSE_SWEEP_SHIFT_MASK      %00000111
 
 .macro lda_apu_pulse_sweep  enable, negate, period, shift
-    lda #( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_NOISE_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
+    lda #( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
 .endmacro
 
 ; $4002/6
