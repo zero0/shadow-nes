@@ -164,19 +164,20 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     META_SPRITE_LEN:            .res 1 ;
     META_SPRITE_ATTR:           .res 1 ;
     META_SPRITE_TILE:           .res 1 ;
-    META_SPRITE_ADDR:           .res 2 ;
-    CHR_UPLOAD_ADDR:            .res 2 ;
     PALETTE_TINT_OAM_INDEX:     .res 1 ;
     PALETTE_TINT_BACKGROUND_INDEX: .res 1 ;
-    ; PALETTE_TINT_OAM_PTR:       .res 2 ;
-    ; PALETTE_TINT_BACKGROUND_PTR:.res 2 ;
-    _PPU_TEMP_PTR:              .res 2 ;
+    _PPU_TEMP_PTR:              .res 4 ;
     _PPU_ARGS:                  .res 8 ;
 
 .export _PPU_ARGS
 
-PALETTE_TINT_OAM_PTR = _PPU_TEMP_PTR
-PALETTE_TINT_BACKGROUND_PTR = _PPU_TEMP_PTR
+; NMI temp variables
+PALETTE_TINT_OAM_PTR =          _PPU_TEMP_PTR + 0
+PALETTE_TINT_BACKGROUND_PTR =   _PPU_TEMP_PTR + 0
+
+; Normal temp variables
+CHR_UPLOAD_ADDR =               _PPU_TEMP_PTR + 2
+META_SPRITE_ADDR =              _PPU_TEMP_PTR + 2
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
@@ -268,7 +269,7 @@ PALETTE_TINT_BACKGROUND_PTR = _PPU_TEMP_PTR
     sta PPU_MASK    ; disable rendering
 
     ; clear palette tint pointers
-    lda #4
+    lda PALETTE_TINT_DEFAULT_INDEX
     sta PALETTE_TINT_OAM_INDEX
     sta PALETTE_TINT_BACKGROUND_INDEX
 
@@ -1309,7 +1310,7 @@ _ppu_tint_reset_internal:
 .proc ppu_tint_reset
 
     ; clear tint indices
-    lda #4
+    lda PALETTE_TINT_DEFAULT_INDEX
     sta PALETTE_TINT_OAM_INDEX
     sta PALETTE_TINT_BACKGROUND_INDEX
 
