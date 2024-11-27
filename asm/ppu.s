@@ -144,6 +144,8 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 
 .define NMI_NAMETABLE_UPDATE_COUNT_MAX              #32
 
+.define PALETTE_TINT_DEFAULT_INDEX                  #4
+
 .segment "ZEROPAGE"
 
     NMI_LOCK:                   .res 1 ;
@@ -164,11 +166,17 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     META_SPRITE_TILE:           .res 1 ;
     META_SPRITE_ADDR:           .res 2 ;
     CHR_UPLOAD_ADDR:            .res 2 ;
-    PALETTE_TINT_OAM_PTR:       .res 2 ;
-    PALETTE_TINT_BACKGROUND_PTR:.res 2 ;
+    PALETTE_TINT_OAM_INDEX:     .res 1 ;
+    PALETTE_TINT_BACKGROUND_INDEX: .res 1 ;
+    ; PALETTE_TINT_OAM_PTR:       .res 2 ;
+    ; PALETTE_TINT_BACKGROUND_PTR:.res 2 ;
+    _PPU_TEMP_PTR:              .res 2 ;
     _PPU_ARGS:                  .res 8 ;
 
 .export _PPU_ARGS
+
+PALETTE_TINT_OAM_PTR = _PPU_TEMP_PTR
+PALETTE_TINT_BACKGROUND_PTR = _PPU_TEMP_PTR
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
@@ -260,11 +268,9 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     sta PPU_MASK    ; disable rendering
 
     ; clear palette tint pointers
-    sta PALETTE_TINT_BACKGROUND_PTR+0
-    sta PALETTE_TINT_BACKGROUND_PTR+1
-
-    sta PALETTE_TINT_OAM_PTR+0
-    sta PALETTE_TINT_OAM_PTR+1
+    lda #4
+    sta PALETTE_TINT_OAM_INDEX
+    sta PALETTE_TINT_BACKGROUND_INDEX
 
     rts
 .endproc
@@ -1265,14 +1271,7 @@ _ppu_tint_palellete_oam_internal:
 
     ; load tint
     lda _PPU_ARGS+0
-    tax
-
-    ; load ptr from remap table
-    lda palette_tint_remap_table+0, X
-    sta PALETTE_TINT_OAM_PTR+0
-
-    lda palette_tint_remap_table+1, X
-    sta PALETTE_TINT_OAM_PTR+1
+    sta PALETTE_TINT_OAM_INDEX
 
     ; mark palette as dirty
     inc PALETTE_UPDATE_LEN
@@ -1286,14 +1285,7 @@ _ppu_tint_palellete_background_internal:
 
     ; load tint
     lda _PPU_ARGS+0
-    tax
-
-    ; load ptr from remap table
-    lda palette_tint_remap_table+0, X
-    sta PALETTE_TINT_BACKGROUND_PTR+0
-
-    lda palette_tint_remap_table+1, X
-    sta PALETTE_TINT_BACKGROUND_PTR+1
+    sta PALETTE_TINT_BACKGROUND_INDEX
 
     ; mark palette as dirty
     inc PALETTE_UPDATE_LEN
@@ -1316,15 +1308,10 @@ _ppu_tint_palelletes_internal:
 _ppu_tint_reset_internal:
 .proc ppu_tint_reset
 
-    lda #0
-
-    ; clear oam ptr
-    sta PALETTE_TINT_OAM_PTR+0
-    sta PALETTE_TINT_OAM_PTR+1
-
-    ; clear background ptr
-    sta PALETTE_TINT_BACKGROUND_PTR+0
-    sta PALETTE_TINT_BACKGROUND_PTR+1
+    ; clear tint indices
+    lda #4
+    sta PALETTE_TINT_OAM_INDEX
+    sta PALETTE_TINT_BACKGROUND_INDEX
 
     ; mark palette as dirty
     inc PALETTE_UPDATE_LEN
@@ -1411,7 +1398,18 @@ _ppu_tint_reset_internal:
 @update_palette_background:
 
     ; if there is no tint ptr, do raw background palette upload
-    lda PALETTE_TINT_BACKGROUND_PTR
+    ldx PALETTE_TINT_BACKGROUND_INDEX
+
+    ; load ptr from remap table
+    lda palette_tint_remap_table+0, X
+    sta PALETTE_TINT_BACKGROUND_PTR+0
+
+    lda palette_tint_remap_table+1, X
+    sta PALETTE_TINT_BACKGROUND_PTR+1
+
+    ; if the palette is defautl, then update raw
+    ; NOTE: this check has to be here because there's too much code between the check and the raw upload if the ptr update is included
+    cpx PALETTE_TINT_DEFAULT_INDEX
     beq @update_palette_background_raw
 
 @update_palette_background_tint:
@@ -1445,17 +1443,29 @@ _ppu_tint_reset_internal:
         sta PPU_DATA
 
         inx
-        cmp #16
+        cpx #16
         bne :-
 
 @update_palette_oam:
 
     ; if there is no tint ptr, do raw OAM palette upload
-    lda PALETTE_TINT_OAM_PTR
+    ldx PALETTE_TINT_OAM_INDEX
+
+    ; load ptr from remap table
+    lda palette_tint_remap_table+0, X
+    sta PALETTE_TINT_OAM_PTR+0
+
+    lda palette_tint_remap_table+1, X
+    sta PALETTE_TINT_OAM_PTR+1
+
+    ; if the palette is defautl, then update raw
+    ; NOTE: this check has to be here because there's too much code between the check and the raw upload if the ptr update is included
+    cpx PALETTE_TINT_DEFAULT_INDEX
     beq @update_palette_oam_raw
 
 @update_palette_oam_tint:
     ; map each OAM color using tint ptr
+
 .repeat 4, I
     ; don't map "transparent" color
     lda PALETTE_UPDATE+16+0+(I*4)
@@ -1485,7 +1495,7 @@ _ppu_tint_reset_internal:
         sta PPU_DATA
 
         inx
-        cmp #16
+        cpx #16
         bne :-
 
 @update_palette_end:
