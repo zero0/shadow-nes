@@ -97,6 +97,7 @@ void __fastcall__ game_state_playing_leave()
 // pause internal state
 static void __fastcall__ game_state_playing_paused_enter(void)
 {
+    ppu_wait_vblank();
     ppu_off();
 
     ppu_clear_nametable( NAMETABLE_C, 0xFF, 0 );
@@ -105,6 +106,7 @@ static void __fastcall__ game_state_playing_paused_enter(void)
 
     text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_paused_width), SCREEN_HEIGH + ALIGN_SCREEN_HEIGHT_CENTER(tr_paused_height), PALETTE_BACKGROUND_0, tr_paused );
 
+    ppu_wait_vblank();
     ppu_on();
 }
 
@@ -115,9 +117,38 @@ static void __fastcall__ game_state_playing_paused_leave(void)
 
 static void __fastcall__ game_state_playing_paused_update(void)
 {
+    // close pause menu
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+    {
+        game_state_internal = GAME_STATE_PLAYING_PLAYING;
+
+        game_state_playing_paused_leave();
+    }
+}
+
+//
+static void __fastcall__ game_state_playing_game_over_enter(void)
+{
 
 }
 
+static void __fastcall__ game_state_playing_game_over_update(void)
+{
+    // close pause menu
+    if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
+    {
+        set_next_game_state( GAME_STATE_TITLE );
+
+        game_state_playing_paused_leave();
+    }
+}
+
+static void __fastcall__ game_state_playing_game_over_leave(void)
+{
+
+}
+
+//
 void __fastcall__ game_state_playing_update()
 {
     gamepad_poll(0);
@@ -128,6 +159,8 @@ void __fastcall__ game_state_playing_update()
         {
             // TODO: play intro
             game_state_internal = GAME_STATE_PLAYING_PLAYING;
+
+           // ppu_fade_to( PPU_PALETTE_TINT_DEFAULT, 10 );
         }
             break;
 
@@ -151,6 +184,8 @@ void __fastcall__ game_state_playing_update()
             if( player_is_dead() )
             {
                 game_state_internal = GAME_STATE_PLAYING_GAME_OVER;
+
+                game_state_playing_game_over_enter();
             }
             else if( boss_is_dead() )
             {
@@ -169,15 +204,6 @@ void __fastcall__ game_state_playing_update()
         case GAME_STATE_PLAYING_PAUSED:
         {
             game_state_playing_paused_update();
-
-            // close pause menu
-            if( GAMEPAD_PRESSED( 0, GAMEPAD_START ) )
-            {
-                game_state_internal = GAME_STATE_PLAYING_PLAYING;
-
-                game_state_playing_paused_leave();
-                return;
-            }
         }
             break;
 
@@ -190,7 +216,7 @@ void __fastcall__ game_state_playing_update()
 
         case GAME_STATE_PLAYING_GAME_OVER:
         {
-
+            game_state_playing_game_over_update();
         }
             break;
 

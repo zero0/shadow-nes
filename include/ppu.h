@@ -87,6 +87,12 @@ extern ptr_t PPU_DATA;
 extern uint8_t PPU_ARGS[8];
 #pragma zpsym("PPU_ARGS");
 
+extern uint8_t PALETTE_TINT_BACKGROUND_INDEX;
+#pragma zpsym("PALETTE_TINT_BACKGROUND_INDEX");
+
+extern uint8_t PALETTE_TINT_OAM_INDEX;
+#pragma zpsym("PALETTE_TINT_OAM_INDEX");
+
 uint8_t __fastcall__ ppu_frame_index(void);
 
 void __fastcall__ ppu_update(void);
@@ -332,5 +338,16 @@ void __fastcall__ ppu_tint_reset_internal(void);
 
 #define ppu_tint_reset()        \
     ppu_tint_reset_internal()
+
+//
+//
+//
+
+void __fastcall__ ppu_fade_to_internal(void);
+
+#define ppu_fade_to( f, p )     \
+    PPU_ARGS[0] = (f);          \
+    PPU_ARGS[1] = (p);          \
+    ppu_fade_to_internal()
 
 #endif // PPU_H
