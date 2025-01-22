@@ -144,6 +144,14 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 
 .define NMI_NAMETABLE_UPDATE_COUNT_MAX              #32
 
+; Dirty upload mask
+.define DIRTY_UPLOAD_MASK_OAM                       $80 ;
+.define DIRTY_UPLOAD_MASK_OAM_CLEAR                 $7F ;
+
+;
+;
+;
+
 .segment "ZEROPAGE"
 
     NMI_LOCK:                   .res 1 ;
@@ -156,6 +164,9 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     NAMETABLE_UPDATE_POS:       .res 1 ;
     PALETTE_UPDATE_LEN:         .res 1 ;
     OAM_UPDATE_LEN:             .res 1 ;
+    OAM_SPRITE_LEN:             .res 1 ;
+    OAM_SPRITE_FREE_LIST_LEN:   .res 1 ;
+    DIRTY_UPLOAD_MASK:          .res 1 ;
     SCROLL_X:                   .res 1 ;
     SCROLL_Y:                   .res 1 ;
     TILE_BATCH_INDEX:           .res 1 ;
@@ -173,6 +184,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
     PALETTE_UPDATE:         .res 32 ;
+    OAM_SPRITE_FREE_LIST:   .res 64 ;
 
 .segment "OAM"
     OAM_UPDATE:             .res 256 ;
@@ -181,7 +193,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 ; ppu functions
 ;
 
-.export _ppu_frame_index
+.export _ppu_frame_index = ppu_frame_index
 
 .export ppu_init
 .export ppu_wait_vblank, _ppu_wait_vblank
@@ -190,10 +202,11 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export ppu_clear_nametable
 .export ppu_clear_palette
 .export ppu_clear_chr_ram
+.export ppu_clear_oam
 
 .export _ppu_set_scroll_internal
 
-.export _ppu_update
+.export _ppu_update = ppu_update
 .export _ppu_off, _ppu_on
 .export _ppu_skip
 
@@ -214,7 +227,11 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _ppu_set_palette_internal
 .export _ppu_set_palette_background_internal
 
-.export _ppu_clear_oam
+.export _ppu_clear_oam = ppu_clear_oam
+.export _ppu_clear_sprites = ppu_clear_sprites
+.export _ppu_request_sprite = ppu_request_sprite
+.export _ppu_release_sprite = ppu_release_sprite
+.export _ppu_update_sprite = ppu_update_sprite
 .export _ppu_oam_sprite
 
 .export _ppu_add_meta_sprite_internal
@@ -234,7 +251,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .segment "LOWCODE"
 
 ; ppu_frame_index: returns in A the frame count [0..255]
-.proc _ppu_frame_index
+.proc ppu_frame_index
 
     lda NMI_COUNT
     rts
@@ -297,18 +314,27 @@ ppu_enable_default:
     rts
 
 ; ppu_update: waits until next NMI, turns rendering on (if not already), uploads OAM, palette, and nametable update to PPU
-.proc _ppu_update
+.proc ppu_update
+
+    ; check if there are oam updates
+    lda OAM_SPRITE_LEN
+    beq @no_oam_update
+
+    ; convert index -> offset
+    asl
+    asl
+
+    ; transfer index -> offset
+    tax
 
     ; clear remaining OAM data
     lda #$FF
-    ldx OAM_UPDATE_LEN
     :
         sta OAM_UPDATE, x
         inx
         bne :-
 
-    ; clear OAM length
-    stx OAM_UPDATE_LEN
+@no_oam_update:
 
     ; wait for NMI to be ready
     lda #1
@@ -320,12 +346,15 @@ ppu_enable_default:
 .endproc
 
 ; ppu_skip: waits until next NMI, does not update PPU
-_ppu_skip:
+.proc _ppu_skip
+
     lda NMI_COUNT
     :
         cmp NMI_COUNT
         beq :-
+
     rts
+.endproc
 
 ; ppu_off: waits until next NMI, turns rendering off (now safe to write PPU directly via $2007)
 .proc _ppu_off
@@ -766,23 +795,141 @@ _ppu_fill_nametable_attr:
     rts
 .endproc
 
-; _ppu_clear_oam: clear oam buffer
-.proc _ppu_clear_oam
+;
+;
+;
 
-    ; clear OAM buffer
-    ldx #0
+; clear oam buffer
+.proc ppu_clear_oam
+
+    ; clear oam buffer
     lda #$FF
+    ldx #0
     :
         sta OAM_UPDATE, x
         inx
-        ; inx
-        ; inx
-        ; inx
         bne :-
 
-    ; reset length
+    rts
+.endproc
+
+; clear sprite lists
+.proc ppu_clear_sprites
+
+    ; reset lengths
     lda #0
-    sta OAM_UPDATE_LEN
+    sta OAM_SPRITE_LEN
+    sta OAM_SPRITE_FREE_LIST_LEN
+
+    rts
+.endproc
+
+; request a sprite
+.proc ppu_request_sprite
+
+    ; load sprite free list length
+    ldx OAM_SPRITE_FREE_LIST_LEN
+
+    ; if there are sprites in free list, remove it from the list and return
+    beq :+
+
+        ; decrement length
+        dex
+        stx OAM_SPRITE_FREE_LIST_LEN
+
+        ; load index from free list
+        lda OAM_SPRITE_FREE_LIST, x
+
+        rts
+        :
+
+    ; load sprite length
+    ldx OAM_SPRITE_LEN
+
+    ; store value to A
+    txa
+
+    ; increment and store sprite length
+    inx
+    stx OAM_SPRITE_LEN
+
+    rts
+.endproc
+
+; release sprite A back to pool
+.proc ppu_release_sprite
+
+    ; load sprite free list length
+    ldx OAM_SPRITE_FREE_LIST_LEN
+
+    ; store sprite in free list
+    sta OAM_SPRITE_FREE_LIST, x
+
+    ; increment free list length
+    inx
+    stx OAM_SPRITE_FREE_LIST_LEN
+
+    ; convert index -> offset
+    asl
+    asl
+
+    ; transfer index -> offset
+    tax
+
+    ; load clear value
+    lda #$FF
+
+    ; store cleared oam updates
+    sta OAM_UPDATE, x
+    inx
+
+    sta OAM_UPDATE, x
+    inx
+
+    sta OAM_UPDATE, x
+    inx
+
+    sta OAM_UPDATE, x
+
+    ; mark dirty
+    lda DIRTY_UPLOAD_MASK
+    ora #(DIRTY_UPLOAD_MASK_OAM)
+    sta DIRTY_UPLOAD_MASK
+
+    rts
+.endproc
+
+; update a sprite
+.proc ppu_update_sprite
+
+    ; load sprite index (index -> offset)
+    lda _PPU_ARGS+0
+    asl
+    asl
+
+    ; transfer index -> offset
+    tax
+
+    ; store oam updates
+    lda _PPU_ARGS+1
+    sta OAM_UPDATE, x
+    inx
+
+    lda _PPU_ARGS+2
+    sta OAM_UPDATE, x
+    inx
+
+    lda _PPU_ARGS+3
+    sta OAM_UPDATE, x
+    inx
+
+    lda _PPU_ARGS+4
+    sta OAM_UPDATE, x
+
+    ; mark dirty
+    lda DIRTY_UPLOAD_MASK
+    ora #(DIRTY_UPLOAD_MASK_OAM)
+    sta DIRTY_UPLOAD_MASK
 
     rts
 .endproc
@@ -1381,6 +1528,16 @@ _ppu_tint_reset_internal:
     :
 
 @update_oam:
+
+    ; test dirty bit
+    lda DIRTY_UPLOAD_MASK
+    cmp #(DIRTY_UPLOAD_MASK_OAM)
+    bne @update_palette
+
+    ; clear dirty flag
+    and #(DIRTY_UPLOAD_MASK_OAM_CLEAR)
+    sta DIRTY_UPLOAD_MASK
+
     ; DMA upload
     lda #>OAM_UPDATE
     sta PPU_OAM_DMA

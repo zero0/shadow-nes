@@ -217,6 +217,20 @@ void __fastcall__ ppu_clear_oam();
 
 void __fastcall__ ppu_oam_sprite();
 
+uint8_t __fastcall__ ppu_request_sprite();
+
+void __fastcall__ ppu_release_sprite( uint8_t sprite );
+
+#define ppu_update_sprite_full( idx, px, py, pal, bg, fh, fv, spr )                             \
+    PPU_ARGS[0] = (idx);                                                            \
+    PPU_ARGS[1] = (py) - 1;                                                         \
+    PPU_ARGS[2] = (spr);                                                            \
+    PPU_ARGS[3] = ( (fv) << 7 ) | ( (fh) << 6 ) | ( (bg) << 5 ) | ( 0x03 & (pal) ); \
+    PPU_ARGS[4] = (px);                                                             \
+    ppu_update_sprite()
+
+void __fastcall__ ppu_update_sprite();
+
 //
 //
 //

@@ -12,6 +12,8 @@
 
 extern ptr_t shadow_font;
 
+static uint8_t arrow_sprite;
+
 void __fastcall__ game_state_title_enter(void)
 {
     // turn off ppu
@@ -64,6 +66,10 @@ void __fastcall__ game_state_title_enter(void)
     // reset game flow
     reset_game_flow();
 
+    arrow_sprite = ppu_request_sprite();
+
+    ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, 0x33 );
+
     b = 0;
     t = 0;
     game_state_internal = 0;
@@ -77,6 +83,7 @@ void __fastcall__ game_state_title_enter(void)
 
 void __fastcall__ game_state_title_leave(void)
 {
+    ppu_release_sprite( arrow_sprite );
 }
 
 void __fastcall__ game_state_title_update(void)
@@ -112,9 +119,10 @@ void __fastcall__ game_state_title_update(void)
     switch( t )
     {
         case 0:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0x33);
+            //ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0x33);
             if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
             {
+                ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 0, 0, 0, 0x33);
                 t = 1;
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
@@ -126,9 +134,10 @@ void __fastcall__ game_state_title_update(void)
             break;
 
         case 1:
-            ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 0x33);
+            //ppu_add_oam_sprite(TILE_TO_PIXEL(10), TILE_TO_PIXEL(16), PALETTE_SPRITE_0, 0x33);
             if( GAMEPAD_PRESSED(0, GAMEPAD_U))
             {
+                ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, 0x33 );
                 t = 0;
             }
             else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )

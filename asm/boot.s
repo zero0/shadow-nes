@@ -22,7 +22,7 @@ FT_SFX_STREAMS = 4              ;number of sound effects played at once, 1..4
 .import __RODATA_LOAD__     ,__RODATA_RUN__ ,__RODATA_SIZE__
 .import __DMC_START__
 .importzp _PPU_ARGS
-.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_clear_chr_ram, nmi
+.import ppu_init, ppu_enable_default, ppu_wait_vblank, ppu_clear_nametable, ppu_clear_palette, ppu_clear_chr_ram, ppu_clear_oam, nmi
 .import apu_init
 .import mapper_reset
 .import mapper_init
@@ -225,6 +225,9 @@ _wait_irq:
 
     ; clear pallete (store $3f00)
     jsr ppu_clear_palette
+
+    ; clear OAM sprites
+    jsr ppu_clear_oam
 
     ;lda #$3f
     ;sta PPU_ADDR
