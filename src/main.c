@@ -61,6 +61,8 @@ void main(void)
 
     rt_timer_reset( game_rt_timer );
 
+    ppu_tint_palelletes( PPU_PALETTE_TINT_BLACK );
+
     while( 1 )
     {
         rt_timer_tick( game_rt_timer );
