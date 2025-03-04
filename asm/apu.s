@@ -257,7 +257,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 .endproc
 
-; Enable pulse 1, 2, triangle, noies
+; Enable pulse 1, 2, triangle, noise
 .proc apu_enable_all
 
     lda APU_STATUS_BUFF
