@@ -7,6 +7,7 @@
 #include "macros.h"
 
 #include "game_state_title.h"
+#include "game_state_continue.h"
 #include "game_state_playing.h"
 #include "game_state_cutscene.h"
 #include "game_state_store.h"
@@ -16,8 +17,8 @@ enum
 {
     GAME_STATE_INIT,
     GAME_STATE_TITLE,
-    GAME_STATE_PLAYING,
     GAME_STATE_CONTINUE,
+    GAME_STATE_PLAYING,
     GAME_STATE_CUTSCENE,
     GAME_STATE_STORE,
     GAME_STATE_CHECKPOINT,

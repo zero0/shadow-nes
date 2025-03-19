@@ -237,6 +237,14 @@ void __fastcall__ ppu_release_sprite( uint8_t sprite );
 
 void __fastcall__ ppu_update_sprite();
 
+#define ppu_update_sprite_pos( idx, px, py )    \
+    PPU_ARGS[0] = (idx);                        \
+    PPU_ARGS[1] = (py) - 1;                     \
+    PPU_ARGS[2] = (px);                         \
+    ppu_update_sprite_pos_impl()
+
+void __fastcall__ ppu_update_sprite_pos_impl();
+
 //
 //
 //
@@ -363,5 +371,39 @@ void __fastcall__ ppu_fade_to_internal(void);
     PPU_ARGS[0] = (f);          \
     PPU_ARGS[1] = (p);          \
     ppu_fade_to_internal()
+
+
+//
+//
+//
+
+extern uint8_t PPU_SCOPE;
+#pragma zpsym("PPU_SCOPE");
+
+#define ppu_disable()   \
+do                      \
+{                       \
+    ppu_wait_vblank();  \
+    ppu_off();          \
+} while( 0 )
+
+#define ppu_enable()    \
+do                      \
+{                       \
+    ppu_wait_vblank();  \
+    ppu_on();           \
+} while( 0 )
+
+#define ppu_disable_scope() \
+for(                        \
+    PPU_SCOPE = 0,          \
+    ppu_wait_vblank(),      \
+    ppu_off();              \
+    PPU_SCOPE != 0;         \
+    ppu_wait_vblank(),      \
+    ppu_on(),               \
+    ++PPU_SCOPE             \
+)
+
 
 #endif // PPU_H

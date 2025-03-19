@@ -151,8 +151,6 @@ static void __fastcall__ game_state_playing_game_over_leave(void)
 //
 void __fastcall__ game_state_playing_update()
 {
-    gamepad_poll(0);
-
     switch( game_state_internal )
     {
         case GAME_STATE_PLAYING_INTRO:

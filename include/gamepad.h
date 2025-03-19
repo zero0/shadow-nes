@@ -6,10 +6,10 @@
 
 enum
 {
-    GAMEPAD_0,
     GAMEPAD_1,
     GAMEPAD_2,
     GAMEPAD_3,
+    GAMEPAD_4,
 };
 
 void __fastcall__ gamepad_poll( uint8_t pad );

@@ -179,8 +179,6 @@ static void __fastcall__ advance_cutscene(void)
 
 void __fastcall__ game_state_cutscene_update(void)
 {
-    gamepad_poll(0);
-
     // if START is heald for a number of frames, end the cutscene early
     if( GAMEPAD_HELD(0, GAMEPAD_START) )
     {

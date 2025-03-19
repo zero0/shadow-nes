@@ -24,14 +24,23 @@ STATIC_ASSERT(ARRAY_SIZE(game_data_migrations) == CURRENT_GAME_DATA_VERSION);
 // Game Data API
 //
 
-void __fastcall__ load_game_data_for_new_game(void)
+void __fastcall__ game_data_load_for_new_game(void)
 {
     memset(g_current_game_data, 0, sizeof(game_data_t));
 
     g_current_game_data.version = CURRENT_GAME_DATA_VERSION;
 }
 
-void __fastcall__ load_game_data_from_save_slot(uint8_t saveSlot)
+void __fastcall__ game_data_peek_from_save_slot(uint8_t saveSlot)
+{
+    UNUSED(saveSlot);
+    ASSERT(saveSlot < _SAVE_SLOT_COUNT);
+
+    // TODO: load game data from save ram
+    memset(g_current_game_data, 0, sizeof(game_data_t));
+}
+
+void __fastcall__ game_data_load_from_save_slot(uint8_t saveSlot)
 {
     UNUSED(saveSlot);
     ASSERT(saveSlot < _SAVE_SLOT_COUNT);
@@ -50,11 +59,11 @@ void __fastcall__ load_game_data_from_save_slot(uint8_t saveSlot)
         }
 
         // resave data when migration complete
-        save_game_data_to_save_slot(saveSlot);
+        game_data_save_to_save_slot(saveSlot);
     }
 }
 
-void __fastcall__ save_game_data_to_save_slot(uint8_t saveSlot)
+void __fastcall__ game_data_save_to_save_slot(uint8_t saveSlot)
 {
     UNUSED(saveSlot);
     ASSERT(saveSlot < _SAVE_SLOT_COUNT);

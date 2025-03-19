@@ -177,10 +177,12 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     META_SPRITE_TILE:           .res 1 ;
     PALETTE_TINT_OAM_INDEX:     .res 1 ;
     PALETTE_TINT_BACKGROUND_INDEX: .res 1 ;
+    _PPU_SCOPE:                 .res 1 ;
     _PPU_TEMP_PTR:              .res 4 ;
     _PPU_ARGS:                  .res 8 ;
 
 .export _PPU_ARGS
+.export _PPU_SCOPE
 .export _PALETTE_TINT_OAM_INDEX = PALETTE_TINT_OAM_INDEX
 .export _PALETTE_TINT_BACKGROUND_INDEX = PALETTE_TINT_BACKGROUND_INDEX
 
@@ -243,6 +245,7 @@ META_SPRITE_ADDR =              _PPU_TEMP_PTR + 2
 .export _ppu_request_sprite = ppu_request_sprite
 .export _ppu_release_sprite = ppu_release_sprite
 .export _ppu_update_sprite = ppu_update_sprite
+.export _ppu_update_sprite_pos_impl = ppu_update_sprite_pos
 .export _ppu_oam_sprite
 
 .export _ppu_add_meta_sprite_internal
@@ -933,6 +936,37 @@ _ppu_fill_nametable_attr:
     inx
 
     lda _PPU_ARGS+4
+    sta OAM_UPDATE, x
+
+    ; mark dirty
+    lda DIRTY_UPLOAD_MASK
+    ora #(DIRTY_UPLOAD_MASK_OAM)
+    sta DIRTY_UPLOAD_MASK
+
+    rts
+.endproc
+
+; update a sprite's position only
+.proc ppu_update_sprite_pos
+
+    ; load sprite index (index -> offset)
+    lda _PPU_ARGS+0
+    asl
+    asl
+
+    ; transfer index -> offset
+    tax
+
+    ; store oam updates
+    lda _PPU_ARGS+1
+    sta OAM_UPDATE, x
+    inx
+
+    inx
+
+    inx
+
+    lda _PPU_ARGS+2
     sta OAM_UPDATE, x
 
     ; mark dirty

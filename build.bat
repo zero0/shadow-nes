@@ -17,6 +17,7 @@ set "CC65_LD=%CC65_BIN%\ld65.exe"
 
 set "GAME_NAME=%1"
 set "CPU_TYPE=-t nes"
+set "COMPILE_ASSETS=0"
 
 set "CA_FLAGS="
 set "CC_FLAGS="
@@ -46,10 +47,12 @@ rem Clean tmp and obj directories
 if exist tmp (del /Q tmp) else md tmp
 if exist obj (del /Q obj) else md obj
 
-rem Run img2chr tool to generate .s files from images
-pushd tools\img2chr\
-dotnet run -c Release -- assets || goto :fail_assetbuild
-popd
+if %COMPILE_ASSETS%==1 (
+    rem Run img2chr tool to generate .s files from images
+    pushd tools\img2chr\
+    dotnet run -c Release -- assets || goto :fail_assetbuild
+    popd
+)
 
 set "GAME_ASSETS_INCLUDE=assets/generated/include"
 set "GAME_ASSETS_ASM=assets/generated/asm"
