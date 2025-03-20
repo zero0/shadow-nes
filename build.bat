@@ -5,6 +5,7 @@ rem Get ESC character
 for /F %%a in ('"prompt $E$S & echo on & for %%b in (1) do rem"') do set "ESC=%%a"
 
 set "BUILD_TYPE=DEBUG"
+set "BUILD_LANG=en"
 
 set "CC65_HOME=C:\cc65"
 set "CC65_BIN=%CC65_HOME%\bin"
@@ -16,6 +17,7 @@ set "CC65_CC=%CC65_BIN%\cc65.exe"
 set "CC65_LD=%CC65_BIN%\ld65.exe"
 
 set "GAME_NAME=%1"
+set "GAME_FILE_NAME=%GAME_NAME%.%BUILD_LANG%"
 set "CPU_TYPE=-t nes"
 set "COMPILE_ASSETS=0"
 
@@ -23,22 +25,37 @@ set "CA_FLAGS="
 set "CC_FLAGS="
 set "LD_FLAGS="
 
+set "DBG_FILE_PATH=bin\%GAME_FILE_NAME%.dbg"
+set "NES_FILE_PATH=bin\%GAME_FILE_NAME%.nes"
+
 if %BUILD_TYPE%==DEBUG (
-    set "CA_FLAGS=-g -D DEBUG_BUILD"
-    set "CC_FLAGS=-g -D DEBUG_BUILD --add-source"
-    set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
+    set "CA_FLAGS=-g -D DEBUG_BUILD=1"
+    set "CC_FLAGS=-g -D DEBUG_BUILD=1 --add-source"
+    set "LD_FLAGS=--dbgfile %DBG_FILE_PATH%"
 ) else if %BUILD_TYPE%==RELEASE (
-    set "CA_FLAGS=-g -D RELEASE_BUILD"
-    set "CC_FLAGS=-g -O -D RELEASE_BUILD --add-source"
-    set "LD_FLAGS=--dbgfile bin\%GAME_NAME%.dbg"
+    set "CA_FLAGS=-g -D RELEASE_BUILD=1"
+    set "CC_FLAGS=-g -O -D RELEASE_BUILD=1 --add-source"
+    set "LD_FLAGS=--dbgfile %DBG_FILE_PATH%"
 ) else if %BUILD_TYPE%==DISTRO (
-    set "CA_FLAGS=-D DISTRO_BUILD"
-    set "CC_FLAGS=-O -Oi -D DISTRO_BUILD"
+    set "CA_FLAGS=-D DISTRO_BUILD=1"
+    set "CC_FLAGS=-O -Oi -D DISTRO_BUILD=1"
     set "LD_FLAGS="
 ) else (
     echo %ESC%[91mNo build type defined. DEBUG, RELEASE, or DISTRO required.%ESC%[0m
     goto :end
 )
+
+set "BUILD_LANG_ID=0"
+
+if "%BUILD_LANG%" == "en" set "BUILD_LANG_ID=0"
+if "%BUILD_LANG%" == "fr" set "BUILD_LANG_ID=1"
+if "%BUILD_LANG%" == "it" set "BUILD_LANG_ID=2"
+if "%BUILD_LANG%" == "de" set "BUILD_LANG_ID=3"
+if "%BUILD_LANG%" == "es" set "BUILD_LANG_ID=4"
+
+rem Add build language define
+set "CA_FLAGS=%CA_FLAGS% -D BUILD_LANG=%BUILD_LANG_ID%"
+set "CC_FLAGS=%CC_FLAGS% -D BUILD_LANG=%BUILD_LANG_ID%"
 
 rem Create bin directory for final .nes file
 if not exist bin md bin
@@ -79,18 +96,18 @@ set "LD_CONFIG=-C config\nes_mmc5.cfg"
 rem set "LD_DBG="
 
 rem Link all .o files into .nes file
-%CC65_LD% %LD_CONFIG% %LD_FLAGS% --lib-path lib --lib-path %CC65_LIB% -o bin\%GAME_NAME%.nes %OBJ_FILES% nes.lib || goto :fail
+%CC65_LD% %LD_CONFIG% %LD_FLAGS% --lib-path lib --lib-path %CC65_LIB% -o %NES_FILE_PATH% %OBJ_FILES% nes.lib || goto :fail
 
 :success
-echo %ESC%[92mCompile bin\%GAME_NAME%.nes success.%ESC%[0m
+echo %ESC%[92mCompile %NES_FILE_PATH% success.%ESC%[0m
 goto :end
 
 :fail
-echo %ESC%[91mCompile bin\%GAME_NAME%.nes failed.%ESC%[0m
+echo %ESC%[91mCompile %NES_FILE_PATH% failed.%ESC%[0m
 goto :end
 
 :fail_assetbuild
-echo %ESC%[91mAsset Build for bin\%GAME_NAME%.nes failed.%ESC%[0m
+echo %ESC%[91mAsset Build for %NES_FILE_PATH% failed.%ESC%[0m
 goto :end
 
 :end

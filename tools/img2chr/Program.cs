@@ -3188,7 +3188,7 @@ namespace img2chr
                     if (value.Length > kMaxStringWidth && !IsVerbatumString(value))
                     {
                         // split on "new line" sequence
-                        string[] lines = value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+                        string[] lines = value.Split("\\\\n", StringSplitOptions.RemoveEmptyEntries);
 
                         bool allLinesShort = true;
                         foreach (string l in lines)

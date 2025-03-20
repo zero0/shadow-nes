@@ -63,63 +63,51 @@ STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
 extern ptr_t shadow_font;
 
 static uint8_t current_cutscene_index;
-static uint8_t current_cutscene_step;
 
 static void __fastcall__ draw_cutscene_part(void)
 {
-    ppu_set_scroll( 0, 0 );
-
     // TODO: maybe fade out/in while clearing
-    ppu_wait_vblank();
-    ppu_off();
-    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
+    ppu_disable();
 
-    // draw
-    switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes[ current_cutscene_index ].attr ) )
     {
-        case CUTSCENE_TYPE_TEXT:
-            text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, current_cutscene_step ), all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step ] );
-            break;
+        ppu_set_scroll( 0, 0 );
+        ppu_clear_palette();
+        ppu_clear_oam();
 
-        case CUTSCENE_TYPE_DIALOG:
-            text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, current_cutscene_step + 0 ), all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step + 0 ] );
-            text_draw_string( 0, 2, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, current_cutscene_step + 1 ), all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step + 1 ] );
-            break;
+        //ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
 
-        default:
-            INVALID_CODE_PATH;
-            break;
+        ppu_set_palette_background( 0x0F );
+        ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
+        ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white
+        ppu_set_palette( PALETTE_BACKGROUND_2, 0x1A, 0x2A, 0x30 ); // green, light green, white
+        ppu_set_palette( PALETTE_SPRITE_0, 0x0A, 0x1A, 0x2A );
+        ppu_set_palette( PALETTE_SPRITE_1, 0x0A, 0x1A, 0x2A );
+        ppu_set_palette( PALETTE_SPRITE_2, 0x0A, 0x1A, 0x2A );
+
+        // draw
+        switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes[ current_cutscene_index ].attr ) )
+        {
+            case CUTSCENE_TYPE_TEXT:
+                text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] );
+                break;
+
+            case CUTSCENE_TYPE_DIALOG:
+                text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 0 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 0 ] );
+                text_draw_string( 0, 2, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 1 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 1 ] );
+                break;
+
+            default:
+                INVALID_CODE_PATH;
+                break;
+        }
     }
 
-    ppu_wait_vblank();
-    ppu_on();
+    ppu_enable();
 }
 
 void __fastcall__ game_state_cutscene_enter(void)
 {
-    // turn off ppu
-    ppu_wait_vblank();
-
-    ppu_off();
-
-    ppu_clear_nametable( NAMETABLE_A, 0xFF, 0 );
-
-    ppu_set_scroll( 0, 0 );
-    ppu_clear_palette();
-    ppu_clear_oam();
-
-    //ppu_upload_chr_ram( shadow_font, MAKE_CHR_PTR(0,0,0), 16*4+13 );
-
-    ppu_set_palette_background( 0x0F );
-    ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
-    ppu_set_palette( PALETTE_BACKGROUND_1, 0x05, 0x15, 0x30 ); // red, light red, white
-    ppu_set_palette( PALETTE_BACKGROUND_2, 0x1A, 0x2A, 0x30 ); // green, light green, white
-    ppu_set_palette( PALETTE_SPRITE_0, 0x0A, 0x1A, 0x2A );
-    ppu_set_palette( PALETTE_SPRITE_1, 0x0A, 0x1A, 0x2A );
-    ppu_set_palette( PALETTE_SPRITE_2, 0x0A, 0x1A, 0x2A );
-
     current_cutscene_index = next_game_state_arg;
-    current_cutscene_step = 0;
 
     r = HOLD_TO_SKIP_ENTIRE_CUTSCENE_TIME_FRAMES;
     game_state_internal = 0;
@@ -127,11 +115,6 @@ void __fastcall__ game_state_cutscene_enter(void)
 
     // draw the first cutscene
     draw_cutscene_part();
-
-    // turn on ppu
-    ppu_wait_vblank();
-
-    ppu_on();
 }
 
 void __fastcall__ game_state_cutscene_leave(void)
@@ -149,10 +132,10 @@ static void __fastcall__ advance_cutscene(void)
     switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes[ current_cutscene_index ].attr ) )
     {
         case CUTSCENE_TYPE_DIALOG:
-            ++current_cutscene_step;
+            ++game_state_internal;
 
         case CUTSCENE_TYPE_TEXT:
-            ++current_cutscene_step;
+            ++game_state_internal;
             break;
 
         default:
@@ -161,12 +144,12 @@ static void __fastcall__ advance_cutscene(void)
     }
 
     // if it's the last step, end the cutscene
-    if( current_cutscene_step >= GET_CUTSCENE_ATTR_COUNT( all_cutscenes[ current_cutscene_index ].attr ) )
+    if( game_state_internal >= GET_CUTSCENE_ATTR_COUNT( all_cutscenes[ current_cutscene_index ].attr ) )
     {
         end_cutscene();
     }
     // if there's no more text, end the cutscene
-    else if( all_cutscenes[ current_cutscene_index ].t[ current_cutscene_step ] == (uint8_t)END_CUTSCENE )
+    else if( all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] == (uint8_t)END_CUTSCENE )
     {
         end_cutscene();
     }
@@ -180,7 +163,7 @@ static void __fastcall__ advance_cutscene(void)
 void __fastcall__ game_state_cutscene_update(void)
 {
     // if START is heald for a number of frames, end the cutscene early
-    if( GAMEPAD_HELD(0, GAMEPAD_START) )
+    if( GAMEPAD_HELD(GAMEPAD_1, GAMEPAD_START) )
     {
         --r;
         if( r == 0 )
@@ -195,7 +178,7 @@ void __fastcall__ game_state_cutscene_update(void)
     }
 
     // advance cutscene on A press
-    if( GAMEPAD_RELEASED(0, GAMEPAD_A) )
+    if( GAMEPAD_RELEASED(GAMEPAD_1, GAMEPAD_A) )
     {
         advance_cutscene();
     }
