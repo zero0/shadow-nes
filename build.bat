@@ -19,7 +19,7 @@ set "CC65_LD=%CC65_BIN%\ld65.exe"
 set "GAME_NAME=%1"
 set "GAME_FILE_NAME=%GAME_NAME%.%BUILD_LANG%"
 set "CPU_TYPE=-t nes"
-set "COMPILE_ASSETS=0"
+set "COMPILE_ASSETS=1"
 
 set "CA_FLAGS="
 set "CC_FLAGS="

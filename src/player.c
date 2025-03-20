@@ -80,9 +80,9 @@ enum
     Player_action_Block,
 };
 
-extern ptr_t knight_sprite_0;
-extern ptr_t knight_sprite_1;
-extern ptr_t knight_sprite_2;
+// extern ptr_t knight_sprite_0;
+// extern ptr_t knight_sprite_1;
+// extern ptr_t knight_sprite_2;
 
 extern ptr_t progress_bar;
 
@@ -227,10 +227,10 @@ void __fastcall__ player_init(void)
     subpixel_set_zero( player_pos_dx );
     subpixel_set_zero( player_pos_dy );
 
-    // knite sprite
-    ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
-    ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x12 );
-    ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x14 );
+    //// knite sprite
+    //ppu_upload_meta_sprite_chr_ram( knight_sprite_0, 0x10 );
+    //ppu_upload_meta_sprite_chr_ram( knight_sprite_1, 0x12 );
+    //ppu_upload_meta_sprite_chr_ram( knight_sprite_2, 0x14 );
 }
 
 static void __fastcall__ player_update_physics(void)
@@ -308,20 +308,20 @@ static void __fastcall__ player_render_status_bars(void)
 
 static void __fastcall__ player_render_character(void)
 {
-    switch(t)
-    {
-        case 0:
-            ppu_add_meta_sprite( knight_sprite_0, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x00 );
-            break;
-
-        case 1:
-            ppu_add_meta_sprite( knight_sprite_1, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x20 );
-            break;
-
-        case 2:
-            ppu_add_meta_sprite( knight_sprite_2, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x40 );
-            break;
-    }
+    //switch(t)
+    //{
+    //    case 0:
+    //        ppu_add_meta_sprite( knight_sprite_0, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x00 );
+    //        break;
+    //
+    //    case 1:
+    //        ppu_add_meta_sprite( knight_sprite_1, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x20 );
+    //        break;
+    //
+    //    case 2:
+    //        ppu_add_meta_sprite( knight_sprite_2, TILE_TO_PIXEL(3), TILE_TO_PIXEL(14), 0x40 );
+    //        break;
+    //}
 }
 
 #ifdef DEBUG

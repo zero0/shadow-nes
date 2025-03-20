@@ -8,34 +8,27 @@ tr_confirm,Confirm
 tr_cancel,Cancel
 tr_paused,Paused
 tr_save,Save
-#
-# Difficulty Names
-#
+tr_back,Back
+tr_next,Next
+tr_main_menu,Main Menu
+tr_restart_checkpoint,Restart Checkpoint
+tr_game_over,Game Over
 tr_diff_name_0,Story
 tr_diff_name_1,Easy
 tr_diff_name_2,Normal
 tr_diff_name_3,Hard
 tr_diff_name_4,Extreme
 tr_diff_name_5,Brutal
-tr_diff_name_6,Boss Only
-tr_diff_name_7,Speedrun
-#
-# Currency
-#
+tr_boss_rush,Boss Rush
+tr_speedrun,Speedrun
 tr_currency_0_name,Flux
 tr_currency_1_name,Ultraflux
 tr_shop_title,Shop
 tr_checkpoint_title,Withered Shade Tree
-#
-# Characters
-#
 tr_char_unknown,???
 tr_char_shademother,Shademother
 tr_char_shadowborn,Shadowborn
 tr_char_lightlord,Lightlord
-#
-# Boss Info
-#
 tr_tower_name,Tower of Luxluma
 tr_boss_0_location,Entrance
 tr_boss_0_name,Lost Knight Yrkargarin
@@ -53,89 +46,53 @@ tr_boss_6_location,Gleaming Anteroom
 tr_boss_6_name,Specular Guards Dirk & Quince
 tr_boss_7_location,Radiant Throne Hall
 tr_boss_7_name,${tr_char_lightlord} of Sin
-tr_boss_8_location,Echo of Light
+tr_boss_8_location,Echo of Luxluma
 tr_boss_8_name,Quintessence of Light
 tr_boss_9_location,Vestige of Shadow
 tr_boss_9_name,Icon of the ${tr_char_shademother}
-#
-# Cutscenes
-#
-tr_cutscene_intro_0,"Those born of shadow are
-forever doomed to serve
-the light."
-tr_cutscene_intro_1,"This corrupted light must
-be snuffed out. Those born of
-shadow have devine right to
-fufill this task."
-tr_cutscene_intro_2,"When the light is stained; dim;
-corrupted. Those born to shadow
-are bound to act."
-tr_cutscene_intro_3,"fa"
-tr_cutscene_intro_4,"ee"
-#
-tr_cutscene_boss_0_intro_0,"At long last I have returned,
-o' ${tr_char_lightlord}. Though your
-light dim in the far reaches,
-I follow..."
-tr_cutscene_boss_0_intro_1,"I've spent whatbea millenia
-to be at present, Shadowed One!
-You will not keep me from my
-journey's end!"
-tr_cutscene_boss_0_outro_0,"To die... o' ${tr_char_lightlord}...
-At your feet..."
-tr_cutscene_boss_0_outro_1,"A dream..."
-#
-tr_cutscene_boss_1_intro_0,"*pfft pfft pff...*"
-tr_cutscene_boss_1_intro_1,"*SKREE-AAAAAAAAWWW!!!*"
-tr_cutscene_boss_1_outro_0,"..."
-tr_cutscene_boss_1_outro_1,"*urrrgggh*"
-#
-tr_cutscene_boss_2_intro_0,"Blessed o' ${tr_char_lightlord}, I pray
-to thee this day for your
-strength to return
--- hmm?"
-tr_cutscene_boss_2_intro_1,"Shadowed One! How dare you
-defile this divine house!"
-tr_cutscene_boss_2_outro_0,"Curse you... Shadowed One...
-Defilier..."
-tr_cutscene_boss_2_outro_1,"The scripture...
-The signs...
-o' ${tr_char_lightlord}..."
-#
-tr_cutscene_boss_3_intro_0,"*rrrrrrgggghhh*"
-tr_cutscene_boss_3_intro_1,"*RAWWWR!!!*"
-tr_cutscene_boss_3_outro_0,""
-tr_cutscene_boss_3_outro_1,""
-#
-tr_cutscene_boss_4_intro_0,"*sqwig slosh*"
-tr_cutscene_boss_4_intro_1,""
-tr_cutscene_boss_4_outro_0,"*uraaagghhhhhh*"
-tr_cutscene_boss_4_outro_1,"*pfft*"
-#
-tr_cutscene_boss_5_intro_0,"Hail and well met Shadowkin.
-Think that Mother would entrust
-just one child to this task?"
-tr_cutscene_boss_5_intro_1,"Test your metal Shadowkin."
-tr_cutscene_boss_5_outro_0,"Mother has chosen well..."
-tr_cutscene_boss_5_outro_1,"All to the ${tr_char_shademother}..."
-#
-tr_cutscene_boss_6_intro_0,"Halt!"
-tr_cutscene_boss_6_intro_1,"None shall enter!"
-tr_cutscene_boss_6_outro_0,"None... shall..."
-tr_cutscene_boss_6_outro_1,"Enter..."
-#
-tr_cutscene_boss_7_intro_0,""
-tr_cutscene_boss_7_intro_1,""
-tr_cutscene_boss_7_outro_0,""
-tr_cutscene_boss_7_outro_1,""
-#
-tr_cutscene_boss_8_intro_0,""
-tr_cutscene_boss_8_intro_1,""
-tr_cutscene_boss_8_outro_0,""
-tr_cutscene_boss_8_outro_1,""
-#
-tr_cutscene_boss_9_intro_0,""
-tr_cutscene_boss_9_intro_1,""
-tr_cutscene_boss_9_outro_0,""
-tr_cutscene_boss_9_outro_1,""
-#
+tr_cutscene_intro_0,Those born of shadow are\nforever doomed to serve\nthe light.
+tr_cutscene_intro_1,This corrupted light must\nbe snuffed out. Those born of\nshadow have devine right to\nfufill this task.
+tr_cutscene_intro_2,When the light is stained; dim;\ncorrupted. Those born to shadow\nare bound to act.
+tr_cutscene_intro_3,fa
+tr_cutscene_intro_4,ee
+tr_cutscene_boss_0_intro_0,"At long last I have returned,\no' ${tr_char_lightlord}. Though your\nlight dim in the far reaches,\nI follow..."
+tr_cutscene_boss_0_intro_1,"I've spent whatbea millenia\nto be at present, Shadowed One!\nYou will not keep me from my\njourney's end!"
+tr_cutscene_boss_0_outro_0,To die... o' ${tr_char_lightlord}...\nAt your feet...
+tr_cutscene_boss_0_outro_1,A dream...
+tr_cutscene_boss_1_intro_0,*pfft pfft pff...*
+tr_cutscene_boss_1_intro_1,*SKREE-AAAAAAAAWWW!!!*
+tr_cutscene_boss_1_outro_0,...
+tr_cutscene_boss_1_outro_1,*urrrgggh*
+tr_cutscene_boss_2_intro_0,"Blessed o' ${tr_char_lightlord}, I pray\nto thee this day for your\nstrength to return\n-- hmm?"
+tr_cutscene_boss_2_intro_1,Shadowed One! How dare you\ndefile His divine house!
+tr_cutscene_boss_2_outro_0,Curse you... Shadowed One...\nDefilier...
+tr_cutscene_boss_2_outro_1,The scripture...\nThe signs...\no' ${tr_char_lightlord}...
+tr_cutscene_boss_3_intro_0,*rrrrrrgggghhh*
+tr_cutscene_boss_3_intro_1,*RAWWWR!!!*
+tr_cutscene_boss_3_outro_0,
+tr_cutscene_boss_3_outro_1,
+tr_cutscene_boss_4_intro_0,*sqwig slosh*
+tr_cutscene_boss_4_intro_1,
+tr_cutscene_boss_4_outro_0,*uraaagghhhhhh*
+tr_cutscene_boss_4_outro_1,*pfft*
+tr_cutscene_boss_5_intro_0,Hail and well met Shadowkin.\nThink Mother would entrust\njust one child to this task?
+tr_cutscene_boss_5_intro_1,Test your mettle Shadowkin.
+tr_cutscene_boss_5_outro_0,Mother has chosen...
+tr_cutscene_boss_5_outro_1,All for the ${tr_char_shademother}...
+tr_cutscene_boss_6_intro_0,Halt!
+tr_cutscene_boss_6_intro_1,None shall enter!
+tr_cutscene_boss_6_outro_0,None... shall...
+tr_cutscene_boss_6_outro_1,Enter...
+tr_cutscene_boss_7_intro_0,
+tr_cutscene_boss_7_intro_1,
+tr_cutscene_boss_7_outro_0,
+tr_cutscene_boss_7_outro_1,
+tr_cutscene_boss_8_intro_0,
+tr_cutscene_boss_8_intro_1,
+tr_cutscene_boss_8_outro_0,
+tr_cutscene_boss_8_outro_1,
+tr_cutscene_boss_9_intro_0,
+tr_cutscene_boss_9_intro_1,
+tr_cutscene_boss_9_outro_0,
+tr_cutscene_boss_9_outro_1,
+tr_cutscene_credits,

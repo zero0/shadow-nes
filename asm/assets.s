@@ -16,7 +16,7 @@ include_asset "chr_01.s"
 
 .segment "RODATA"
 
-include_asset "knight.s"
+;include_asset "knight.s"
 
 
 ;
@@ -37,7 +37,11 @@ _temp_text_table:   .res  2 ;
 ; Map characters to sprite sheet ordering
 .pushcharmap
 
-include_asset "shadow-font.font.s"
+.define TEXT_LANGUAGE   "en"
+.define VERSION         "0.1.0"
+.define COPYRIGHT_YEAR  "2024"
+
+include_asset .concat("shadow-font.", TEXT_LANGUAGE, ".png.font.s")
 
 .feature string_escapes +
 
@@ -50,10 +54,6 @@ include_asset "shadow-font.font.s"
 .else
 .define BUILD_TYPE      "?"
 .endif
-
-.define TEXT_LANGUAGE   "en"
-.define VERSION         "0.1.0"
-.define COPYRIGHT_YEAR  "2024"
 
 include_asset .concat("gametext.", TEXT_LANGUAGE, ".s")
 

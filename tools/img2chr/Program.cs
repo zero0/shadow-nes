@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
@@ -58,10 +59,24 @@ namespace img2chr
                 hash = hash * 31 + c[3];
                 return hash;
             }
+
+            public override string ToString()
+            {
+                using var auto = AutoStringBuilder.Auto();
+
+                auto.sb.AppendLine("[");
+                auto.sb.Append("  ").Append($"{c[0]:X8}").AppendLine(",");
+                auto.sb.Append("  ").Append($"{c[1]:X8}").AppendLine(",");
+                auto.sb.Append("  ").Append($"{c[2]:X8}").AppendLine(",");
+                auto.sb.Append("  ").Append($"{c[3]:X8}").AppendLine();
+                auto.sb.AppendLine("]");
+
+                return auto.sb.ToString();
+            }
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        unsafe struct TileIndices
+        unsafe struct TileIndices : IEquatable<TileIndices>
         {
             private fixed ushort r[8];
 
@@ -125,6 +140,11 @@ namespace img2chr
                 return FlipHorizontal().FlipVertical();
             }
 
+            public override bool Equals([NotNullWhen(true)] object obj)
+            {
+                return Equals((TileIndices)obj);
+            }
+
             public override int GetHashCode()
             {
                 int hash = 17;
@@ -134,6 +154,17 @@ namespace img2chr
                 }
 
                 return hash;
+            }
+
+            public bool Equals(TileIndices other)
+            {
+                bool eq = true;
+                for (int i = 0; i < 8 && eq; ++i)
+                {
+                    eq &= r[i] == other.r[i];
+                }
+
+                return eq;
             }
         }
 
@@ -444,7 +475,7 @@ namespace img2chr
 
                 for (int i = 1; i < paths.Length; i++)
                 {
-                    auto.sb.Append(Path.PathSeparator);
+                    auto.sb.Append(Path.DirectorySeparatorChar);
                     auto.sb.Append(paths[i]);
                 }
             }
@@ -583,7 +614,7 @@ namespace img2chr
             { Color.FromArgb(unchecked((int)0xFFfefefe)), 0 },
         };
 
-        private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(Bitmap bitmapImage, Rectangle area)
+        private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(Bitmap bitmapImage, Rectangle area, int tileWidth, int tileHeight)
         {
             List<TileEntry> allTiles = new List<TileEntry>();
 
@@ -595,29 +626,29 @@ namespace img2chr
             HashSet<Color> uniqueAttributeColors = new();
 
             // generate palattes from image
-            for (int y = area.Y, ymax = area.Y + area.Height; y < ymax; y += 16)
+            for (int y = area.Y, ymax = area.Y + area.Height; y < ymax; y += tileHeight)
             {
-                for (int x = area.X, xmax = area.X + area.Width; x < xmax; x += 16)
+                for (int x = area.X, xmax = area.X + area.Width; x < xmax; x += tileWidth)
                 {
-
                     uniqueAttributeColors.Clear();
 
-                    for (int py = 0; py < 16; ++py)
+                    for (int py = 0; py < tileHeight; ++py)
                     {
-                        for (int px = 0; px < 16; ++px)
+                        for (int px = 0; px < tileWidth; ++px)
                         {
                             int vx = x + px;
                             int vy = y + py;
-                            Assert(vx < bitmapImage.Width);
-                            Assert(vy < bitmapImage.Height);
+                            if (vx < bitmapImage.Width && vy < bitmapImage.Height)
+                            {
+                                Color pixel = bitmapImage.GetPixel(vx, vy);
+                                Assert(kNESColorToPalette.ContainsKey(pixel), $"Unknown Color at [{vx}, {vy}]: {pixel} ({pixel.ToArgb():X8})");
 
-                            Color pixel = bitmapImage.GetPixel(vx, vy);
-
-                            uniqueAttributeColors.Add(pixel);
+                                uniqueAttributeColors.Add(pixel);
+                            }
                         }
                     }
 
-                    Assert(uniqueAttributeColors.Count < 4, $"Too may colors ({uniqueAttributeColors.Count}) in 16x16 region ({x}, {y}) to form palette");
+                    Assert(uniqueAttributeColors.Count <= 4, $"Too may colors ({uniqueAttributeColors.Count}) in 16x16 region ({x}, {y}) to form palette");
 
                     SpritePalette spritePalette = default;
 
@@ -640,11 +671,16 @@ namespace img2chr
 
                     // add sprite palette region
                     uniqueSpritePalettes.Add(spritePalette);
-                    allSpritePalettes.Add((new Rectangle(x, y, 16, 16), spritePalette));
+                    allSpritePalettes.Add((new Rectangle(x, y, tileWidth, tileHeight), spritePalette));
                 }
             }
 
-            Assert(uniqueSpritePalettes.Count < 4, $"Too many defined sprite palettes ({uniqueSpritePalettes.Count})");
+            Assert(uniqueSpritePalettes.Count <= 4, $"Too many defined sprite palettes ({uniqueSpritePalettes.Count})");
+
+            //foreach (SpritePalette spritePalette in uniqueSpritePalettes)
+            //{
+            //LogInfo(spritePalette.ToString());
+            //}
 
             List<SpritePalette> allTileSpritePalettes = new(uniqueSpritePalettes);
 
@@ -663,17 +699,17 @@ namespace img2chr
                         {
                             int vx = x + px;
                             int vy = y + py;
-                            Assert(vx < bitmapImage.Width);
-                            Assert(vy < bitmapImage.Height);
-
-                            Color pixel = bitmapImage.GetPixel(vx, vy);
-
-                            bool found = spritePalette.TryGetIndex(pixel, out int indexInPalette);
-                            Assert(found, $"Unable to find index for color {pixel} at [{vx}, {vy}]");
-
-                            if (found)
+                            if (vx < bitmapImage.Width && vy < bitmapImage.Height)
                             {
-                                tileIndices[px, py] = indexInPalette;
+                                Color pixel = bitmapImage.GetPixel(vx, vy);
+
+                                bool found = spritePalette.TryGetIndex(pixel, out int indexInPalette);
+                                Assert(found, $"Unable to find index for color {pixel} at [{vx}, {vy}]");
+
+                                if (found)
+                                {
+                                    tileIndices[px, py] = indexInPalette;
+                                }
                             }
                         }
                     }
@@ -695,7 +731,7 @@ namespace img2chr
 
         private static string NormalizeExportName(string name)
         {
-            return name.ToLowerInvariant().Replace(' ', '-').Replace('.', '_');
+            return name.ToLowerInvariant().Replace(' ', '_').Replace('.', '_').Replace('-', '_');
         }
 
         const string kRODATASegment = "RODATA";
@@ -784,30 +820,145 @@ namespace img2chr
             }
         }
 
+        private static int PixelsToTiles(int pixels) => pixels / 8;
+
+        private static int PackPaletteOffsetLength(int offset, int count)
+        {
+            return (0x3 & count) | ((0x3 & offset) << 2);
+        }
+
         private static void GenerateBackgroundHeaderString(StringBuilder sb, string exportName, int nametable, int offsetX, int offsetY, int width, int height, int paletteOffset, int paletteCount)
         {
             sb.AppendLine($"; Background {exportName}");
             sb.AppendLine($".export {exportName}_bg = _{exportName}_bg");
             sb.AppendLine($"_{exportName}_bg:");
-            sb.AppendLine($".byte #$${nametable:X2} ; {nameof(nametable)}");
-            sb.AppendLine($".byte #${offsetX:X2} ; {nameof(offsetX)} in tiles");
-            sb.AppendLine($".byte #${offsetY:X2} ; {nameof(offsetY)} in tiles");
-            sb.AppendLine($".byte #${width:X2} ; {nameof(width)} in tiles");
-            sb.AppendLine($".byte #${height:X2} ; {nameof(height)} in tiles");
-            sb.AppendLine($".byte #${paletteCount:X2} ; {nameof(paletteCount)}");
-            sb.AppendLine($".addr {exportName}_palettes + {paletteOffset} ; base palette address");
+            sb.AppendLine($".byte #${nametable:X2} ; {nameof(nametable)}");
+            sb.AppendLine($".byte #${PixelsToTiles(offsetX):X2} ; {nameof(offsetX)} in tiles");
+            sb.AppendLine($".byte #${PixelsToTiles(offsetY):X2} ; {nameof(offsetY)} in tiles");
+            sb.AppendLine($".byte #${PixelsToTiles(width):X2} ; {nameof(width)} in tiles");
+            sb.AppendLine($".byte #${PixelsToTiles(height):X2} ; {nameof(height)} in tiles");
+            sb.AppendLine($".byte #${PackPaletteOffsetLength(paletteOffset, paletteCount):X2} ; %0000xxyy x={nameof(paletteOffset)} y={nameof(paletteCount)}");
+            sb.AppendLine($".addr {exportName}_palettes ; base palette address");
             sb.AppendLine($".addr {exportName}_tiles ; base tile address");
             sb.AppendLine();
         }
 
-        private static void GenerateTileString(StringBuilder sb, string exportName, IEnumerable<TileEntry> tileEntries)
+        class TileEntryComparer : IEqualityComparer<TileEntry>
+        {
+            public bool Equals(TileEntry x, TileEntry y)
+            {
+                return x.tileIndices.Equals(y.tileIndices);
+            }
+
+            public int GetHashCode([DisallowNull] TileEntry obj)
+            {
+                return obj.GetHashCode();
+            }
+        }
+
+        private static void GenerateCompressedBackgroundString(StringBuilder sb, string exportName, Dictionary<string, ChrRomOutput> outputChrData, IEnumerable<TileEntry> tileEntries)
+        {
+            List<TileEntry> uniqueTileEntries = new();
+
+            using (var auto = AutoStringBuilder.Auto())
+            {
+                int currentTileIndex = -1;
+                int tileIndexCount = 0;
+                int rleBytes = 0;
+
+                auto.sb.AppendLine("; tile count, tile index");
+
+                foreach (var tileEntry in tileEntries)
+                {
+                    int tileIndex = uniqueTileEntries.FindIndex(x => x.tileIndices.Equals(tileEntry.tileIndices));
+                    if (tileIndex < 0)
+                    {
+                        tileIndex = uniqueTileEntries.Count;
+                        uniqueTileEntries.Add(tileEntry);
+                    }
+
+                    if (currentTileIndex != tileIndex || tileIndexCount == 0xFF)
+                    {
+                        if (tileIndexCount > 0 && currentTileIndex >= 0 )
+                        {
+                            auto.sb.AppendLine($".byte #${tileIndexCount:X2}, #${currentTileIndex:X2}");
+                            rleBytes += 2;
+                        }
+
+                        currentTileIndex = tileIndex;
+                        tileIndexCount = 1;
+                    }
+                    else
+                    {
+                        ++tileIndexCount;
+                    }
+                }
+
+                Assert(rleBytes <= 0xFF, $"Compressed Background should be <= 255 bytes ({rleBytes})");
+
+                sb.AppendLine($".byte #${rleBytes:X2} ; RLE Bytes");
+                sb.AppendLine(auto.sb.ToString());
+            }
+
+            // output CHR for tiles
+            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+            {
+                GenerateTileCHRString(auto.sb, exportName, uniqueTileEntries);
+
+                // output chr data
+                outputChrData.Add(exportName, new()
+                {
+                    chrRomAsm = auto.sb.ToString(),
+                    chrCount = uniqueTileEntries.Count,
+                    is8x16 = false
+                });
+            }
+        }
+
+        private static void GenerateTileCHRString(StringBuilder sb, string exportName, int idx, TileEntry tileEntry)
+        {
+            StringBuilder byte0 = RequestStringBuilder();
+            StringBuilder byte1 = RequestStringBuilder();
+
+            {
+                byte0.Clear();
+                byte1.Clear();
+
+                for (int y = 0; y < 8; ++y)
+                {
+                    byte0.Append(".byte %");
+                    byte1.Append(".byte %");
+
+                    for (int x = 0; x < 8; ++x)
+                    {
+                        byte0.Append((tileEntry.tileIndices[x, y] & 0x1) == 0x1 ? "1" : "0");
+                        byte1.Append((tileEntry.tileIndices[x, y] & 0x2) == 0x2 ? "1" : "0");
+                    }
+
+                    byte0.AppendLine();
+                    byte1.AppendLine();
+                }
+
+                sb.AppendLine($"; Tile {idx} {tileEntry.x}x{tileEntry.y}");
+                sb.AppendLine($"{exportName}_tile_{tileEntry.x}x{tileEntry.y}:");
+                sb.AppendLine(byte0.ToString());
+                sb.AppendLine(byte1.ToString());
+            }
+
+            sb.AppendLine();
+
+            ReleaseStringBuilder(byte0);
+            ReleaseStringBuilder(byte1);
+        }
+
+        private static void GenerateTileCHRString(StringBuilder sb, string exportName, IEnumerable<TileEntry> tileEntries)
         {
             sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
             sb.AppendLine($"_{exportName}_tiles:");
             sb.AppendLine();
 
-            StringBuilder byte0 = new();
-            StringBuilder byte1 = new();
+            StringBuilder byte0 = RequestStringBuilder();
+            StringBuilder byte1 = RequestStringBuilder();
 
             int idx = 0;
             foreach (TileEntry tileEntry in tileEntries)
@@ -839,6 +990,9 @@ namespace img2chr
             }
 
             sb.AppendLine();
+
+            ReleaseStringBuilder(byte0);
+            ReleaseStringBuilder(byte1);
         }
         #endregion
 
@@ -875,7 +1029,7 @@ namespace img2chr
             Assert(bitmapImage.Height <= kNameTableHeight * 2, $"Image height too much for 4 nametables: {bitmapImage.Height}");
 
             var area = new Rectangle(0, 0, bitmapImage.Width, bitmapImage.Height);
-            var tiles = ConvertImageToTiles(bitmapImage, area);
+            var tiles = ConvertImageToTiles(bitmapImage, area, 16, 16);
 
             string exportName = NormalizeExportName(Path.GetFileName(backgroundFilename));
 
@@ -886,24 +1040,14 @@ namespace img2chr
 
                 GenerateBackgroundHeaderString(auto.sb, exportName, baseNameTable, backgroundX, backgroundY, backgroundWidth, backgroundHeight, 0, Math.Clamp(tiles.spritePalettes.Count, 0, 4));
 
+                // output CHR for tiles
+                GenerateCompressedBackgroundString(auto.sb, exportName, outputChrData, tiles.tiles);
+
                 GeneratePaletteString(auto.sb, exportName, tiles.spritePalettes);
 
                 WriteGeneratedAsmFile(auto.sb, backgroundFilename, in cmdOptions);
             }
 
-            // output CHR for tiles
-            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
-            {
-                GenerateTileString(auto.sb, exportName, tiles.tiles);
-
-                // output chr data
-                outputChrData.Add(exportName, new()
-                {
-                    chrRomAsm = auto.sb.ToString(),
-                    chrCount = tiles.tiles.Count,
-                    is8x16 = false
-                });
-            }
         }
         #endregion
 
@@ -941,7 +1085,7 @@ namespace img2chr
             area.Width = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.w", area.Width), 0, bitmapImage.Width);
             area.Height = Math.Clamp(GetIntParameter(spriteParameters, "image.max-rect.h", area.Height), 0, bitmapImage.Height);
 
-            var tiles = ConvertImageToTiles(bitmapImage, area);
+            var tiles = ConvertImageToTiles(bitmapImage, area, 8, 8);
 
             string exportName = NormalizeExportName(Path.GetFileName(spriteFilename));
 
@@ -1021,7 +1165,20 @@ namespace img2chr
                 }
             }
 
-            // TODO: write out CHR
+            // output CHR for tiles
+            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+            {
+                // TODO: use unique tiles
+                GenerateTileCHRString(auto.sb, exportName, tiles.tiles);
+
+                // output chr data
+                outputChrData.Add(exportName, new()
+                {
+                    chrRomAsm = auto.sb.ToString(),
+                    chrCount = tiles.tiles.Count,
+                    is8x16 = false
+                });
+            }
         }
         #endregion
 
@@ -1055,9 +1212,21 @@ namespace img2chr
             if (!string.IsNullOrEmpty(charMap))
             {
                 Rectangle area = new(0, 0, bitmapImage.Width, bitmapImage.Height);
-                var tiles = ConvertImageToTiles(bitmapImage, area);
+                var tiles = ConvertImageToTiles(bitmapImage, area, 8, 8);
 
-                // TODO: write out CHR
+                // output CHR for tiles
+                string exportName = NormalizeExportName(Path.GetFileName(fontFilename));
+                using (var auto = AutoStringBuilder.Auto())
+                {
+                    GenerateTileCHRString(auto.sb, exportName, tiles.tiles);
+
+                    outputChrData.Add(exportName, new()
+                    {
+                        chrRomAsm = auto.sb.ToString(),
+                        chrCount = tiles.tiles.Count,
+                        is8x16 = false
+                    });
+                }
 
                 // Gemerate charmap .s file
                 using (var auto = AutoStringBuilder.Auto())
@@ -1126,7 +1295,7 @@ namespace img2chr
                     sb.AppendLine("//");
                     sb.AppendLine();
 
-                    string defineGuard = $"{fontFilename}_h".Replace('-', '_').Replace('.', '_').ToUpperInvariant();
+                    string defineGuard = Path.GetFileName(fontFilename).Replace('-', '_').Replace('.', '_').ToUpperInvariant();
                     sb.AppendLine($"#ifndef {defineGuard}");
                     sb.AppendLine($"#define {defineGuard}");
                     sb.AppendLine();
@@ -2886,7 +3055,7 @@ namespace img2chr
             StringBuilder sb = new();
 
             // write output file
-            string chrOutputKey = $"{Path.GetFileName(asepriteFilename)}.sprite";
+            string chrOutputKey = NormalizeExportName($"{Path.GetFileName(asepriteFilename)}.sprite");
             outputChrData.Add(chrOutputKey, new()
             {
                 chrRomAsm = sb.ToString(),
@@ -2960,7 +3129,7 @@ namespace img2chr
         #endregion
 
         #region CSV File
-        static void ConvertCSVFile(string textFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        static void ConvertCSVFile(string textFilename, Dictionary<string, ChrRomOutput> _, in ConvertOptions cmdOptions)
         {
             TryGetFileParamters(textFilename, "tr", out var remapCharsParameters);
 
@@ -3188,7 +3357,7 @@ namespace img2chr
                     if (value.Length > kMaxStringWidth && !IsVerbatumString(value))
                     {
                         // split on "new line" sequence
-                        string[] lines = value.Split("\\\\n", StringSplitOptions.RemoveEmptyEntries);
+                        string[] lines = value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
 
                         bool allLinesShort = true;
                         foreach (string l in lines)
@@ -3331,7 +3500,7 @@ namespace img2chr
             foreach (var langToMap in textMap)
             {
                 string lang = langToMap.Key.ToLower();
-                string hFilename = Path.Combine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.{lang}.h");
+                string hFilename = PathCombine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.{lang}.h");
 
                 string defineGuard = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
 
@@ -3540,7 +3709,7 @@ namespace img2chr
             sb.AppendLine(".popseg");
 
             // write output file
-            string sFilename = Path.Combine(Path.GetDirectoryName(layoutFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{chrSegment.ToLowerInvariant()}.s");
+            string sFilename = PathCombine(Path.GetDirectoryName(layoutFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{chrSegment.ToLowerInvariant()}.s");
             File.WriteAllText(sFilename, sb.ToString(), UTF8);
             LogInfo($"Converted {layoutFilename} -> {sFilename}");
         }
