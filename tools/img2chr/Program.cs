@@ -195,6 +195,7 @@ namespace img2chr
         struct ConvertOptions
         {
             public string defaultGeneratedAssetFolder;
+            public string language;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -772,7 +773,7 @@ namespace img2chr
             }
         }
 
-        private static void GenerateFileHeader(StringBuilder sb, string srcFilename, string segment = null)
+        private static void GenerateAsmFileHeader(StringBuilder sb, string srcFilename, string segment = null)
         {
             sb.AppendLine(";");
             sb.AppendLine($"; Generated from {Path.GetFileName(srcFilename)}");
@@ -784,6 +785,26 @@ namespace img2chr
                 sb.AppendLine($".segment {segment}");
                 sb.AppendLine();
             }
+        }
+
+        private static void WrapHeaderFile(StringBuilder sb, string srcFilename, string dstFilename)
+        {
+            using var auto = AutoStringBuilder.Auto();
+
+            auto.sb.AppendLine("//");
+            auto.sb.AppendLine($"// Generated from {Path.GetFileName(srcFilename)}");
+            auto.sb.AppendLine("//");
+            auto.sb.AppendLine();
+
+            string defineGuard = $"{Path.GetFileName(dstFilename)}.h".Replace('-', '_').Replace('.', '_').ToUpperInvariant();
+            auto.sb.AppendLine($"#ifndef {defineGuard}");
+            auto.sb.AppendLine($"#define {defineGuard}");
+            auto.sb.AppendLine();
+
+            sb.Insert(0, auto.sb.ToString());
+
+            sb.AppendLine();
+            sb.AppendLine($"#endif // {defineGuard}");
         }
 
         private static void GeneratePaletteString(StringBuilder sb, string exportName, IEnumerable<SpritePalette> spritePalettes)
@@ -879,7 +900,7 @@ namespace img2chr
 
                     if (currentTileIndex != tileIndex || tileIndexCount == 0xFF)
                     {
-                        if (tileIndexCount > 0 && currentTileIndex >= 0 )
+                        if (tileIndexCount > 0 && currentTileIndex >= 0)
                         {
                             auto.sb.AppendLine($".byte #${tileIndexCount:X2}, #${currentTileIndex:X2}");
                             rleBytes += 2;
@@ -1036,7 +1057,7 @@ namespace img2chr
             // write background info to file
             using (AutoStringBuilder auto = AutoStringBuilder.Auto())
             {
-                GenerateFileHeader(auto.sb, backgroundFilename, kRODATASegment);
+                GenerateAsmFileHeader(auto.sb, backgroundFilename, kRODATASegment);
 
                 GenerateBackgroundHeaderString(auto.sb, exportName, baseNameTable, backgroundX, backgroundY, backgroundWidth, backgroundHeight, 0, Math.Clamp(tiles.spritePalettes.Count, 0, 4));
 
@@ -1228,12 +1249,12 @@ namespace img2chr
                     });
                 }
 
-                // Gemerate charmap .s file
+                // Generate charmap .s file
                 using (var auto = AutoStringBuilder.Auto())
                 {
                     var sb = auto.sb;
 
-                    GenerateFileHeader(sb, fontFilename);
+                    GenerateAsmFileHeader(sb, fontFilename);
 
                     sb.AppendLine(".feature string_escapes +");
                     sb.AppendLine();
@@ -1290,16 +1311,6 @@ namespace img2chr
                 {
                     var sb = auto.sb;
 
-                    sb.AppendLine("//");
-                    sb.AppendLine($"// Generated from {Path.GetFileName(imageFilename)}");
-                    sb.AppendLine("//");
-                    sb.AppendLine();
-
-                    string defineGuard = Path.GetFileName(fontFilename).Replace('-', '_').Replace('.', '_').ToUpperInvariant();
-                    sb.AppendLine($"#ifndef {defineGuard}");
-                    sb.AppendLine($"#define {defineGuard}");
-                    sb.AppendLine();
-
                     int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
 
                     int index = 0;
@@ -1344,13 +1355,45 @@ namespace img2chr
                         }
                     }
 
-                    sb.AppendLine();
-                    sb.AppendLine($"#endif // {defineGuard}");
+                    // wrap contents
+                    WrapHeaderFile(sb, fontFilename, fontFilename);
 
                     // write font file
                     WriteGeneratedHeaderFile(sb, fontFilename, in cmdOptions);
                 }
             }
+        }
+        #endregion
+
+        #region Game Text File
+        static void ConvertL10NFile(string l10nFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        {
+            TryGetFileParamters(l10nFilename, string.Empty, out var l10nParameters);
+
+            string lang = GetStringParameter(l10nParameters, "force-lang", cmdOptions.language);
+
+            string includeRoot = PathCombine(Path.GetDirectoryName(l10nFilename), cmdOptions.defaultGeneratedAssetFolder, "include");
+            string[] languageFiles = Directory.GetFiles(includeRoot, $"*.{lang}.*", SearchOption.AllDirectories);
+
+            if (languageFiles.Length > 0)
+            {
+                using var auto = AutoStringBuilder.Auto();
+
+                foreach (string languageFile in languageFiles)
+                {
+                    if (languageFile.EndsWith(".h"))
+                    {
+                        auto.sb.AppendLine($"#include \"{Path.GetFileName(languageFile)}\"");
+                    }
+                }
+
+                string filename = PathCombine(Path.GetDirectoryName(l10nFilename), Path.GetFileNameWithoutExtension(l10nFilename));
+
+                WrapHeaderFile(auto.sb, l10nFilename, filename);
+
+                WriteGeneratedHeaderFile(auto.sb, filename, in cmdOptions);
+            }
+
         }
         #endregion
 
@@ -1856,16 +1899,6 @@ namespace img2chr
                     {
                         sb.Clear();
 
-                        sb.AppendLine("//");
-                        sb.AppendLine($"// Generated from {Path.GetFileName(imageFilename)}");
-                        sb.AppendLine("//");
-                        sb.AppendLine();
-
-                        string defineGuard = $"{filename}_font_h".Replace('-', '_').Replace('.', '_').ToUpperInvariant();
-                        sb.AppendLine($"#ifndef {defineGuard}");
-                        sb.AppendLine($"#define {defineGuard}");
-                        sb.AppendLine();
-
                         int charOffset = GetIntParameter(fontParameters, "charmap.offset", 0);
 
                         int index = 0;
@@ -1910,8 +1943,7 @@ namespace img2chr
                             }
                         }
 
-                        sb.AppendLine();
-                        sb.AppendLine($"#endif // {defineGuard}");
+                        WrapHeaderFile(sb, fontFilename, fontFilename);
 
                         // write font file
                         string hFilename = Path.Combine(Path.GetDirectoryName(imageFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.font.h");
@@ -3500,21 +3532,10 @@ namespace img2chr
             foreach (var langToMap in textMap)
             {
                 string lang = langToMap.Key.ToLower();
-                string hFilename = PathCombine(Path.GetDirectoryName(textFilename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{filename}.{lang}.h");
-
-                string defineGuard = Path.GetFileName(hFilename).ToUpper().Replace('.', '_');
 
                 sb.Clear();
-                sb.AppendLine("// ");
-                sb.AppendLine($"// Generated from '{Path.GetFileName(textFilename)}'");
-                sb.AppendLine("// ");
-                sb.AppendLine();
 
-                sb.AppendLine($"#ifndef {defineGuard}");
-                sb.AppendLine($"#define {defineGuard}");
-                sb.AppendLine();
-
-                sb.AppendLine($"#define LANGUAGE_{lang.ToUpper()} \"{lang}\"");
+                sb.AppendLine($"#define BUILD_LANGUAGE \"{lang}\"");
                 sb.AppendLine();
 
                 sb.AppendLine("// string keys");
@@ -3588,12 +3609,11 @@ namespace img2chr
                 }
 
                 sb.AppendLine("};");
-                sb.AppendLine();
 
-                sb.AppendLine($"#endif // {defineGuard}");
+                string dstFilename = PathCombine(Path.GetDirectoryName(textFilename), $"{filename}.{lang}");
+                WrapHeaderFile(sb, textFilename, dstFilename);
 
-                File.WriteAllText(hFilename, sb.ToString(), UTF8);
-                LogInfo($"Converted {textFilename} -> {hFilename}");
+                WriteGeneratedHeaderFile(sb, dstFilename, in cmdOptions);
             }
         }
         #endregion
@@ -3749,12 +3769,14 @@ namespace img2chr
 
             ConvertOptions options = new()
             {
-                defaultGeneratedAssetFolder = "generated"
+                defaultGeneratedAssetFolder = "generated",
+                language = "en",
             };
 
             Dictionary<string, SupportedFormat> formatMap = new()
             {
                 { ".csv", new() { convertFunc = ConvertCSVFile, order = 0 } },
+                { ".l10n", new () { convertFunc = ConvertL10NFile, order = int.MaxValue} },
 
                 { ".layout", new() {convertFunc = ConvertLayoutFile, order = int.MaxValue } },
 
@@ -3802,6 +3824,15 @@ namespace img2chr
                             if (i < args.Length)
                             {
                                 options.defaultGeneratedAssetFolder = args[i];
+                            }
+                            break;
+
+                        case "-l":
+                        case "--lang":
+                            ++i;
+                            if (i < args.Length)
+                            {
+                                options.language = args[i];
                             }
                             break;
                     }
@@ -3856,7 +3887,7 @@ namespace img2chr
                     else if (File.Exists(argPath))
                     {
                         LogInfo($"Process file {argPath}...");
-                        if (!TryGetFileParamters(Path.Combine(Path.GetDirectoryName(argPath), ""), "library", out var libraryParameters) || forceReimport)
+                        if (!TryGetFileParamters(PathCombine(Path.GetDirectoryName(argPath), ""), "library", out var libraryParameters) || forceReimport)
                         {
                             libraryParameters = new Dictionary<string, string>();
                         }
@@ -3889,19 +3920,19 @@ namespace img2chr
 
                         if (updateLibrary)
                         {
-                            WriteParametersToFile(libraryParameters, Path.Combine(Path.GetDirectoryName(argPath), ".library"));
+                            WriteParametersToFile(libraryParameters, PathCombine(Path.GetDirectoryName(argPath), ".library"));
                         }
                     }
                 }
             }
 
+            HashSet<string> outputGenDirs = new();
             // create output generated folders
             if (compilerTasks.Count > 0)
             {
-                HashSet<string> outputGenDirs = new();
                 foreach (var task in compilerTasks)
                 {
-                    string outGenDir = Path.Combine(Path.GetDirectoryName(compilerTasks[0].inputFileName), options.defaultGeneratedAssetFolder);
+                    string outGenDir = PathCombine(Path.GetDirectoryName(compilerTasks[0].inputFileName), options.defaultGeneratedAssetFolder);
                     outputGenDirs.Add(outGenDir);
                 }
 
@@ -3909,8 +3940,8 @@ namespace img2chr
                 {
                     LogInfo($"Output Gen: {dir}");
                     Directory.CreateDirectory(dir);
-                    Directory.CreateDirectory(Path.Combine(dir, "asm"));
-                    Directory.CreateDirectory(Path.Combine(dir, "include"));
+                    Directory.CreateDirectory(PathCombine(dir, "asm"));
+                    Directory.CreateDirectory(PathCombine(dir, "include"));
                 }
             }
             else

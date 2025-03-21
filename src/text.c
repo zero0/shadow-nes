@@ -2,13 +2,11 @@
 #include "ppu.h"
 #include "subpixel.h"
 #include "globals.h"
+#include "gametext.h"
 
 #define EMPTY_TILE          0xFF
 
-#define CHAR_SPACE          77
-#define CHAR_NEW_LINE       78
-#define CHAR_CARAGE_RETURN  79
-#define CHAR_TAB            80
+
 
 // draw string directly to nametable while nmi is off
 void __fastcall__ text_draw_string_direct_impl(void)
@@ -20,13 +18,13 @@ void __fastcall__ text_draw_string_direct_impl(void)
     for( i = 0, imax = text_strlen() ; i < imax ; ++i )
     {
         c = text_str_at( i );
-        if( c == CHAR_SPACE )
+        if( c == FONT_CHAR_SPACE )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             ++x;
             continue;
         }
-        if( c == CHAR_NEW_LINE )
+        if( c == FONT_CHAR_NEW_LINE )
         {
             ppu_end_tile_batch();
 
@@ -36,7 +34,7 @@ void __fastcall__ text_draw_string_direct_impl(void)
             ppu_begin_tile_batch( x, y );
             continue;
         }
-        if( c == CHAR_CARAGE_RETURN )
+        if( c == FONT_CHAR_CARAGE_RETURN )
         {
             ppu_end_tile_batch();
 
@@ -47,7 +45,7 @@ void __fastcall__ text_draw_string_direct_impl(void)
             ppu_begin_tile_batch( x, y );
             continue;
         }
-        if( c == CHAR_TAB )
+        if( c == FONT_CHAR_TAB )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
@@ -71,13 +69,13 @@ void __fastcall__ text_draw_string_impl(void)
     for( i = 0, imax = text_strlen() ; i < imax ; ++i )
     {
         c = text_str_at( i );
-        if( c == CHAR_SPACE )
+        if( c == FONT_CHAR_SPACE )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             ++x;
             continue;
         }
-        if( c == CHAR_NEW_LINE )
+        if( c == FONT_CHAR_NEW_LINE )
         {
             ppu_end_tile_batch();
 
@@ -87,7 +85,7 @@ void __fastcall__ text_draw_string_impl(void)
             ppu_begin_tile_batch( x, y );
             continue;
         }
-        if( c == CHAR_CARAGE_RETURN )
+        if( c == FONT_CHAR_CARAGE_RETURN )
         {
             ppu_end_tile_batch();
 
@@ -98,7 +96,7 @@ void __fastcall__ text_draw_string_impl(void)
             ppu_begin_tile_batch( x, y );
             continue;
         }
-        if( c == CHAR_TAB )
+        if( c == FONT_CHAR_TAB )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
