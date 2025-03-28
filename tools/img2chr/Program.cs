@@ -615,6 +615,75 @@ namespace img2chr
             { Color.FromArgb(unchecked((int)0xFFfefefe)), 0 },
         };
 
+        // Colors from Aseprite NES palette
+        static Dictionary<Color, int> kAsepriteNESPalette = new() {
+            { Color.FromArgb(0, 0, 0), 0 },
+            { Color.FromArgb(121, 121, 121),0 },
+            { Color.FromArgb(162, 162, 162),0 },
+            { Color.FromArgb(48, 81, 130),0 },
+            { Color.FromArgb(65, 146, 195),0 },
+            { Color.FromArgb(97, 211, 227),0 },
+            { Color.FromArgb(162, 255, 243),0 },
+            { Color.FromArgb(48, 97, 65),0 },
+            { Color.FromArgb(73, 162, 105),0 },
+            { Color.FromArgb(113, 227, 146),0 },
+            { Color.FromArgb(162, 255, 203),0 },
+            { Color.FromArgb(56, 109, 0),0 },
+            { Color.FromArgb(73, 170, 16),0 },
+            { Color.FromArgb(113, 243, 65),0 },
+            { Color.FromArgb(162, 243, 162),0 },
+            { Color.FromArgb(56, 105, 0),0 },
+            { Color.FromArgb(81, 162, 0),0 },
+            { Color.FromArgb(154, 235, 0),0 },
+            { Color.FromArgb(203, 243, 130),0 },
+            { Color.FromArgb(73, 89, 0),0 },
+            { Color.FromArgb(138, 138, 0),0 },
+            { Color.FromArgb(235, 211, 32),0 },
+            { Color.FromArgb(255, 243, 146),0 },
+            { Color.FromArgb(121, 65, 0),0 },
+            { Color.FromArgb(195, 113, 0),0 },
+            { Color.FromArgb(255, 162, 0),0 },
+            { Color.FromArgb(255, 219, 162),0 },
+            { Color.FromArgb(162, 48, 0),0 },
+            { Color.FromArgb(227, 81, 0),0 },
+            { Color.FromArgb(255, 121, 48),0 },
+            { Color.FromArgb(255, 203, 186),0 },
+            { Color.FromArgb(178, 16, 48),0 },
+            { Color.FromArgb(219, 65, 97),0 },
+            { Color.FromArgb(255, 97, 178),0 },
+            { Color.FromArgb(255, 186, 235),0 },
+            { Color.FromArgb(154, 32, 121),0 },
+            { Color.FromArgb(219, 65, 195),0 },
+            { Color.FromArgb(243, 97, 255),0 },
+            { Color.FromArgb(227, 178, 255),0 },
+            { Color.FromArgb(97, 16, 162),0 },
+            { Color.FromArgb(146, 65, 243),0 },
+            { Color.FromArgb(162, 113, 255),0 },
+            { Color.FromArgb(195, 178, 255),0 },
+            { Color.FromArgb(40, 0, 186),0 },
+            { Color.FromArgb(65, 65, 255),0 },
+            { Color.FromArgb(81, 130, 255),0 },
+            { Color.FromArgb(162, 186, 255),0 },
+            { Color.FromArgb(32, 0, 178),0 },
+            { Color.FromArgb(65, 97, 251),0 },
+            { Color.FromArgb(97, 162, 255),0 },
+            { Color.FromArgb(146, 211, 255),0 },
+            { Color.FromArgb(178, 178, 178),0 },
+            { Color.FromArgb(235, 235, 235),0 },
+            { Color.FromArgb(255, 255, 255),0 },
+        };
+
+        private static bool IsKnownColor(Color color, out int id)
+        {
+            bool known = kAsepriteNESPalette.TryGetValue(color, out id);
+            if (!known)
+            {
+                known = kNESColorToPalette.TryGetValue(color, out id);
+            }
+
+            return known;
+        }
+
         private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(Bitmap bitmapImage, Rectangle area, int tileWidth, int tileHeight)
         {
             List<TileEntry> allTiles = new List<TileEntry>();
@@ -642,7 +711,7 @@ namespace img2chr
                             if (vx < bitmapImage.Width && vy < bitmapImage.Height)
                             {
                                 Color pixel = bitmapImage.GetPixel(vx, vy);
-                                Assert(kNESColorToPalette.ContainsKey(pixel), $"Unknown Color at [{vx}, {vy}]: {pixel} ({pixel.ToArgb():X8})");
+                                Assert(IsKnownColor(pixel, out var _), $"Unknown Color at [{vx}, {vy}]: {pixel} ({pixel.ToArgb():X8})");
 
                                 uniqueAttributeColors.Add(pixel);
                             }
@@ -676,7 +745,7 @@ namespace img2chr
                 }
             }
 
-            Assert(uniqueSpritePalettes.Count <= 4, $"Too many defined sprite palettes ({uniqueSpritePalettes.Count})");
+            //Assert(uniqueSpritePalettes.Count <= 4, $"Too many defined sprite palettes ({uniqueSpritePalettes.Count})");
 
             //foreach (SpritePalette spritePalette in uniqueSpritePalettes)
             //{
@@ -1189,14 +1258,20 @@ namespace img2chr
             // output CHR for tiles
             using (AutoStringBuilder auto = AutoStringBuilder.Auto())
             {
+                List<TileEntry> tileEntriesToConvert = new();
+                foreach (UniqueTileEntry uniqueTileEntry in allUniqueTiles)
+                {
+                    tileEntriesToConvert.Add(tiles.tiles[uniqueTileEntry.index]);
+                }
+
                 // TODO: use unique tiles
-                GenerateTileCHRString(auto.sb, exportName, tiles.tiles);
+                GenerateTileCHRString(auto.sb, exportName, tileEntriesToConvert);
 
                 // output chr data
                 outputChrData.Add(exportName, new()
                 {
                     chrRomAsm = auto.sb.ToString(),
-                    chrCount = tiles.tiles.Count,
+                    chrCount = tileEntriesToConvert.Count,
                     is8x16 = false
                 });
             }
