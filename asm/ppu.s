@@ -193,6 +193,7 @@ PALETTE_TINT_BACKGROUND_PTR =   _PPU_TEMP_PTR + 0
 ; Normal temp variables
 CHR_UPLOAD_ADDR =               _PPU_TEMP_PTR + 2
 META_SPRITE_ADDR =              _PPU_TEMP_PTR + 2
+BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 
 .segment "BSS"
     NAMETABLE_UPDATE:       .res 256 ;
@@ -246,6 +247,7 @@ META_SPRITE_ADDR =              _PPU_TEMP_PTR + 2
 .export _ppu_release_sprite = ppu_release_sprite
 .export _ppu_update_sprite = ppu_update_sprite
 .export _ppu_update_sprite_pos_impl = ppu_update_sprite_pos
+.export _ppu_update_sprite_sprite_impl = ppu_update_sprite_sprite
 .export _ppu_oam_sprite
 
 .export _ppu_add_meta_sprite_internal
@@ -261,6 +263,8 @@ META_SPRITE_ADDR =              _PPU_TEMP_PTR + 2
 .export _ppu_tint_palellete_background_internal
 .export _ppu_tint_palelletes_internal
 .export _ppu_tint_reset_internal
+
+.export _ppu_load_background_impl = ppu_load_background
 
 .segment "LOWCODE"
 
@@ -903,6 +907,11 @@ _ppu_fill_nametable_attr:
 
     sta OAM_UPDATE, x
 
+    ; remove sprite from oam list
+    ldx OAM_SPRITE_LEN
+    dex
+    stx OAM_SPRITE_LEN
+
     ; mark dirty
     lda DIRTY_UPLOAD_MASK
     ora #(DIRTY_UPLOAD_MASK_OAM)
@@ -923,19 +932,50 @@ _ppu_fill_nametable_attr:
     tax
 
     ; store oam updates
+    ; y
     lda _PPU_ARGS+1
     sta OAM_UPDATE, x
     inx
 
+    ; sprite
     lda _PPU_ARGS+2
     sta OAM_UPDATE, x
     inx
 
+    ; attr
     lda _PPU_ARGS+3
     sta OAM_UPDATE, x
     inx
 
+    ; x
     lda _PPU_ARGS+4
+    sta OAM_UPDATE, x
+
+    ; mark dirty
+    lda DIRTY_UPLOAD_MASK
+    ora #(DIRTY_UPLOAD_MASK_OAM)
+    sta DIRTY_UPLOAD_MASK
+
+    rts
+.endproc
+
+; update a sprite's sprite only
+.proc ppu_update_sprite_sprite
+
+    ; load sprite index (index -> offset)
+    lda _PPU_ARGS+0
+    asl
+    asl
+
+    ; transfer index -> offset
+    tax
+
+    ; store oam updates
+    ; skip y
+    inx
+
+    ; sprite
+    lda _PPU_ARGS+1
     sta OAM_UPDATE, x
 
     ; mark dirty
@@ -958,14 +998,18 @@ _ppu_fill_nametable_attr:
     tax
 
     ; store oam updates
+    ; y
     lda _PPU_ARGS+1
     sta OAM_UPDATE, x
     inx
 
+    ; skip sprite
     inx
 
+    ; skip attr
     inx
 
+    ; x
     lda _PPU_ARGS+2
     sta OAM_UPDATE, x
 
@@ -1499,6 +1543,14 @@ _ppu_tint_reset_internal:
 
     ; mark palette as dirty
     inc PALETTE_UPDATE_LEN
+
+    rts
+.endproc
+
+;
+.proc ppu_load_background
+
+
 
     rts
 .endproc

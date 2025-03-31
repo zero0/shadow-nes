@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.IO;
 using System.IO.Compression;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Parameters = System.Collections.Generic.Dictionary<string, string>;
 
 namespace img2chr
@@ -16,9 +20,10 @@ namespace img2chr
     {
         #region Util Structs
         [StructLayout(LayoutKind.Sequential)]
-        unsafe struct SpritePalette
+        unsafe struct SpritePalette : IEquatable<SpritePalette>
         {
-            fixed int c[4];
+            public string exportName;
+            private fixed int c[4];
 
             public Color this[int index]
             {
@@ -62,16 +67,12 @@ namespace img2chr
 
             public override string ToString()
             {
-                using var auto = AutoStringBuilder.Auto();
+                return $"({c[0]:X8}, {c[1]:X8}, {c[2]:X8}, {c[3]:X8})";
+            }
 
-                auto.sb.AppendLine("[");
-                auto.sb.Append("  ").Append($"{c[0]:X8}").AppendLine(",");
-                auto.sb.Append("  ").Append($"{c[1]:X8}").AppendLine(",");
-                auto.sb.Append("  ").Append($"{c[2]:X8}").AppendLine(",");
-                auto.sb.Append("  ").Append($"{c[3]:X8}").AppendLine();
-                auto.sb.AppendLine("]");
-
-                return auto.sb.ToString();
+            public bool Equals(SpritePalette other)
+            {
+                return c[0] == other.c[0] && c[1] == other.c[1] && c[2] == other.c[2] && c[3] == other.c[3];
             }
         }
 
@@ -171,6 +172,7 @@ namespace img2chr
         [StructLayout(LayoutKind.Sequential)]
         struct TileEntry
         {
+            public string tileName;
             public TileIndices tileIndices;
             public int spritePaletteIndex;
             public int x, y, attr;
@@ -362,6 +364,28 @@ namespace img2chr
             }
         }
 
+        static Parameters GetSubParameters(Parameters parameters, string key)
+        {
+            Parameters subparameters = new();
+
+            if (!key.EndsWith('.'))
+            {
+                key += ".";
+            }
+
+            foreach (var kv in parameters)
+            {
+                if (kv.Key.StartsWith(key))
+                {
+                    string subkey = kv.Key.Substring(key.Length);
+                    bool added = subparameters.TryAdd(subkey, kv.Value);
+                    Assert(added, $"Unable to add sub parameter {kv.Key} -> {subkey}");
+                }
+            }
+
+            return subparameters;
+        }
+
         static bool GetBoolParameter(Parameters parameters, string key, bool defaultValue = false)
         {
             bool value = parameters?.TryGetValue(key, out string strValue) ?? false ? bool.TryParse(strValue, out bool boolValue) ? boolValue : defaultValue : defaultValue;
@@ -548,12 +572,86 @@ namespace img2chr
 
             return defineName;
         }
+
+        static bool TryParseRectString(string value, out Rect rect)
+        {
+            rect = default;
+
+            bool parsed = false;
+            if (!string.IsNullOrEmpty(value))
+            {
+                parsed = value.StartsWith('[') && value.EndsWith(']');
+                if (parsed)
+                {
+                    var parts = value[1..^1].Split(',');
+                    rect.origin.x = 0;
+                    rect.origin.y = 0;
+                    rect.size.width = 1;
+                    rect.size.height = 1;
+
+                    if (parts.Length >= 2)
+                    {
+                        int.TryParse(parts[0], out rect.origin.x);
+                        int.TryParse(parts[1], out rect.origin.y);
+
+                        if (parts.Length >= 4)
+                        {
+                            int.TryParse(parts[2], out rect.size.width);
+                            int.TryParse(parts[3], out rect.size.height);
+                        }
+                    }
+                }
+            }
+
+            return parsed;
+        }
+
+        static bool TryParseColorString(string value, out Color color)
+        {
+            color = default;
+
+            bool parsed = false;
+            if (!string.IsNullOrEmpty(value))
+            {
+                if (value.StartsWith('#'))
+                {
+                    parsed = int.TryParse(value[1..], out int argb);
+                    color = Color.FromArgb(argb); ;
+                }
+                else if (value.StartsWith('$'))
+                {
+                    parsed = int.TryParse(value[1..], out int paletteId);
+                    color = GetColorFromId(paletteId);
+                }
+                else if (value.StartsWith('[') && value.EndsWith(']'))
+                {
+                    var parts = value[1..^1].Split(',');
+                    if (parts.Length >= 3)
+                    {
+                        bool ok = false;
+                        ok &= int.TryParse(parts[0].Trim(), out int r);
+                        ok &= int.TryParse(parts[1].Trim(), out int g);
+                        ok &= int.TryParse(parts[2].Trim(), out int b);
+                        int a = 255;
+                        if (parts.Length >= 4)
+                        {
+                            ok &= int.TryParse(parts[3].Trim(), out a);
+                        }
+
+                        parsed = ok;
+                        color = Color.FromArgb(a, r, g, b);
+                    }
+                }
+            }
+
+            return parsed;
+        }
         #endregion
 
         #region Generate String Utils
         const string uint8Type = "uint8_t";
-        const int kNameTableWidth = 320;
-        const int kNameTableHeight = 300;
+        const int kNameTableWidth = 32 * 8;
+        const int kNameTableHeight = 30 * 8;
 
         // Palette from Lospec.com/palette-list
         // Palette Name: NES (Wikipedia)
@@ -673,6 +771,11 @@ namespace img2chr
             { Color.FromArgb(255, 255, 255),0 },
         };
 
+        private static int KnownColorToId(Color color)
+        {
+            return IsKnownColor(color, out int id) ? id : 0;
+        }
+
         private static bool IsKnownColor(Color color, out int id)
         {
             bool known = kAsepriteNESPalette.TryGetValue(color, out id);
@@ -684,7 +787,12 @@ namespace img2chr
             return known;
         }
 
-        private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(Bitmap bitmapImage, Rectangle area, int tileWidth, int tileHeight)
+        private static Color GetColorFromId(int id)
+        {
+            return Color.AliceBlue;
+        }
+
+        private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(Bitmap bitmapImage, Rectangle area, int paletteWidth, int paletteHeight, Color? backgroundColor = null)
         {
             List<TileEntry> allTiles = new List<TileEntry>();
 
@@ -696,15 +804,15 @@ namespace img2chr
             HashSet<Color> uniqueAttributeColors = new();
 
             // generate palattes from image
-            for (int y = area.Y, ymax = area.Y + area.Height; y < ymax; y += tileHeight)
+            for (int y = area.Y, ymax = area.Y + area.Height; y < ymax; y += paletteHeight)
             {
-                for (int x = area.X, xmax = area.X + area.Width; x < xmax; x += tileWidth)
+                for (int x = area.X, xmax = area.X + area.Width; x < xmax; x += paletteWidth)
                 {
                     uniqueAttributeColors.Clear();
 
-                    for (int py = 0; py < tileHeight; ++py)
+                    for (int py = 0; py < paletteHeight; ++py)
                     {
-                        for (int px = 0; px < tileWidth; ++px)
+                        for (int px = 0; px < paletteWidth; ++px)
                         {
                             int vx = x + px;
                             int vy = y + py;
@@ -741,7 +849,7 @@ namespace img2chr
 
                     // add sprite palette region
                     uniqueSpritePalettes.Add(spritePalette);
-                    allSpritePalettes.Add((new Rectangle(x, y, tileWidth, tileHeight), spritePalette));
+                    allSpritePalettes.Add((new Rectangle(x, y, paletteWidth, paletteHeight), spritePalette));
                 }
             }
 
@@ -793,6 +901,41 @@ namespace img2chr
                         tileIndices = tileIndices,
                         spritePaletteIndex = spritePaletteIndex,
                     });
+                }
+            }
+
+            // if there's a bg color, remove solid bg colors
+            if (backgroundColor.HasValue)
+            {
+                SpritePalette fullBackgroundPalette = default;
+                fullBackgroundPalette[0] = backgroundColor.Value;
+                fullBackgroundPalette[1] = backgroundColor.Value;
+                fullBackgroundPalette[2] = backgroundColor.Value;
+                fullBackgroundPalette[3] = backgroundColor.Value;
+
+                int backgroundPaletteIndex = allTileSpritePalettes.IndexOf(fullBackgroundPalette);
+                if (backgroundPaletteIndex >= 0)
+                {
+                    // remove the bg-only palette
+                    allTileSpritePalettes.RemoveAt(backgroundPaletteIndex);
+
+                    int prevTileCount = allTiles.Count;
+
+                    // remove all bg-only tiles
+                    allTiles.RemoveAll(x => x.spritePaletteIndex == backgroundPaletteIndex);
+
+                    LogInfo($"Removed background-only ({backgroundColor.Value}) tiles {prevTileCount} -> {allTiles.Count}");
+
+                    // adjust tiles from the removed bg
+                    for (int i = 0; i < allTiles.Count; i++)
+                    {
+                        TileEntry tile = allTiles[i];
+                        if (tile.spritePaletteIndex > backgroundPaletteIndex)
+                        {
+                            tile.spritePaletteIndex--;
+                            allTiles[i] = tile;
+                        }
+                    }
                 }
             }
 
@@ -885,39 +1028,37 @@ namespace img2chr
             int idx = 0;
             foreach (SpritePalette spritePalette in spritePalettes)
             {
-                string export = $"{exportName}_palette_{idx}";
+                string export = string.IsNullOrEmpty(spritePalette.exportName) ? $"{exportName}_palette_{idx}" : spritePalette.exportName;
 
                 sb.AppendLine($"; Palette {idx}:");
-                sb.AppendLine($";  0: ${kNESColorToPalette[spritePalette[0]]:X2} ({spritePalette[0]})");
-                sb.AppendLine($";  1: ${kNESColorToPalette[spritePalette[1]]:X2} ({spritePalette[1]})");
-                sb.AppendLine($";  2: ${kNESColorToPalette[spritePalette[2]]:X2} ({spritePalette[2]})");
-                sb.AppendLine($";  3: ${kNESColorToPalette[spritePalette[3]]:X2} ({spritePalette[3]})");
+                sb.AppendLine($";  0: ${KnownColorToId(spritePalette[0]):X2} ({spritePalette[0]})");
+                sb.AppendLine($";  1: ${KnownColorToId(spritePalette[1]):X2} ({spritePalette[1]})");
+                sb.AppendLine($";  2: ${KnownColorToId(spritePalette[2]):X2} ({spritePalette[2]})");
+                sb.AppendLine($";  3: ${KnownColorToId(spritePalette[3]):X2} ({spritePalette[3]})");
                 sb.AppendLine();
 
                 sb.AppendLine($".export {export} = _{export}");
                 sb.AppendLine($"_{export}:");
 
                 sb.Append(".byte");
-                sb.Append($" #${kNESColorToPalette[spritePalette[0]]:X2},");
-                sb.Append($" #${kNESColorToPalette[spritePalette[1]]:X2},");
-                sb.Append($" #${kNESColorToPalette[spritePalette[2]]:X2},");
-                sb.Append($" #${kNESColorToPalette[spritePalette[3]]:X2}");
+                sb.Append($" #${KnownColorToId(spritePalette[0]):X2},");
+                sb.Append($" #${KnownColorToId(spritePalette[1]):X2},");
+                sb.Append($" #${KnownColorToId(spritePalette[2]):X2},");
+                sb.Append($" #${KnownColorToId(spritePalette[3]):X2}");
                 sb.AppendLine();
 
                 ++idx;
-
-                if (idx >= 4) break;
             }
         }
 
         private static int PixelsToTiles(int pixels) => pixels / 8;
 
-        private static int PackPaletteOffsetLength(int offset, int count)
+        private static int PackPaletteOffsetLength(bool compressed, int offset, int count)
         {
-            return (0x3 & count) | ((0x3 & offset) << 2);
+            return (compressed ? 0x80 : 0) | (0x3 & count) | ((0x3 & offset) << 2);
         }
 
-        private static void GenerateBackgroundHeaderString(StringBuilder sb, string exportName, int nametable, int offsetX, int offsetY, int width, int height, int paletteOffset, int paletteCount)
+        private static void GenerateBackgroundHeaderString(StringBuilder sb, string exportName, int nametable, int offsetX, int offsetY, int width, int height, bool compressed, int paletteOffset, int paletteCount)
         {
             sb.AppendLine($"; Background {exportName}");
             sb.AppendLine($".export {exportName}_bg = _{exportName}_bg");
@@ -927,7 +1068,7 @@ namespace img2chr
             sb.AppendLine($".byte #${PixelsToTiles(offsetY):X2} ; {nameof(offsetY)} in tiles");
             sb.AppendLine($".byte #${PixelsToTiles(width):X2} ; {nameof(width)} in tiles");
             sb.AppendLine($".byte #${PixelsToTiles(height):X2} ; {nameof(height)} in tiles");
-            sb.AppendLine($".byte #${PackPaletteOffsetLength(paletteOffset, paletteCount):X2} ; %0000xxyy x={nameof(paletteOffset)} y={nameof(paletteCount)}");
+            sb.AppendLine($".byte #${PackPaletteOffsetLength(compressed, paletteOffset, paletteCount):X2} ; %z000xxyy z={nameof(compressed)} x={nameof(paletteOffset)} y={nameof(paletteCount)}");
             sb.AppendLine($".addr {exportName}_palettes ; base palette address");
             sb.AppendLine($".addr {exportName}_tiles ; base tile address");
             sb.AppendLine();
@@ -946,48 +1087,52 @@ namespace img2chr
             }
         }
 
-        private static void GenerateCompressedBackgroundString(StringBuilder sb, string exportName, Dictionary<string, ChrRomOutput> outputChrData, IEnumerable<TileEntry> tileEntries)
+        private static void GenerateBackgroundString(StringBuilder sb, string exportName, Dictionary<string, ChrRomOutput> outputChrData, IEnumerable<TileEntry> tileEntries)
         {
             List<TileEntry> uniqueTileEntries = new();
 
+            List<int> bytes = new();
+
+            foreach (var tileEntry in tileEntries)
+            {
+                int tileIndex = uniqueTileEntries.FindIndex(x => x.tileIndices.Equals(tileEntry.tileIndices));
+                if (tileIndex < 0)
+                {
+                    tileIndex = uniqueTileEntries.Count;
+                    uniqueTileEntries.Add(tileEntry);
+                }
+
+                bytes.Add(tileIndex);
+            }
+
             using (var auto = AutoStringBuilder.Auto())
             {
-                int currentTileIndex = -1;
-                int tileIndexCount = 0;
                 int rleBytes = 0;
 
-                auto.sb.AppendLine("; tile count, tile index");
+                auto.sb.AppendLine("; tile index");
 
-                foreach (var tileEntry in tileEntries)
+                foreach (int idx in bytes)
                 {
-                    int tileIndex = uniqueTileEntries.FindIndex(x => x.tileIndices.Equals(tileEntry.tileIndices));
-                    if (tileIndex < 0)
-                    {
-                        tileIndex = uniqueTileEntries.Count;
-                        uniqueTileEntries.Add(tileEntry);
-                    }
+                    auto.sb.AppendLine($".byte #${idx:X2}");
+                    rleBytes++;
 
-                    if (currentTileIndex != tileIndex || tileIndexCount == 0xFF)
+                    if (rleBytes == 255)
                     {
-                        if (tileIndexCount > 0 && currentTileIndex >= 0)
-                        {
-                            auto.sb.AppendLine($".byte #${tileIndexCount:X2}, #${currentTileIndex:X2}");
-                            rleBytes += 2;
-                        }
+                        sb.AppendLine($".byte #${rleBytes:X2} ; Bytes");
+                        sb.AppendLine(auto.sb.ToString());
 
-                        currentTileIndex = tileIndex;
-                        tileIndexCount = 1;
-                    }
-                    else
-                    {
-                        ++tileIndexCount;
+                        rleBytes = 0;
+                        auto.sb.Clear();
+
+                        auto.sb.AppendLine("; tile count, tile index");
                     }
                 }
 
-                Assert(rleBytes <= 0xFF, $"Compressed Background should be <= 255 bytes ({rleBytes})");
-
-                sb.AppendLine($".byte #${rleBytes:X2} ; RLE Bytes");
-                sb.AppendLine(auto.sb.ToString());
+                if (rleBytes > 0)
+                {
+                    sb.AppendLine($".byte #${rleBytes:X2} ; Bytes");
+                    sb.AppendLine(auto.sb.ToString());
+                }
             }
 
             // output CHR for tiles
@@ -1005,40 +1150,85 @@ namespace img2chr
             }
         }
 
-        private static void GenerateTileCHRString(StringBuilder sb, string exportName, int idx, TileEntry tileEntry)
+        private static void GenerateCompressedBackgroundString(StringBuilder sb, string exportName, Dictionary<string, ChrRomOutput> outputChrData, IEnumerable<TileEntry> tileEntries)
         {
-            StringBuilder byte0 = RequestStringBuilder();
-            StringBuilder byte1 = RequestStringBuilder();
+            List<TileEntry> uniqueTileEntries = new();
 
+            int currentTileIndex = -1;
+            int tileIndexCount = 0;
+
+            List<(int, int)> compressedBytes = new();
+
+            foreach (var tileEntry in tileEntries)
             {
-                byte0.Clear();
-                byte1.Clear();
-
-                for (int y = 0; y < 8; ++y)
+                int tileIndex = uniqueTileEntries.FindIndex(x => x.tileIndices.Equals(tileEntry.tileIndices));
+                if (tileIndex < 0)
                 {
-                    byte0.Append(".byte %");
-                    byte1.Append(".byte %");
-
-                    for (int x = 0; x < 8; ++x)
-                    {
-                        byte0.Append((tileEntry.tileIndices[x, y] & 0x1) == 0x1 ? "1" : "0");
-                        byte1.Append((tileEntry.tileIndices[x, y] & 0x2) == 0x2 ? "1" : "0");
-                    }
-
-                    byte0.AppendLine();
-                    byte1.AppendLine();
+                    tileIndex = uniqueTileEntries.Count;
+                    uniqueTileEntries.Add(tileEntry);
                 }
 
-                sb.AppendLine($"; Tile {idx} {tileEntry.x}x{tileEntry.y}");
-                sb.AppendLine($"{exportName}_tile_{tileEntry.x}x{tileEntry.y}:");
-                sb.AppendLine(byte0.ToString());
-                sb.AppendLine(byte1.ToString());
+                if (currentTileIndex != tileIndex || tileIndexCount == 0xFF)
+                {
+                    if (tileIndexCount > 0 && currentTileIndex >= 0)
+                    {
+                        compressedBytes.Add((tileIndexCount, currentTileIndex));
+
+                    }
+
+                    currentTileIndex = tileIndex;
+                    tileIndexCount = 1;
+                }
+                else
+                {
+                    ++tileIndexCount;
+                }
             }
 
-            sb.AppendLine();
 
-            ReleaseStringBuilder(byte0);
-            ReleaseStringBuilder(byte1);
+            using (var auto = AutoStringBuilder.Auto())
+            {
+                int rleBytes = 0;
+
+                auto.sb.AppendLine("; tile count, tile index");
+
+                foreach ((int count, int idx) in compressedBytes)
+                {
+                    auto.sb.AppendLine($".byte #${count:X2}, #${idx:X2}");
+                    rleBytes += 2;
+
+                    if (rleBytes == 254)
+                    {
+                        sb.AppendLine($".byte #${rleBytes:X2} ; RLE Bytes");
+                        sb.AppendLine(auto.sb.ToString());
+
+                        rleBytes = 0;
+                        auto.sb.Clear();
+
+                        auto.sb.AppendLine("; tile count, tile index");
+                    }
+                }
+
+                if (rleBytes > 0)
+                {
+                    sb.AppendLine($".byte #${rleBytes:X2} ; RLE Bytes");
+                    sb.AppendLine(auto.sb.ToString());
+                }
+            }
+
+            // output CHR for tiles
+            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+            {
+                GenerateTileCHRString(auto.sb, exportName, uniqueTileEntries);
+
+                // output chr data
+                outputChrData.Add(exportName, new()
+                {
+                    chrRomAsm = auto.sb.ToString(),
+                    chrCount = uniqueTileEntries.Count,
+                    is8x16 = false
+                });
+            }
         }
 
         private static void GenerateTileCHRString(StringBuilder sb, string exportName, IEnumerable<TileEntry> tileEntries)
@@ -1071,8 +1261,10 @@ namespace img2chr
                     byte1.AppendLine();
                 }
 
-                sb.AppendLine($"; Tile {idx} {tileEntry.x}x{tileEntry.y}");
-                sb.AppendLine($"{exportName}_tile_{tileEntry.x}x{tileEntry.y}:");
+                string tileEntryName = string.IsNullOrEmpty(tileEntry.tileName) ? $"{exportName}_tile_{tileEntry.x}x{tileEntry.y}" : tileEntry.tileName;
+                sb.AppendLine($"; Tile {idx} {tileEntry.x}x{tileEntry.y} ({tileEntry.tileName ?? string.Empty})");
+                sb.AppendLine($".export {tileEntryName} = _{tileEntryName}");
+                sb.AppendLine($"_{tileEntryName}:");
                 sb.AppendLine(byte0.ToString());
                 sb.AppendLine(byte1.ToString());
 
@@ -1083,6 +1275,56 @@ namespace img2chr
 
             ReleaseStringBuilder(byte0);
             ReleaseStringBuilder(byte1);
+        }
+        #endregion
+
+        #region Palette File
+        private static void ConvertPaletteFile(string paletteFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        {
+            TryGetFileParamters(paletteFilename, string.Empty, out var paletteParameters);
+
+            if (!GetBoolParameter(paletteParameters, "enable-import", true))
+            {
+                return;
+            }
+
+            Parameters palettes = GetSubParameters(paletteParameters, "palette");
+
+            Dictionary<string, SpritePalette> spritePalettes = new();
+            foreach (var kv in palettes)
+            {
+                string paletteName = kv.Key[0..^2];
+                Parameters paletteParts = GetSubParameters(palettes, paletteName);
+
+                TryParseColorString(GetStringParameter(paletteParts, "0"), out var color0);
+                TryParseColorString(GetStringParameter(paletteParts, "1"), out var color1);
+                TryParseColorString(GetStringParameter(paletteParts, "2"), out var color2);
+                TryParseColorString(GetStringParameter(paletteParts, "3"), out var color3);
+
+                SpritePalette spritePalette = default;
+                spritePalette.exportName = paletteName;
+                spritePalette[0] = color0;
+                spritePalette[1] = color1;
+                spritePalette[2] = color2;
+                spritePalette[3] = color3;
+
+                spritePalettes.Add(paletteName, spritePalette);
+            }
+
+            if (spritePalettes.Count > 0)
+            {
+                string exportName = NormalizeExportName(Path.GetFileName(paletteFilename));
+
+                // write background info to file
+                using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+                {
+                    GenerateAsmFileHeader(auto.sb, paletteFilename, kRODATASegment);
+
+                    GeneratePaletteString(auto.sb, exportName, spritePalettes.Values);
+
+                    WriteGeneratedAsmFile(auto.sb, paletteFilename, in cmdOptions);
+                }
+            }
         }
         #endregion
 
@@ -1112,14 +1354,25 @@ namespace img2chr
             int backgroundX = GetIntParameter(backgroundParameters, "bg.x", 0);
             int backgroundY = GetIntParameter(backgroundParameters, "bg.y", 0);
             int baseNameTable = GetIntParameter(backgroundParameters, "bg.nametable", 0);
+            string backgroundColorString = GetStringParameter(backgroundParameters, "bg.color", "[0,0,0]");
+            bool compress = GetBoolParameter(backgroundParameters, "bg.compress", true);
 
             Assert(bitmapImage.Width % backgroundWidth == 0, $"Image width must be mulitple of {backgroundWidth}");
             Assert(bitmapImage.Height % backgroundHeight == 0, $"Image height must be mulitple of {backgroundHeight}");
             Assert(bitmapImage.Width <= kNameTableWidth * 2, $"Image width too much for 4 nametables: {bitmapImage.Width}");
             Assert(bitmapImage.Height <= kNameTableHeight * 2, $"Image height too much for 4 nametables: {bitmapImage.Height}");
 
+            TryParseColorString(backgroundColorString, out var bgColor);
+
             var area = new Rectangle(0, 0, bitmapImage.Width, bitmapImage.Height);
-            var tiles = ConvertImageToTiles(bitmapImage, area, 16, 16);
+            var tiles = ConvertImageToTiles(bitmapImage, area, 16, 16, bgColor);
+
+            var offset = new Rectangle(tiles.tiles[0].x, tiles.tiles[0].y, 8, 8);
+            for (int i = 1; i < tiles.tiles.Count; i++)
+            {
+                TileEntry t = tiles.tiles[i];
+                offset = Rectangle.Union(offset, new Rectangle(t.x, t.y, 8, 8));
+            }
 
             string exportName = NormalizeExportName(Path.GetFileName(backgroundFilename));
 
@@ -1128,16 +1381,22 @@ namespace img2chr
             {
                 GenerateAsmFileHeader(auto.sb, backgroundFilename, kRODATASegment);
 
-                GenerateBackgroundHeaderString(auto.sb, exportName, baseNameTable, backgroundX, backgroundY, backgroundWidth, backgroundHeight, 0, Math.Clamp(tiles.spritePalettes.Count, 0, 4));
+                GenerateBackgroundHeaderString(auto.sb, exportName, baseNameTable, offset.X, offset.Y, offset.Width, offset.Height, compress, 0, tiles.spritePalettes.Count);
 
                 // output CHR for tiles
-                GenerateCompressedBackgroundString(auto.sb, exportName, outputChrData, tiles.tiles);
+                if (compress)
+                {
+                    GenerateCompressedBackgroundString(auto.sb, exportName, outputChrData, tiles.tiles);
+                }
+                else
+                {
+                    GenerateBackgroundString(auto.sb, exportName, outputChrData, tiles.tiles);
+                }
 
                 GeneratePaletteString(auto.sb, exportName, tiles.spritePalettes);
 
                 WriteGeneratedAsmFile(auto.sb, backgroundFilename, in cmdOptions);
             }
-
         }
         #endregion
 
@@ -1222,7 +1481,6 @@ namespace img2chr
                 }
             }
 
-
             List<MetaSpriteEntry> allMetaSprites = new List<MetaSpriteEntry>();
 
             // if meta sprite is used, group sprites
@@ -1255,6 +1513,23 @@ namespace img2chr
                 }
             }
 
+
+            // sprite region names
+            Parameters regions = GetSubParameters(spriteParameters, "sprite.region");
+
+            List<(string regionName, Rectangle region)> spriteRegions = new();
+            foreach (var kv in regions)
+            {
+                string spriteName = kv.Key;
+                string regionString = kv.Value;
+                if (TryParseRectString(regionString, out Rect rect))
+                {
+                    Rectangle region = new(rect.origin.x * 8, rect.origin.y * 8, rect.size.width * 8, rect.size.height * 8);
+
+                    spriteRegions.Add((spriteName, region));
+                }
+            }
+
             // output CHR for tiles
             using (AutoStringBuilder auto = AutoStringBuilder.Auto())
             {
@@ -1264,7 +1539,24 @@ namespace img2chr
                     tileEntriesToConvert.Add(tiles.tiles[uniqueTileEntry.index]);
                 }
 
-                // TODO: use unique tiles
+                // add region names
+                foreach ((string regionName, Rectangle region) in spriteRegions)
+                {
+                    for (int i = 0; i < tileEntriesToConvert.Count; i++)
+                    {
+                        TileEntry tileEntry = tileEntriesToConvert[i];
+                        if (region.Contains(tileEntry.x, tileEntry.y))
+                        {
+                            tileEntry.tileName = regionName;
+
+                            tileEntriesToConvert[i] = tileEntry;
+
+                            break;
+                        }
+                    }
+                }
+
+                // generate unique tiles
                 GenerateTileCHRString(auto.sb, exportName, tileEntriesToConvert);
 
                 // output chr data
@@ -3858,6 +4150,7 @@ namespace img2chr
                 {".sprite", new () {convertFunc = ConvertSpriteFile, order = 0}},
                 {".font", new () {convertFunc = ConvertFontFile, order = 0}},
                 {".background", new () {convertFunc = ConvertBackgroundImageFile, order = 0}},
+                {".palette", new () { convertFunc = ConvertPaletteFile, order = 0}},
 
                 //{ ".aseprite", new(){ convertFunc = ConverteAsepriteFile, order = 0 } },
             };

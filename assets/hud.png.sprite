@@ -1,0 +1,64 @@
+# selection pointer
+sprite.region.pointer_0=[0, 0]
+sprite.region.pointer_1=[0, 1]
+sprite.region.pointer_2=[0, 2]
+sprite.region.pointer_3=[0, 3]
+sprite.region.pointer_4=[0, 4]
+sprite.region.pointer_5=[0, 5]
+
+# 9-slice border
+sprite.region.border_top_left=[1, 0]
+sprite.region.border_top_center=[2, 0]
+sprite.region.border_top_right=[3, 0]
+sprite.region.border_center_left=[1, 1]
+sprite.region.border_center_center=[2, 1]
+sprite.region.border_center_right=[3, 1]
+sprite.region.border_bottom_left=[1, 2]
+sprite.region.border_bottom_center=[2, 2]
+sprite.region.border_bottom_right=[3, 2]
+
+# check box
+sprite.region.check_box_clear=[4, 0]
+sprite.region.check_box_selected=[4, 1]
+
+# more dialog arrow
+sprite.region.dialog_arror=[4, 2]
+
+# progress bar
+sprite.region.progress_8=[6,0]
+sprite.region.progress_7=[6,1]
+sprite.region.progress_6=[6,2]
+sprite.region.progress_5=[6,3]
+sprite.region.progress_4=[6,4]
+sprite.region.progress_3=[6,5]
+sprite.region.progress_2=[6,6]
+sprite.region.progress_1=[6,7]
+sprite.region.progress_0=[6,8]
+
+# clock
+sprite.region.clock_0=[2, 3]
+sprite.region.clock_1=[2, 4]
+sprite.region.clock_2=[2, 5]
+sprite.region.clock_3=[2, 6]
+sprite.region.clock_4=[2, 7]
+sprite.region.clock_5=[2, 8]
+sprite.region.clock_6=[2, 9]
+sprite.region.clock_7=[2, 10]
+sprite.region.clock_8=[2, 11]
+sprite.region.clock_9=[2, 12]
+
+# small clock
+sprite.region.small_clock_0=[3, 3]
+sprite.region.small_clock_1=[3, 4]
+sprite.region.small_clock_2=[3, 5]
+sprite.region.small_clock_3=[3, 6]
+sprite.region.small_clock_4=[3, 7]
+
+# currency
+sprite.region.currency_0=[7, 2]
+sprite.region.currency_1=[7, 3]
+
+# combat status icons
+sprite.region.combat_status_poison=[8, 0]
+sprite.region.combat_status_burn=[8, 1]
+sprite.region.combat_status_frost=[8, 2]

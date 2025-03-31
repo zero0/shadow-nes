@@ -1,2 +1,3 @@
 shadow_font_en_png_font=0x00
-progress_bar_png_sprite=0x50
+#progress_bar_png_sprite=0x50
+title_png_background=0x50

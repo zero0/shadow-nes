@@ -227,7 +227,7 @@ uint8_t __fastcall__ ppu_request_sprite();
 
 void __fastcall__ ppu_release_sprite( uint8_t sprite );
 
-#define ppu_update_sprite_full( idx, px, py, pal, bg, fh, fv, spr )                             \
+#define ppu_update_sprite_full( idx, px, py, pal, bg, fh, fv, spr )                 \
     PPU_ARGS[0] = (idx);                                                            \
     PPU_ARGS[1] = (py) - 1;                                                         \
     PPU_ARGS[2] = (spr);                                                            \
@@ -244,6 +244,13 @@ void __fastcall__ ppu_update_sprite();
     ppu_update_sprite_pos_impl()
 
 void __fastcall__ ppu_update_sprite_pos_impl();
+
+#define ppu_update_sprite_sprite( idx, spr )    \
+    PPU_ARGS[0] = (idx);                        \
+    PPU_ARGS[1] = (spr);                        \
+    ppu_update_sprite_sprite_impl()
+
+void __fastcall__ ppu_update_sprite_sprite_impl();
 
 //
 //
@@ -405,5 +412,14 @@ for(                        \
     ++PPU_SCOPE             \
 )
 
+//
+//
+//
+
+#define ppu_load_background(bg)     \
+    PTR_TO_ARGS(PPU_ARGS, 0, bg);   \
+    ppu_load_background_impl()
+
+void __fastcall__ ppu_load_background_impl(void);
 
 #endif // PPU_H

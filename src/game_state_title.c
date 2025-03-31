@@ -20,6 +20,7 @@ void __fastcall__ game_state_title_enter(void)
 
     // turn off ppu
     ppu_disable();
+
     //ppu_disable_scope()
     {
         ppu_set_scroll( 0, 0 );
@@ -47,7 +48,7 @@ void __fastcall__ game_state_title_enter(void)
         ppu_set_palette( PALETTE_BACKGROUND_0, 0x15, 0x26, 0x37 );
         ppu_set_palette( PALETTE_BACKGROUND_1, 0x2D, 0x3D, 0x20 );
         ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
-        ppu_set_palette( PALETTE_SPRITE_0, 0x00, 0x10, 0x20 );
+        ppu_set_palette( PALETTE_SPRITE_0, 0x15, 0x26, 0x37 );
         ppu_set_palette( PALETTE_SPRITE_1, 0x00, 0x10, 0x20 );
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
@@ -64,7 +65,7 @@ void __fastcall__ game_state_title_enter(void)
 
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 
-        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, 0x33 );
+        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, 0x17 );
     }
 
     // turn on ppu
@@ -95,12 +96,15 @@ void __fastcall__ game_state_title_update(void)
         {
             case 0:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
+                ppu_update_sprite_sprite( arrow_sprite, 0x1C );
                 break;
             case 1:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x37, 0x15, 0x26 );
+                ppu_update_sprite_sprite( arrow_sprite, 0x21 );
                 break;
             case 2:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x26, 0x37, 0x15 );
+                ppu_update_sprite_sprite( arrow_sprite, 0x26 );
                 b = -1;
                 break;
         }
