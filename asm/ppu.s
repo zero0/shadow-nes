@@ -865,7 +865,7 @@ _ppu_fill_nametable_attr:
     ; store value to A
     txa
 
-    ; increment and store sprite length
+    ; store sprite length
     inx
     stx OAM_SPRITE_LEN
 
@@ -875,15 +875,19 @@ _ppu_fill_nametable_attr:
 ; release sprite A back to pool
 .proc ppu_release_sprite
 
-    ; load sprite free list length
-    ldx OAM_SPRITE_FREE_LIST_LEN
+    ; don't add sprite 0 to the free list
+    cmp #0
+    beq :+
+        ; load sprite free list length
+        ldx OAM_SPRITE_FREE_LIST_LEN
 
-    ; store sprite in free list
-    sta OAM_SPRITE_FREE_LIST, x
+        ; store sprite in free list
+        sta OAM_SPRITE_FREE_LIST, x
 
-    ; increment free list length
-    inx
-    stx OAM_SPRITE_FREE_LIST_LEN
+        ; increment free list length
+        inx
+        stx OAM_SPRITE_FREE_LIST_LEN
+        :
 
     ; convert index -> offset
     asl

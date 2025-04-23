@@ -496,12 +496,22 @@ namespace img2chr
             using AutoStringBuilder auto = AutoStringBuilder.Auto();
             if (paths?.Length > 0)
             {
-                auto.sb.Append(paths[0]);
+                if (string.IsNullOrEmpty(paths[0]))
+                {
+                    auto.sb.Append('.');
+                }
+                else
+                {
+                    auto.sb.Append(paths[0]);
+                }
 
                 for (int i = 1; i < paths.Length; i++)
                 {
-                    auto.sb.Append(Path.DirectorySeparatorChar);
-                    auto.sb.Append(paths[i]);
+                    if (!string.IsNullOrEmpty(paths[i]))
+                    {
+                        auto.sb.Append(Path.DirectorySeparatorChar);
+                        auto.sb.Append(paths[i]);
+                    }
                 }
             }
 
@@ -994,7 +1004,7 @@ namespace img2chr
 
             if (!string.IsNullOrEmpty(segment))
             {
-                sb.AppendLine($".segment {segment}");
+                sb.AppendLine($".segment \"{segment}\"");
                 sb.AppendLine();
             }
         }
@@ -4059,46 +4069,63 @@ namespace img2chr
             // sort chr rom by offsets
             chrRomLayouts.Sort((x, y) => x.offset.CompareTo(y.offset));
 
-            StringBuilder sb = new();
-            sb.AppendLine(";");
-            sb.AppendLine($"; Generated from '{Path.GetFileName(layoutFilename)}'");
-            sb.AppendLine(";");
-            sb.AppendLine();
+            string exportPath = PathCombine(Path.GetDirectoryName(layoutFilename), Path.GetFileNameWithoutExtension(layoutFilename));
 
-            sb.AppendLine(".pushseg");
-            sb.AppendLine($".segment \"{chrSegment}\"");
-            sb.AppendLine();
-
-            for (offset = 0; offset <= 0xFF;)
+            // write CHR ASM file
+            using (var auto = AutoStringBuilder.Auto())
             {
-                int chrIndex = chrRomLayouts.FindIndex(x => offset >= x.offset && offset < (x.offset + x.length));
-                if (chrIndex >= 0)
-                {
-                    var chrRom = chrRomLayouts[chrIndex];
-                    bool ok = outputChrData.TryGetValue(chrRom.chrRomKey, out var chrRomOutput);
-                    Assert(ok, $"Unable to find CHR ROM Output {chrRom.chrRomKey}");
-                    sb.Append(chrRomOutput.chrRomAsm);
+                StringBuilder sb = auto.sb;
 
-                    offset += chrRom.length;
-                    Assert(offset < 0xFF, $"{chrSegment} overrun {offset}");
-                }
-                else
-                {
-                    sb.AppendLine("; Empty");
-                    sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
-                    sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
-                    sb.AppendLine();
+                GenerateAsmFileHeader(sb, layoutFilename, chrSegment);
 
-                    ++offset;
+                for (offset = 0; offset <= 0xFF;)
+                {
+                    int chrIndex = chrRomLayouts.FindIndex(x => offset >= x.offset && offset < (x.offset + x.length));
+                    if (chrIndex >= 0)
+                    {
+                        var chrRom = chrRomLayouts[chrIndex];
+                        bool ok = outputChrData.TryGetValue(chrRom.chrRomKey, out var chrRomOutput);
+                        Assert(ok, $"Unable to find CHR ROM Output {chrRom.chrRomKey}");
+                        sb.Append(chrRomOutput.chrRomAsm);
+
+                        offset += chrRom.length;
+                        Assert(offset < 0xFF, $"{chrSegment} overrun {offset}");
+                    }
+                    else
+                    {
+                        sb.AppendLine("; Empty");
+                        sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
+                        sb.AppendLine(".byte 0, 0, 0, 0, 0, 0, 0, 0");
+                        sb.AppendLine();
+
+                        ++offset;
+                    }
                 }
+
+                // write output file
+                WriteGeneratedAsmFile(sb, exportPath, in cmdOptions);
             }
 
-            sb.AppendLine(".popseg");
+            // write CHR Header
+            using (var auto = AutoStringBuilder.Auto())
+            {
+                StringBuilder sb = auto.sb;
 
-            // write output file
-            string sFilename = PathCombine(Path.GetDirectoryName(layoutFilename), cmdOptions.defaultGeneratedAssetFolder, "asm", $"{chrSegment.ToLowerInvariant()}.s");
-            File.WriteAllText(sFilename, sb.ToString(), UTF8);
-            LogInfo($"Converted {layoutFilename} -> {sFilename}");
+                sb.Append("enum ").Append(chrSegment).AppendLine();
+                sb.AppendLine("{");
+                foreach (var chrRom in chrRomLayouts)
+                {
+                    string key = $"{chrRom.chrRomKey.ToUpperInvariant()} =";
+                    sb.AppendLine($"    {key,-64} 0x{chrRom.offset:X2},");
+                }
+                sb.AppendLine("};");
+
+                string chrHeader = chrSegment.ToLowerInvariant();
+                WrapHeaderFile(sb, layoutFilename, chrHeader);
+
+                // write output file
+                WriteGeneratedHeaderFile(sb, exportPath, in cmdOptions);
+            }
         }
         #endregion
 

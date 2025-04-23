@@ -1,0 +1,167 @@
+<project name="shadow-nes" default="build-nes" basedir="." xmlns:if="ant:if" xmlns:unless="ant:unless">
+    <description>
+    </description>
+
+    <property environment="env"/>
+
+    <property name="tmp.dir" location="tmp"/>
+    <property name="obj.dir" location="obj"/>
+    <property name="bin.dir" location="bin"/>
+    <property name="assets.dir" location="assets"/>
+    <property name="tools.dir" location="tools"/>
+    <property name="lib.dir" location="lib"/>
+    <property name="config.dir" location="config"/>
+    <property name="asm.dir" location="asm"/>
+    <property name="src.dir" location="src"/>
+    <property name="include.dir" location="include"/>
+
+    <property name="ca65.exe" value="ca65"/>
+    <property name="cc65.exe" value="cc65"/>
+    <property name="ld65.exe" value="ld65"/>
+    <property name="dotnet.exe" value="dotnet"/>
+
+    <!-- NOTE: right now stored in ${env.CC65_HOME}/bin so this works -->
+    <property name="edlink.exe" value="edlink-n8"/>
+
+    <!-- TODO: fill in per platform -->
+    <property name="cc65.lib.dir" location="${env.CC65_HOME}/lib"/>
+    <property name="cc65.asminc.dir" location="${env.CC65_HOME}/asminc"/>
+
+    <property name="build.assets.run" value="true"/>
+    <property name="assets.gen.dir" location="${assets.dir}/generated"/>
+    <property name="assets.gen.include.dir" location="${assets.gen.dir}/include"/>
+    <property name="assets.gen.asm.dir" location="${assets.gen.dir}/asm"/>
+    <property name="gen.build.properties" location="${assets.gen.dir}/build.properties"/>
+
+    <property name="build.version.major" value="0"/>
+    <property name="build.version.minor" value="1"/>
+    <property name="build.version.patch" value="0"/>
+    <property name="build.version" value="${build.version.major}.${build.version.minor}.${build.version.patch}"/>
+    <property name="build.type" value="DEBUG"/>
+    <property name="build.lang" value="en"/>
+    <property name="build.lang.id" value="0"/>
+
+    <property name="cpu.type" value="nes"/>
+    <property name="cpu.mapper" value="mmc5"/>
+    <property name="game.name" value="shadow"/>
+    <property name="game.filename" value="${game.name}.${build.lang}"/>
+    <property name="dbg.path" location="${bin.dir}/${game.filename}.dbg"/>
+    <property name="nes.path" location="${bin.dir}/${game.filename}.nes"/>
+
+    <property name="ca65.flags" value="-t ${cpu.type} -g -D DEBUG_BUILD=1 -D BUILD_LANG=${build.lang.id}"/>
+    <property name="cc65.flags" value="-t ${cpu.type} -g --add-source -DDEBUG_BUILD=1 -DBUILD_LANG=${build.lang.id}"/>
+    <property name="ld65.flags" value="--dbgfile ${dbg.path}"/>
+    <property name="ld65.config" location="${config.dir}/${cpu.type}_${cpu.mapper}.cfg"/>
+
+    <!-- Targets -->
+    <target name="clean" description="clean up">
+        <delete dir="${bin.dir}"/>
+        <delete dir="${obj.dir}"/>
+        <delete dir="${tmp.dir}"/>
+        <delete dir="${assets.gen.include.dir}"/>
+        <delete dir="${assets.gen.asm.dir}"/>
+    </target>
+
+    <target name="init" depends="clean">
+        <!-- Create the build directory structure used by compile -->
+        <mkdir dir="${bin.dir}"/>
+        <mkdir dir="${obj.dir}"/>
+        <mkdir dir="${tmp.dir}"/>
+        <!-- Make build files from git -->
+        <exec executable="git" outputproperty="build.branch" errorproperty="error.build.branch">
+            <arg line="branch --show-current"/>
+        </exec>
+        <exec executable="git" outputproperty="build.commit" errorproperty="error.build.commit">
+            <arg line="show -s --format=%h"/>
+        </exec>
+        <propertyfile file="${gen.build.properties}" comment="Auto-generated. Do not edit.">
+            <entry key="build.id" type="string" value="${build.branch}@${build.commit}"/>
+            <entry key="build.time" type="date" value="now" pattern="yyyy-MM-dd'T'HH:mm:ss.SSSZ"/>
+            <entry key="build.version" type="string" value="${build.version}"/>
+            <entry key="build.lang" type="string" value="${build.lang}"/>
+            <entry key="build.type" type="string" value="${build.type}"/>
+            <entry key="build.number" type="int" default="0" operation="+"/>
+        </propertyfile>
+    </target>
+
+    <target name="build-assets" depends="init" if="build.assets.run">
+        <exec executable="${dotnet.exe}" dir="${tools.dir}/img2chr" failonerror="false">
+            <arg line="run -c Release"/>
+            <arg value="--"/>
+            <arg path="${assets.dir}"/>
+        </exec>
+    </target>
+
+    <target name="compile-asm" depends="build-assets" description="compile asm files .s to .o">
+        <apply executable="${ca65.exe}" dir="." dest="${obj.dir}" failonerror="true">
+            <arg line="-I ${lib.dir}"/>
+            <arg line="-I ${cc65.asminc.dir}"/>
+            <arg line="-I ${assets.gen.asm.dir}"/>
+            <arg line="${ca65.flags}"/>
+            <arg value="-o"/>
+            <targetfile/>
+            <srcfile/>
+            <fileset dir="${asm.dir}" includes="*.s"/>
+            <mapper type="glob" from="*.s" to="*.o"/>
+        </apply>
+    </target>
+
+    <target name="compile-c" depends="compile-asm" description="compile C files .c to .s">
+        <apply executable="${cc65.exe}" dir="." dest="${tmp.dir}" failonerror="true">
+            <arg line="-I ${include.dir}"/>
+            <arg line="-I ${cc65.asminc.dir}"/>
+            <arg line="-I ${assets.gen.include.dir}"/>
+            <arg line="${cc65.flags}"/>
+            <arg value="-Oisr"/>
+            <arg value="-o"/>
+            <targetfile/>
+            <srcfile/>
+            <fileset dir="${src.dir}" includes="*.c"/>
+            <mapper type="glob" from="*.c" to="c_*.s"/>
+        </apply>
+    </target>
+
+    <target name="compile-s" depends="compile-c" description="compile temp .s to .o">
+        <apply executable="${ca65.exe}" dir="." dest="${obj.dir}" failonerror="true">
+            <arg line="-I ${lib.dir}"/>
+            <arg line="-I ${cc65.asminc.dir}"/>
+            <arg line="-I ${assets.gen.asm.dir}"/>
+            <arg line="${ca65.flags}"/>
+            <arg value="-o"/>
+            <targetfile/>
+            <srcfile/>
+            <fileset dir="${tmp.dir}" includes="*.s"/>
+            <mapper type="glob" from="*.s" to="*.o"/>
+        </apply>
+    </target>
+
+    <target name="compile-all" depends="compile-s">
+    </target>
+
+    <target name="link" depends="compile-all" description="link all .o and .lib files">
+        <fileset id="all.obj" dir="${obj.dir}" includes="*.o"/>
+        <pathconvert pathsep=" " property="obj.files" refid="all.obj"/>
+        <exec executable="${ld65.exe}" dir="." failonerror="true">
+            <arg line="-C ${ld65.config}"/>
+            <arg line="${ld65.flags}"/>
+            <arg line="--lib-path ${lib.dir}"/>
+            <arg line="--lib-path ${cc65.lib.dir}"/>
+            <arg line="-o ${nes.path}"/>
+            <arg line="${obj.files}"/>
+            <arg line="nes.lib"/>
+        </exec>
+    </target>
+
+    <target name="build-nes" depends="link" description="build the .nes files">
+        <available property="nes.present" file="${nes.path}"/>
+        <echo if:true="${nes.present}">Success ${nes.path}</echo>
+        <fail unless="${nes.present}">Failed to find ${nes.path}</fail>
+    </target>
+
+    <target name="deploy-nes" description="deploy the .nes file to the console">
+        <available property="nes.present" file="${nes.path}"/>
+        <exec if:true="${nes.present}" executable="${edlink.exe}" dir="." failonerror="true">
+            <arg line="${nes.path}"/>
+        </exec>
+    </target>
+</project>

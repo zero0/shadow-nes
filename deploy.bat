@@ -1,6 +1,10 @@
 @echo off
 setlocal
 
+rem Deploy using ant
+ant deploy-nes
+goto :end
+
 rem Get ESC character
 for /F %%a in ('"prompt $E$S & echo on & for %%b in (1) do rem"') do set "ESC=%%a"
 
