@@ -67,6 +67,7 @@
         <mkdir dir="${bin.dir}"/>
         <mkdir dir="${obj.dir}"/>
         <mkdir dir="${tmp.dir}"/>
+        <mkdir dir="${assets.gen.dir}"/>
         <!-- Make build files from git -->
         <exec executable="git" outputproperty="build.branch" errorproperty="error.build.branch">
             <arg line="branch --show-current"/>
