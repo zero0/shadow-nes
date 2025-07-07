@@ -4,7 +4,7 @@
         {
             "label": "Build NES project",
             "type": "shell",
-            "command": "./build.bat shadow",
+            "command": "ant",
             "problemMatcher": [
                 {
                     "owner": "nesdev",

@@ -14,7 +14,7 @@
 #define UNUSED(x)               (void)x
 
 #define IS_POW2(t)              ( ( (t) & ( (t) - 1 ) ) == 0 )
-#define STATIC_ASSERT(t)        static void CONCAT(sa, __LINE__)( char [ (t) ? 1 : -1 ] )
+#define STATIC_ASSERT(t)        //static void __fastcall__ CONCAT(__static_assert__, __LINE__)( char [ (t) ? 1 : -1 ] )
 
 #ifdef USE_ASSERTS
 #define ASSERT(t)               do { if( (t) ) {} else { __asm__("brk"); } } while( 0 )

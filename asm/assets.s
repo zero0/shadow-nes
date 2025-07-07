@@ -35,7 +35,7 @@ _temp_text_table:   .res  2 ;
 .endmacro
 
 ; Map characters to sprite sheet ordering
-.pushcharmap
+;.pushcharmap
 
 .define TEXT_LANGUAGE   "en"
 .define VERSION         "0.1.0"
@@ -43,7 +43,7 @@ _temp_text_table:   .res  2 ;
 
 include_asset .concat("shadow-font.", TEXT_LANGUAGE, ".png.font.s")
 
-.feature string_escapes +
+.feature string_escapes
 
 .if .defined(DEBUG_BUILD)
 .define BUILD_TYPE      "d"
@@ -57,4 +57,4 @@ include_asset .concat("shadow-font.", TEXT_LANGUAGE, ".png.font.s")
 
 include_asset .concat("gametext.", TEXT_LANGUAGE, ".s")
 
-.popcharmap
+;.popcharmap

@@ -47,12 +47,48 @@ typedef struct
 } cutscene_desc_t;
 
 static const cutscene_desc_t all_cutscenes[] = {
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    {
+        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
+        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
+        {
+            tr_cutscene_intro_0,
+            tr_cutscene_intro_1,
+            tr_cutscene_intro_2,
+            tr_cutscene_intro_3
+        }
+    },
 
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    {
+        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
+        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
+        {
+            tr_cutscene_intro_0,
+            tr_cutscene_intro_1,
+            tr_cutscene_intro_2,
+            tr_cutscene_intro_3
+        }
+    },
+    {
+        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
+        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
+        {
+            tr_cutscene_intro_0,
+            tr_cutscene_intro_1,
+            tr_cutscene_intro_2,
+            tr_cutscene_intro_3
+        },
+    },
 
-    { MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 3 ), MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ), tr_cutscene_intro_0, tr_cutscene_intro_1, tr_cutscene_intro_2, tr_cutscene_intro_3 },
+    {
+        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 3 ),
+        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
+        {
+            tr_cutscene_intro_0,
+            tr_cutscene_intro_1,
+            tr_cutscene_intro_2,
+            tr_cutscene_intro_3
+         },
+    }
 };
 STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
 

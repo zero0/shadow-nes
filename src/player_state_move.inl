@@ -1,13 +1,13 @@
 
-const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_P  = {  1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_N  = { -1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_P   = {  1,  15 };    // 1.06
-const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_N   = { -1,  15 };    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_P  = subpixel_diff_make(  1, 128 );    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_CARDINAL_N  = subpixel_diff_make( -1, 128 );    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_P   = subpixel_diff_make(  1,  15 );    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_DIAGNAL_N   = subpixel_diff_make( -1,  15 );    // 1.06
 
-const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_P  = {  1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_N  = { -1, 128 };    // 1.5
-const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P   = {  1,  15 };    // 1.06
-const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N   = { -1,  15 };    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_P  = subpixel_diff_make(  1, 128 );    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_CARDINAL_N  = subpixel_diff_make( -1, 128 );    // 1.5
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_P   = subpixel_diff_make(  1,  15 );    // 1.06
+const static subpixel_diff_t PLAYER_MOVE_SPEED_SLOW_DIAGNAL_N   = subpixel_diff_make( -1,  15 );    // 1.06
 
 
 // test if move can be performed

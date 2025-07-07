@@ -217,9 +217,9 @@ void __fastcall__ player_init(void)
 
     flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
-    memset(player_damage_resistance_modifiers, 0, ARRAY_SIZE(player_damage_resistance_modifiers));
-    memset(player_damage_status_buildup, 0, ARRAY_SIZE(player_damage_status_buildup));
-    memset(player_damage_status_timers, 0, ARRAY_SIZE(player_damage_status_timers));
+    //memset(player_damage_resistance_modifiers, 0, ARRAY_SIZE(player_damage_resistance_modifiers));
+    //memset(player_damage_status_buildup, 0, ARRAY_SIZE(player_damage_status_buildup));
+    //memset(player_damage_status_timers, 0, ARRAY_SIZE(player_damage_status_timers));
 
     // start in the center of the play space
     subpixel_set( player_hit_box.center_x, 12, 0 );

@@ -9,10 +9,6 @@ enum
     BOSS_0_INV_FRAMES_COOLDONW_TIMER = 12,
 };
 
-#define BOSS_0_HEALTH       {   \
-    BOSS_0_MAX_HEALTH,          \
-    BOSS_0_MAX_HEALTH / 2,      \
-}
 #define BOSS_0_STAMINA      {   \
     BOSS_0_MAX_STAMINA,         \
     BOSS_0_STAMINA_REGEN,       \

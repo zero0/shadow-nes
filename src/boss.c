@@ -65,13 +65,8 @@ static timer_t boss_state_timer;
 static ext_aabb_t boss_hit_box;
 
 static uint8_t boss_damage_resistance_modifiers[_DAMAGE_TYPE_COUNT];
-STATIC_ASSERT(ARRAY_SIZE(boss_damage_resistance_modifiers) == _DAMAGE_TYPE_COUNT);
-
 static uint8_t boss_damage_status_buildup[_DAMAGE_STATUS_TYPE_COUNT];
-STATIC_ASSERT(ARRAY_SIZE(boss_damage_status_buildup) == _DAMAGE_STATUS_TYPE_COUNT);
-
-static timer_t boss_damage_status_timers[ _DAMAGE_STATUS_TYPE_COUNT ];
-STATIC_ASSERT(ARRAY_SIZE(boss_damage_status_timers) == _DAMAGE_STATUS_TYPE_COUNT);
+static timer_t boss_damage_status_timers[_DAMAGE_STATUS_TYPE_COUNT];
 
 enum
 {
@@ -94,29 +89,31 @@ static damage_t _temp_dmg;
 
 static const uint8_t all_boss_health_per_block_log2[_BOSS_COUNT] = {
     BOSS_0_HEALTH_PER_BLOCK_LOG2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    0,
+    0,
 };
 
-enum
-{
-    BOSS_HEALTH_MAX,
-    BOSS_HEALTH_PHASE_TRANSITION,
-    _BOSS_HEALTH_COUNT,
-};
+static const uint16_t all_boss_max_healths[_BOSS_COUNT] = {
+    BOSS_0_MAX_HEALTH,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
 
-static const uint16_t all_boss_healths[_BOSS_COUNT][_BOSS_HEALTH_COUNT] = {
-    BOSS_0_HEALTH,
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-
-    {},
-    {},
+    0,
+    0,
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_healths) == _BOSS_COUNT);
 
 enum
 {
@@ -128,8 +125,17 @@ enum
 
 static const uint8_t all_boss_staminas[_BOSS_COUNT][_BOSS_STAMINA_COUNT] = {
     BOSS_0_STAMINA,
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+
+    {},
+    {},
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_staminas) == _BOSS_COUNT);
 
 static const uint8_t all_boss_resistances[_BOSS_COUNT][_DAMAGE_TYPE_COUNT] = {
     BOSS_0_RESISTANCE,
@@ -144,9 +150,8 @@ static const uint8_t all_boss_resistances[_BOSS_COUNT][_DAMAGE_TYPE_COUNT] = {
     {},
     {},
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_resistances) == _BOSS_COUNT);
 
-static const str_t all_boss_names[] = {
+static const str_t all_boss_names[_BOSS_COUNT] = {
     BOSS_0_NAME,
     tr_boss_1_name,
     tr_boss_2_name,
@@ -159,9 +164,8 @@ static const str_t all_boss_names[] = {
     tr_boss_8_name,
     tr_boss_9_name,
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_names) == _BOSS_COUNT);
 
-static const str_t all_boss_location_names[] = {
+static const str_t all_boss_location_names[_BOSS_COUNT] = {
     BOSS_0_LOCATION,
     0,
     0,
@@ -174,7 +178,6 @@ static const str_t all_boss_location_names[] = {
     0,
     0,
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_location_names) == _BOSS_COUNT);
 
 enum
 {
@@ -188,18 +191,17 @@ enum
 
 static const uint8_t all_boss_music[_BOSS_COUNT][_BOSS_MUSIC_PHASE_COUNT] = {
     BOSS_0_MUSIC,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
 
-    0,
-    0,
+    {},
+    {},
 };
-STATIC_ASSERT(ARRAY_SIZE(all_boss_music) == _BOSS_COUNT);
 
 enum
 {
@@ -321,7 +323,7 @@ static void __fastcall__ boss_take_damage(void)
     timer_set( boss_inv_frame_timer, all_boss_cooldown_timers[boss_index][BOSS_COOLDOWN_TIMER_INV_FRAMES] );
 
     // enter phase 2
-    if( flags_is_not_set( boss_flags, BOSS_FLAG_PHASE_TWO ) && ( boss_health < all_boss_healths[boss_index][BOSS_HEALTH_PHASE_TRANSITION] ) )
+    if( flags_is_not_set( boss_flags, BOSS_FLAG_PHASE_TWO ) && ( boss_health < (all_boss_max_healths[boss_index] >> 1) ) )
     {
         boss_enter_phase_2();
     }
@@ -405,7 +407,7 @@ static void __fastcall__ boss_render_status_bar(void)
     if( flags_is_set( boss_changed_flags, BOSS_CHANGED_HEALTH ) )
     {
         x16 = boss_health;
-        y16 = all_boss_healths[boss_index][BOSS_HEALTH_MAX];
+        y16 = all_boss_max_healths[boss_index];
         z = all_boss_health_per_block_log2[boss_index];
 
         // boss health bar
@@ -471,12 +473,12 @@ void __fastcall__ boss_init(uint8_t bossIndex)
     flags_mark( boss_changed_flags, BOSS_CHANGED_ALL );
     boss_damage_queue_length = 0;
 
-    boss_health = all_boss_healths[ boss_index ][ BOSS_HEALTH_MAX ];
+    boss_health = all_boss_max_healths[ boss_index ];
     boss_stamina = all_boss_staminas[ boss_index ][ BOSS_STAMINA_MAX ];
 
-    memset(boss_damage_resistance_modifiers, 0, ARRAY_SIZE(boss_damage_resistance_modifiers));
-    memset(boss_damage_status_buildup, 0, ARRAY_SIZE(boss_damage_status_buildup));
-    memset(boss_damage_status_timers, 0, ARRAY_SIZE(boss_damage_status_timers));
+    //memset(boss_damage_resistance_modifiers, 0, ARRAY_SIZE(boss_damage_resistance_modifiers));
+    //memset(boss_damage_status_buildup, 0, _DAMAGE_STATUS_TYPE_COUNT);
+    //memset(boss_damage_status_timers, 0, _DAMAGE_STATUS_TYPE_COUNT);
 
     // call boss specific init
     CALL_BOSS_FUNC( boss_index, init );

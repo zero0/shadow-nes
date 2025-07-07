@@ -1,6 +1,5 @@
 #include "text.h"
 #include "ppu.h"
-#include "subpixel.h"
 #include "globals.h"
 #include "gametext.h"
 

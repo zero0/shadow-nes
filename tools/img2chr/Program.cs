@@ -153,6 +153,12 @@ namespace img2chr
 
                 public Dictionary<string, string> text;
 
+                public byte grayscaleSignificantBits;
+                public byte redSignificantBits;
+                public byte greenSignificantBits;
+                public byte blueSignificantBits;
+                public byte alphaSignificantBits;
+
                 public void Decompress()
                 {
                     compressedData.Position = 0;
@@ -183,17 +189,52 @@ namespace img2chr
                             break;
 
                         case PNGColorType.IndexColor:
-                            if (index < palette?.Length)
+                            if (index < rawData?.Length)
                             {
-                                ref readonly ColorRGB8 paletteColor = ref palette[index];
-                                r = paletteColor.r;
-                                g = paletteColor.g;
-                                b = paletteColor.b;
-
-                                if (index < paletteAlpha?.Length)
+                                int paletteIndex = -1;
+                                switch (bitDepth)
                                 {
-                                    a = paletteAlpha[index];
+                                    case 4:
+                                        int idx = rawData[index / 2];
+                                        paletteIndex = idx << (4 * (index % 2));
+                                        paletteIndex = (0x0F & (paletteIndex >> 4));
+                                        break;
+                                    case 8:
+                                        paletteIndex = rawData[index];
+                                        break;
+                                    case 16:
+                                        paletteIndex = BitConverter.ToInt16(rawData, index * 2);
+                                        break;
+                                    case 24:
+                                        paletteIndex = (int)(BitConverter.ToUInt32(rawData, index * 3) >> 4);
+                                        break;
+                                    case 32:
+                                        paletteIndex = BitConverter.ToInt32(rawData, index * 4);
+                                        break;
+                                    default:
+                                        InvalidCodePath();
+                                        break;
                                 }
+                                if (paletteIndex >= 0 && paletteIndex < palette?.Length)
+                                {
+                                    ref readonly ColorRGB8 paletteColor = ref palette[paletteIndex];
+                                    r = paletteColor.r;
+                                    g = paletteColor.g;
+                                    b = paletteColor.b;
+
+                                    if (paletteIndex < paletteAlpha?.Length)
+                                    {
+                                        a = paletteAlpha[paletteIndex];
+                                    }
+                                }
+                                else
+                                {
+                                    InvalidCodePath($"pal idx out of range {paletteIndex} < {palette?.Length}");
+                                }
+                            }
+                            else
+                            {
+                                //InvalidCodePath($"idx out of range {index} < {rawData?.Length}");
                             }
                             break;
 
@@ -266,11 +307,12 @@ namespace img2chr
 
             private static class PNGChunckType
             {
+                // required
                 public static readonly uint IHDR = FourCC(nameof(IHDR));
                 public static readonly uint PLTE = FourCC(nameof(PLTE));
                 public static readonly uint IDAT = FourCC(nameof(IDAT));
                 public static readonly uint IEND = FourCC(nameof(IEND));
-                //
+                // optional
                 public static readonly uint tRNS = FourCC(nameof(tRNS));
                 public static readonly uint cHRM = FourCC(nameof(cHRM));
                 public static readonly uint gAMA = FourCC(nameof(gAMA));
@@ -289,25 +331,42 @@ namespace img2chr
                 public static readonly uint sPLT = FourCC(nameof(sPLT));
                 public static readonly uint eXIf = FourCC(nameof(eXIf));
                 public static readonly uint tIME = FourCC(nameof(tIME));
+                public static readonly uint acTL = FourCC(nameof(acTL));
+                public static readonly uint fcTL = FourCC(nameof(fcTL));
+                public static readonly uint fdAT = FourCC(nameof(fdAT));
             };
 
             delegate bool ParseChunkFunc(Stream stream, uint length, ref PNGContext context);
 
             private static readonly Dictionary<uint, ParseChunkFunc> kPNGParseChunkMap = new()
             {
-                { PNGChunckType.IHDR, ParseIHDRChunk },
-                { PNGChunckType.PLTE, ParsePLTEChunk },
-                { PNGChunckType.IDAT, ParseIDATChunk },
-                { PNGChunckType.IEND, ParseIENDChunk },
-                //
-                { PNGChunckType.tRNS, ParsetRNSChunk },
-                { PNGChunckType.cHRM, ParsecHRMChunk },
-                { PNGChunckType.gAMA, ParsegAMAChunk },
-                { PNGChunckType.sRGB, ParsesRGBChunk },
-                { PNGChunckType.tIME, ParsetIMEChunk },
-                { PNGChunckType.iTXt, ParseiTXtChunk },
-                { PNGChunckType.tEXt, ParsetEXtChunk },
-                { PNGChunckType.zTXt, ParsezTXtChunk },
+                // required
+                { PNGChunckType.IHDR, ParseChunk_IHDR },
+                { PNGChunckType.PLTE, ParseChunk_PLTE },
+                { PNGChunckType.IDAT, ParseChunk_IDAT },
+                { PNGChunckType.IEND, ParseChunk_IEND },
+                // optional
+                { PNGChunckType.tRNS, ParseChunk_tRNS },
+                { PNGChunckType.cHRM, ParseChunk_cHRM },
+                { PNGChunckType.gAMA, ParseChunk_gAMA },
+                { PNGChunckType.iCCP, ParseChunk_iCCP },
+                { PNGChunckType.sBIT, ParseChunk_sBIT },
+                { PNGChunckType.sRGB, ParseChunk_sRGB },
+                { PNGChunckType.cICP, ParseChunk_cICP },
+                { PNGChunckType.mDCV, ParseChunk_mDCV },
+                { PNGChunckType.cLLI, ParseChunk_cLLI },
+                { PNGChunckType.tEXt, ParseChunk_tEXt },
+                { PNGChunckType.zTXt, ParseChunk_zTXt },
+                { PNGChunckType.iTXt, ParseChunk_iTXt },
+                { PNGChunckType.bKGD, ParseChunk_bKGD },
+                { PNGChunckType.hIST, ParseChunk_hIST },
+                { PNGChunckType.pHYs, ParseChunk_pHYs },
+                { PNGChunckType.sPLT, ParseChunk_sPLT },
+                { PNGChunckType.eXIf, ParseChunk_eXIf },
+                { PNGChunckType.tIME, ParseChunk_tIME },
+                { PNGChunckType.acTL, null },
+                { PNGChunckType.fcTL, null },
+                { PNGChunckType.fdAT, null },
             };
 
             private static bool TryReadUInt32(Stream stream, out uint value)
@@ -353,6 +412,44 @@ namespace img2chr
                 return false;
             }
 
+            private static bool TryReadString(Stream stream, out string str)
+            {
+                var auto = AutoStringBuilder.Auto();
+                var sb = auto.sb;
+
+                int data = stream.ReadByte();
+                while (data > 0)
+                {
+                    sb.Append((char)data);
+                    data = stream.ReadByte();
+                }
+
+                str = sb.ToString();
+                return data == 0;
+            }
+
+            private static bool TryReadString(Stream stream, uint length, out string str)
+            {
+                var auto = AutoStringBuilder.Auto();
+                var sb = auto.sb;
+
+                str = string.Empty;
+
+                for (uint i = 0; i < length; ++i)
+                {
+                    int data = stream.ReadByte();
+                    if (data < 0)
+                    {
+                        return false;
+                    }
+
+                    sb.Append((char)data);
+                }
+
+                str = sb.ToString();
+                return true;
+            }
+
             private static bool TrySkip(Stream stream, uint length)
             {
                 bool ok = true;
@@ -370,7 +467,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParseIHDRChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_IHDR(Stream stream, uint length, ref PNGContext context)
             {
                 bool ok = true;
 
@@ -385,7 +482,6 @@ namespace img2chr
                 LogInfo("IHDR");
                 if (ok)
                 {
-                    LogInfo($"- {width} x {height}");
                     context.width = width;
                     context.height = height;
                     context.bitDepth = bitDepth;
@@ -393,12 +489,13 @@ namespace img2chr
                     context.compressionMethod = (PNGCompressionMethod)compressionMethod;
                     context.filterMethod = (PNGFilterMethod)filterMethod;
                     context.interlaceMethod = (PNGInterlaceMethod)interlaceMethod;
+                    LogInfo($"- {width} x {height} {bitDepth}bit {context.colorType} {context.compressionMethod} {context.filterMethod} {context.interlaceMethod}");
                 }
 
                 return ok;
             }
 
-            private static bool ParsePLTEChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_PLTE(Stream stream, uint length, ref PNGContext context)
             {
                 Assert(length % 3 == 0);
                 Assert(context.palette == null);
@@ -426,7 +523,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParseIDATChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_IDAT(Stream stream, uint length, ref PNGContext context)
             {
                 bool ok = true;
                 context.compressedData ??= new MemoryStream();
@@ -451,7 +548,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParseIENDChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_IEND(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("IEND");
                 return length == 0;
@@ -459,7 +556,7 @@ namespace img2chr
 
             //
 
-            private static bool ParsetRNSChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_tRNS(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("tRNS");
                 bool ok = true;
@@ -495,7 +592,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParsecHRMChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_cHRM(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("cHRM");
                 bool ok = true;
@@ -520,7 +617,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParsegAMAChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_gAMA(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("gAMA");
                 bool ok = true;
@@ -537,7 +634,97 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParsesRGBChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_iCCP(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("iCCP");
+                bool ok = true;
+
+                ok &= TryReadUInt32(stream, out var imageGamma);
+
+                if (ok)
+                {
+                    const float kScaleFactor = 100000.0f;
+                    context.gamma = imageGamma / kScaleFactor;
+                    LogInfo($"- {context.gamma}");
+                }
+
+                return ok;
+            }
+
+            private static bool ParseChunk_sBIT(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("sBIT");
+                bool ok = true;
+
+                switch (context.colorType)
+                {
+                    case PNGColorType.Greyscale:
+                        ok &= TryReadUInt8(stream, out context.grayscaleSignificantBits);
+                        break;
+                    case PNGColorType.TrueColor:
+                    case PNGColorType.IndexColor:
+                        ok &= TryReadUInt8(stream, out context.redSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.greenSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.blueSignificantBits);
+                        break;
+                    case PNGColorType.GreyscaleWithAlpha:
+                        ok &= TryReadUInt8(stream, out context.grayscaleSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.alphaSignificantBits);
+                        break;
+                    case PNGColorType.TrueColorWithAlpha:
+                        ok &= TryReadUInt8(stream, out context.redSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.greenSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.blueSignificantBits);
+                        ok &= TryReadUInt8(stream, out context.alphaSignificantBits);
+                        break;
+                    default:
+                        InvalidCodePath();
+                        break;
+                }
+
+                return ok;
+            }
+
+            private static bool ParseChunk_cICP(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("cICP");
+                bool ok = true;
+
+                ok &= TryReadUInt8(stream, out byte colorPrimaries);
+                ok &= TryReadUInt8(stream, out byte transferFunction);
+                ok &= TryReadUInt8(stream, out byte maxtrixCoeff);
+                ok &= TryReadUInt8(stream, out byte videoFullRangeFlag);
+
+                return ok;
+            }
+
+            private static bool ParseChunk_mDCV(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("mDCV");
+                bool ok = true;
+
+                ok &= TryReadUInt32(stream, out uint primaryChromaR); // x / 0.00002
+                ok &= TryReadUInt32(stream, out uint primaryChromaG); // x / 0.00002
+                ok &= TryReadUInt32(stream, out uint primaryChromaB); // x / 0.00002
+                ok &= TryReadUInt32(stream, out uint whitePointChroma); // x / 0.00002
+                ok &= TryReadUInt32(stream, out uint maxLuminance); // x / 0.0001
+                ok &= TryReadUInt32(stream, out uint minLuminance); // x / 0.0001
+
+                return ok;
+            }
+
+            private static bool ParseChunk_cLLI(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("cLLI");
+                bool ok = true;
+
+                ok &= TryReadUInt32(stream, out uint maxContentLightLevel); // x / 0.0001
+                ok &= TryReadUInt32(stream, out uint maxFrameAverageLightLevel); // x / 0.0001
+
+                return ok;
+            }
+
+            private static bool ParseChunk_sRGB(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("sRGB");
                 bool ok = true;
@@ -552,7 +739,7 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParsetIMEChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_tIME(Stream stream, uint length, ref PNGContext context)
             {
                 LogInfo("tIME");
                 bool ok = true;
@@ -567,60 +754,187 @@ namespace img2chr
                 return ok;
             }
 
-            private static bool ParseiTXtChunk(Stream stream, uint length, ref PNGContext context)
+
+            private static bool ParseChunk_tEXt(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("ciTXt");
+                LogInfo("tEXt");
                 bool ok = true;
-                StringBuilder sb = new();
 
-                string key = string.Empty;
-                string value = string.Empty;
+                string keyword;
+                string text = string.Empty;
 
-                uint i = 0;
-                for (; i < length; ++i)
+                ok &= TryReadString(stream, out keyword);
+
+                uint remaining = length - ((uint)keyword.Length + 1);
+                if (remaining > 0)
                 {
-                    int ch = stream.ReadByte();
-                    if (ch < 0)
-                    {
-                        break;
-                    }
-
-                    sb.Append((char)ch);
+                    ok &= TryReadString(stream, remaining, out text);
                 }
 
-                key = sb.ToString();
-                sb.Clear();
-
-                for (; i < length; ++i)
-                {
-                    int ch = stream.ReadByte();
-                    if (ch < 0)
-                    {
-                        break;
-                    }
-
-                    sb.Append((char)ch);
-                }
-
-                context.text ??= new();
                 if (ok)
                 {
-                    context.text[key] = value;
+                    LogInfo($"- {keyword} -> '{text}'");
+                    context.text ??= new();
+                    context.text[keyword] = text;
                 }
 
                 return ok;
             }
 
-            private static bool ParsetEXtChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_zTXt(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("tEXt");
-                return TrySkip(stream, length);
+                bool ok = true;
+
+                string keyword;
+                string text = string.Empty;
+
+                ok &= TryReadString(stream, out keyword);
+
+                uint remaining = length - (uint)keyword.Length;
+                if (remaining > 0)
+                {
+                    ok &= TryReadUInt8(stream, out byte compressionMethod);
+
+                    // TODO: decompress
+                    ok &= TrySkip(stream, remaining);
+                }
+
+                if (ok)
+                {
+                    context.text ??= new();
+                    context.text[keyword] = text;
+                }
+
+                return ok;
             }
 
-            private static bool ParsezTXtChunk(Stream stream, uint length, ref PNGContext context)
+            private static bool ParseChunk_iTXt(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("zTXt");
-                return TrySkip(stream, length);
+                LogInfo("iTXt");
+                bool ok = true;
+                StringBuilder sb = new();
+
+                string text = string.Empty;
+
+                var p = stream.Position;
+
+                ok &= TryReadString(stream, out string keyword);
+                ok &= TryReadUInt8(stream, out byte compressionMethod);
+                ok &= TryReadString(stream, out string languageTag);
+                ok &= TryReadString(stream, out string translatedKeyword);
+
+                uint remaining = (uint)(stream.Position - p) - length;
+                if (remaining > 0)
+                {
+                    ok &= TryReadString(stream, remaining, out text);
+                }
+
+                if (ok)
+                {
+                    context.text ??= new();
+                    context.text[keyword] = text;
+                }
+
+                return ok;
+            }
+
+            private static bool ParseChunk_bKGD(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("bKGB");
+                bool ok = true;
+
+                switch (context.colorType)
+                {
+                    case PNGColorType.Greyscale:
+                    case PNGColorType.GreyscaleWithAlpha:
+                        ok &= TryReadUInt16(stream, out var greyscaleBackground);
+                        break;
+                    case PNGColorType.TrueColor:
+                    case PNGColorType.TrueColorWithAlpha:
+                        ok &= TryReadUInt16(stream, out var redBackground);
+                        ok &= TryReadUInt16(stream, out var greenBackground);
+                        ok &= TryReadUInt16(stream, out var blueBackground);
+                        break;
+                    case PNGColorType.IndexColor:
+                        ok &= TryReadUInt8(stream, out byte paletteIndexBackground);
+                        break;
+                    default:
+                        InvalidCodePath();
+                        break;
+                }
+
+                return ok;
+            }
+            private static bool ParseChunk_hIST(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("hIST");
+                bool ok = true;
+
+                for (uint i = 0; ok && i < length; ++i)
+                {
+                    ok &= TryReadUInt16(stream, out ushort frequency);
+                }
+
+                return ok;
+            }
+            private static bool ParseChunk_pHYs(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("pHYs");
+                bool ok = true;
+
+                ok &= TryReadUInt32(stream, out uint pixelsPerUnitX);
+                ok &= TryReadUInt32(stream, out uint pixelsPerUnitY);
+                ok &= TryReadUInt8(stream, out byte unitSpecifier); // 0 - unknown, 1 - meter
+
+                if (ok)
+                {
+                    LogInfo($"- {pixelsPerUnitX} x {pixelsPerUnitY} @ {unitSpecifier}");
+                }
+
+                return ok;
+            }
+
+            private static bool ParseChunk_sPLT(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("sPLT");
+                bool ok = true;
+
+                for (int p = 0; ok && p < context.palette.Length; ++p)
+                {
+                    ok &= TryReadString(stream, out string paletteName);
+
+                    ok &= TryReadUInt8(stream, out byte sampleDepth);
+                    Assert(sampleDepth == 8 || sampleDepth == 16);
+                    switch (sampleDepth)
+                    {
+                        case 8:
+                            ok &= TryReadUInt8(stream, out var red);
+                            ok &= TryReadUInt8(stream, out var green);
+                            ok &= TryReadUInt8(stream, out var blue);
+                            ok &= TryReadUInt8(stream, out var alpha);
+                            break;
+                        case 16:
+                            ok &= TryReadUInt16(stream, out var _red);
+                            ok &= TryReadUInt16(stream, out var _green);
+                            ok &= TryReadUInt16(stream, out var _blue);
+                            ok &= TryReadUInt16(stream, out var _alpha);
+                            break;
+                    }
+
+                    ok &= TryReadUInt16(stream, out var frequency);
+                }
+
+                return ok;
+            }
+
+            private static bool ParseChunk_eXIf(Stream stream, uint length, ref PNGContext context)
+            {
+                LogInfo("eXIf");
+                bool ok = true;
+
+                ok &= TrySkip(stream, length);
+
+                return ok;
             }
 
             private static void ParsePNG(Stream stream, List<Color> pixels, ref int width, ref int height)
@@ -2310,7 +2624,7 @@ namespace img2chr
 
                     GenerateAsmFileHeader(sb, fontFilename);
 
-                    sb.AppendLine(".feature string_escapes +");
+                    sb.AppendLine(".feature string_escapes");
                     sb.AppendLine();
 
                     sb.AppendLine("; Char Map");
@@ -2896,7 +3210,7 @@ namespace img2chr
                         sb.AppendLine(";");
                         sb.AppendLine();
 
-                        sb.AppendLine(".feature string_escapes +");
+                        sb.AppendLine(".feature string_escapes");
                         sb.AppendLine();
 
                         sb.AppendLine("; Char Map");
