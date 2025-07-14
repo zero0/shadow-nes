@@ -170,15 +170,50 @@ namespace img2chr
                     rawData = decompressedData.ToArray();
 
                     LogInfo($"Decompress {compressedData.Length} -> {rawData.Length}");
+
+                    File.WriteAllBytes($"dump-{DateTime.UtcNow.Ticks}.dat", rawData);
                 }
 
-                public Color GetColorAt(int index)
+                public Color GetColorAt(int x, int y)
                 {
                     int r, g, b, a;
                     r = 0;
                     g = 0;
                     b = 0;
                     a = 255;
+
+                    static int GetRawDataAt(int x, int y, in PNGContext context)
+                    {
+                        x = Math.Clamp(x, 0, (int)context.width+1); // offset for scanline?
+                        y = Math.Clamp(y, 0, (int)context.height);
+
+                        int index = ((y * ((int)context.width) + x) * context.bitDepth + y * 8) / 8;
+                        int paletteIndex = -1;
+                        switch (context.bitDepth)
+                        {
+                            case 4:
+                                int idx = context.rawData[index];
+                                paletteIndex = idx << (4 * ( x % 2));
+                                paletteIndex = (0x0F & (paletteIndex >> 4));
+                                break;
+                            case 8:
+                                paletteIndex = context.rawData[index];
+                                break;
+                            case 16:
+                                paletteIndex = BitConverter.ToInt16(context.rawData, index);
+                                break;
+                            case 24:
+                                paletteIndex = (int)(BitConverter.ToUInt32(context.rawData, index) >> 4);
+                                break;
+                            case 32:
+                                paletteIndex = BitConverter.ToInt32(context.rawData, index);
+                                break;
+                            default:
+                                InvalidCodePath();
+                                break;
+                        }
+                        return paletteIndex;
+                    }
 
                     switch (colorType)
                     {
@@ -189,32 +224,42 @@ namespace img2chr
                             break;
 
                         case PNGColorType.IndexColor:
-                            if (index < rawData?.Length)
+                            //if (index < rawData?.Length)
                             {
+                                int rawDataX = GetRawDataAt(x, y, in this);
+                                int rawDataA = GetRawDataAt(x - 1, y, in this);
+                                int rawDataB = GetRawDataAt(x, y - 1, in this);
+                                int rawDataC = GetRawDataAt(x - 1, y - 1, in this);
                                 int paletteIndex = -1;
-                                switch (bitDepth)
+
+                                if (filterMethod == PNGFilterMethod.Adaptive)
                                 {
-                                    case 4:
-                                        int idx = rawData[index / 2];
-                                        paletteIndex = idx << (4 * (index % 2));
-                                        paletteIndex = (0x0F & (paletteIndex >> 4));
-                                        break;
-                                    case 8:
-                                        paletteIndex = rawData[index];
-                                        break;
-                                    case 16:
-                                        paletteIndex = BitConverter.ToInt16(rawData, index * 2);
-                                        break;
-                                    case 24:
-                                        paletteIndex = (int)(BitConverter.ToUInt32(rawData, index * 3) >> 4);
-                                        break;
-                                    case 32:
-                                        paletteIndex = BitConverter.ToInt32(rawData, index * 4);
-                                        break;
-                                    default:
-                                        InvalidCodePath();
-                                        break;
+                                    int scanline = (y * ((int)width) * bitDepth + y * 8)/ 8;
+                                    byte filterMode = rawData[scanline];
+
+                                    switch ((PNGFilterMethodAdaptiveType)filterMode)
+                                    {
+                                        case PNGFilterMethodAdaptiveType.None:
+                                            paletteIndex = rawDataX;
+                                            break;
+                                        case PNGFilterMethodAdaptiveType.Sub:
+                                            paletteIndex = rawDataX + rawDataA;
+                                            break;
+                                        case PNGFilterMethodAdaptiveType.Up:
+                                            paletteIndex = rawDataX + rawDataB;
+                                            break;
+                                        case PNGFilterMethodAdaptiveType.Average:
+                                            paletteIndex = rawDataX + ((rawDataA + rawDataB) / 2);
+                                            break;
+                                        case PNGFilterMethodAdaptiveType.Paeth:
+                                            paletteIndex = rawDataX + PaethPredictor(rawDataA, rawDataB, rawDataC);
+                                            break;
+                                        default:
+                                            InvalidCodePath( $"scanline {scanline} (x {x} y {y} w {width} h {height}) filter {filterMode}");
+                                            break;
+                                    }
                                 }
+
                                 if (paletteIndex >= 0 && paletteIndex < palette?.Length)
                                 {
                                     ref readonly ColorRGB8 paletteColor = ref palette[paletteIndex];
@@ -229,12 +274,8 @@ namespace img2chr
                                 }
                                 else
                                 {
-                                    InvalidCodePath($"pal idx out of range {paletteIndex} < {palette?.Length}");
+                                    //InvalidCodePath($"pal idx out of range {paletteIndex} < {palette?.Length}");
                                 }
-                            }
-                            else
-                            {
-                                //InvalidCodePath($"idx out of range {index} < {rawData?.Length}");
                             }
                             break;
 
@@ -941,8 +982,10 @@ namespace img2chr
             {
                 PNGContext context = new();
 
-                Span<byte> pngHeader = stackalloc byte[8];
-                stream.Read(pngHeader);
+                const int kHeaderSize = 8;
+                Span<byte> pngHeader = stackalloc byte[kHeaderSize];
+                int headerRead = stream.Read(pngHeader);
+                Assert(headerRead == kHeaderSize);
 
                 bool ok = true;
                 bool isEndHeader = false;
@@ -977,9 +1020,12 @@ namespace img2chr
                     pixels.Clear();
                     pixels.Capacity = width * height;
 
-                    for (int i = 0, imax = width * height; i < imax; ++i)
+                    for (int y = 0; y < height; ++y)
                     {
-                        pixels.Add(context.GetColorAt(i));
+                        for (int x = 0; x < width; ++x)
+                        {
+                            pixels.Add(context.GetColorAt(x, y));
+                        }
                     }
                 }
 
