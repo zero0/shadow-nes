@@ -4582,6 +4582,8 @@ namespace img2chr
         }
         #endregion
 
+        private const string kNewLine = "\n";
+
         #region CSV File
         static void ConvertCSVFile(string textFilename, Dictionary<string, ChrRomOutput> _, in ConvertOptions cmdOptions)
         {
@@ -4599,6 +4601,8 @@ namespace img2chr
 
                 // trim initial line read
                 string line = sr.ReadLine()?.TrimStart() ?? string.Empty;
+
+                line = line.ReplaceLineEndings(kNewLine);
 
                 do
                 {
@@ -4688,10 +4692,12 @@ namespace img2chr
                         // read next line, don't trim since there could be spaces needed
                         line = sr.ReadLine();
 
+                        line = line.ReplaceLineEndings(kNewLine);
+
                         // if there are still lines, add a new line to the string buffer
                         if (line != null)
                         {
-                            sb.Append("\\n");
+                            sb.Append(kNewLine);
                         }
                     }
                     else
@@ -4811,7 +4817,7 @@ namespace img2chr
                     if (value.Length > kMaxStringWidth && !IsVerbatumString(value))
                     {
                         // split on "new line" sequence
-                        string[] lines = value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+                        string[] lines = value.Split(kNewLine, StringSplitOptions.RemoveEmptyEntries);
 
                         bool allLinesShort = true;
                         foreach (string l in lines)
@@ -4821,7 +4827,7 @@ namespace img2chr
 
                         if (!allLinesShort)
                         {
-                            LogError($"String too long [{langToMap.Key}]:[{kv.Key}] -> [{value}]");
+                            LogError($"Strings {lines.Length} too long [{langToMap.Key}]:[{kv.Key}] -> [{value}]");
                         }
                     }
                 }
@@ -4996,7 +5002,7 @@ namespace img2chr
                 // output string "width" (max characters per line)
                 foreach (var kv in langToMap.Value)
                 {
-                    string[] lines = kv.Value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+                    string[] lines = kv.Value.Split(kNewLine, StringSplitOptions.RemoveEmptyEntries);
 
                     int maxWidth = -1;
                     foreach (var line in lines)
@@ -5018,7 +5024,7 @@ namespace img2chr
                 // output string "width" (max characters per line)
                 foreach (var kv in langToMap.Value)
                 {
-                    string[] lines = kv.Value.Split("\\n", StringSplitOptions.RemoveEmptyEntries);
+                    string[] lines = kv.Value.Split(kNewLine, StringSplitOptions.RemoveEmptyEntries);
 
                     int maxWidth = -1;
                     foreach (var line in lines)
