@@ -171,7 +171,7 @@ namespace img2chr
 
                     LogInfo($"Decompress {compressedData.Length} -> {rawData.Length}");
 
-                    File.WriteAllBytes($"dump-{DateTime.UtcNow.Ticks}.dat", rawData);
+                    //File.WriteAllBytes($"dump-{DateTime.UtcNow.Ticks}.dat", rawData);
                 }
 
                 public Color GetColorAt(int x, int y)
@@ -184,16 +184,16 @@ namespace img2chr
 
                     static int GetRawDataAt(int x, int y, in PNGContext context)
                     {
-                        x = Math.Clamp(x, 0, (int)context.width+1); // offset for scanline?
+                        x = Math.Clamp(x, 0, (int)context.width);
                         y = Math.Clamp(y, 0, (int)context.height);
 
-                        int index = ((y * ((int)context.width) + x) * context.bitDepth + y * 8) / 8;
+                        int index = ((y * (int)context.width + x) * context.bitDepth + y * 8 + 8) / 8;
                         int paletteIndex = -1;
                         switch (context.bitDepth)
                         {
                             case 4:
                                 int idx = context.rawData[index];
-                                paletteIndex = idx << (4 * ( x % 2));
+                                paletteIndex = idx << (4 * (x % 2));
                                 paletteIndex = (0x0F & (paletteIndex >> 4));
                                 break;
                             case 8:
@@ -218,9 +218,11 @@ namespace img2chr
                     switch (colorType)
                     {
                         case PNGColorType.Greyscale:
+                            InvalidCodePath("Implement Greyscale");
                             break;
 
                         case PNGColorType.TrueColor:
+                            InvalidCodePath("Implement TrueColor");
                             break;
 
                         case PNGColorType.IndexColor:
@@ -234,7 +236,7 @@ namespace img2chr
 
                                 if (filterMethod == PNGFilterMethod.Adaptive)
                                 {
-                                    int scanline = (y * ((int)width) * bitDepth + y * 8)/ 8;
+                                    int scanline = (y * ((int)width) * bitDepth + y * 8) / 8;
                                     byte filterMode = rawData[scanline];
 
                                     switch ((PNGFilterMethodAdaptiveType)filterMode)
@@ -255,9 +257,13 @@ namespace img2chr
                                             paletteIndex = rawDataX + PaethPredictor(rawDataA, rawDataB, rawDataC);
                                             break;
                                         default:
-                                            InvalidCodePath( $"scanline {scanline} (x {x} y {y} w {width} h {height}) filter {filterMode}");
+                                            InvalidCodePath($"scanline {scanline} (x {x} y {y} w {width} h {height}) filter {filterMode}");
                                             break;
                                     }
+                                }
+                                else
+                                {
+                                    InvalidCodePath($"Unknown filtering method {filterMethod}");
                                 }
 
                                 if (paletteIndex >= 0 && paletteIndex < palette?.Length)
@@ -274,19 +280,21 @@ namespace img2chr
                                 }
                                 else
                                 {
-                                    //InvalidCodePath($"pal idx out of range {paletteIndex} < {palette?.Length}");
+                                    InvalidCodePath($"pal idx out of range {paletteIndex} < {palette?.Length}");
                                 }
                             }
                             break;
 
                         case PNGColorType.GreyscaleWithAlpha:
+                            InvalidCodePath("Implement Greyscale with Alpha");
                             break;
 
                         case PNGColorType.TrueColorWithAlpha:
+                            InvalidCodePath("Implement TrueColor with Alpha");
                             break;
 
                         default:
-                            InvalidCodePath();
+                            InvalidCodePath("Unknown PNG Color Type");
                             break;
                     }
 
