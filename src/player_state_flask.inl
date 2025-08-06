@@ -1,7 +1,9 @@
 
 enum
 {
-    PLAYER_FLASH_ANIMATION_TIME = 40,
+    PLAYER_FLASK_ANIMATION_TIME = 40,
+    PLAYER_FLASK_ANIMATION_CAN_PERFORM_MOVE_TIME = 20,
+    PLAYER_FLASK_ANIMATION_CAN_PERFORM_ACTION_TIME = 20,
 };
 
 static timer_t player_flask_cooldown_timer;
@@ -9,7 +11,7 @@ static timer_t player_flask_cooldown_timer;
 // test if flask can be used
 // 1. player has enough flasks
 // 2. flask cooldown is done
-// 3. can actually perform flash action
+// 3. can actually perform flask action
 #define can_perform_flask()                                                             \
 (                                                                                       \
     player_flasks > 0 &&                                                                \
@@ -26,11 +28,11 @@ static void __fastcall__ perform_flask(void)
     player_next_state = PLAYER_STATE_USING_FLASK;
 }
 
-static void __fastcall__ player_state_flash_enter(void)
+static void __fastcall__ player_state_flask_enter(void)
 {
     // TODO: implement actual animation
-    // play flash animation
-    timer_set( player_animation_frame_timer, PLAYER_FLASH_ANIMATION_TIME );
+    // play flask animation
+    timer_set( player_flask_cooldown_timer, PLAYER_FLASK_ANIMATION_TIME );
 
     // reset action flags (cannot interupt)
     flags_reset( player_can_perform_action_flags );
@@ -39,7 +41,7 @@ static void __fastcall__ player_state_flash_enter(void)
 static void __fastcall__ player_state_flask_update(void)
 {
     // leave state and heal when animation is done so if interuptted, heal does not work
-    if( timer_is_done( player_animation_frame_timer ) )
+    if( timer_is_done( player_flask_cooldown_timer ) )
     {
         // leave state when animation is done
         player_next_state = PLAYER_STATE_IDLE;
@@ -51,6 +53,7 @@ static void __fastcall__ player_state_flask_update(void)
         ++player_damage_queue_length;
 
         // use flask
+        ASSERT(player_flasks > 0);
         --player_flasks;
 
         // mark flask changed
@@ -59,20 +62,20 @@ static void __fastcall__ player_state_flask_update(void)
     else
     {
         // enable movement flags after a number of frames
-        if( player_animation_frame_timer == 20 )
+        if( player_flask_cooldown_timer == PLAYER_FLASK_ANIMATION_CAN_PERFORM_MOVE_TIME )
         {
-            flags_mark( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_MOVE );
+            flags_mark( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_MOVE | PLAYER_CAN_PERFORM_ACTION_DODGE );
         }
 
         // set action interupts after a number of frames
-        if( player_animation_frame_timer == 10 )
+        if( player_flask_cooldown_timer == PLAYER_FLASK_ANIMATION_CAN_PERFORM_ACTION_TIME )
         {
-            flags_mark( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_DODGE | PLAYER_CAN_PERFORM_ACTION_ATTACK0 | PLAYER_CAN_PERFORM_ACTION_ATTACK1 );
+            flags_mark( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_ATTACK0 | PLAYER_CAN_PERFORM_ACTION_ATTACK1 );
         }
     }
 }
 
-static void __fastcall__ player_state_flash_leave(void)
+static void __fastcall__ player_state_flask_leave(void)
 {
     // TODO: cancel animation
 
@@ -80,7 +83,7 @@ static void __fastcall__ player_state_flash_leave(void)
     timer_set( player_flask_cooldown_timer, PLAYER_FLASK_COOLDOWN_TIME );
 
     // probably don't have to since entering a new state will play most likely play an animtaion
-    timer_set( player_animation_frame_timer, 0 );
+    timer_set( player_flask_cooldown_timer, 0 );
 }
 
 #define tick_flask_timers()             \

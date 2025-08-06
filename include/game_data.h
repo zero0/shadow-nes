@@ -14,6 +14,13 @@ enum
     _SAVE_SLOT_COUNT
 };
 
+enum
+{
+    CURRENCY_0,
+    CURRENCY_1,
+    _CURRENCY_COUNT
+};
+
 typedef struct {
     uint8_t version;
 
@@ -27,8 +34,7 @@ typedef struct {
     flags8_t difficulties_defeated;
     flags8_t bosses_defeated[_BOSS_COUNT];
 
-    uint8_t currency_0;
-    uint8_t currency_1;
+    uint8_t currency[_CURRENCY_COUNT];
 
     uint8_t name_len;
     uint8_t name[15];

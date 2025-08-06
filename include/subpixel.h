@@ -4,8 +4,8 @@
 #include "types.h"
 #include "macros.h"
 
-typedef uint16_t subpixel_t;
-STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
+typedef unsigned int subpixel_t;
+STATIC_ASSERT( sizeof(subpixel_t) == sizeof(uint16_t) );
 
 // convert subpixel to pixel
 #define subpixel_to_pixel( s )          (pixel_t)( (s) >> 8 )
@@ -110,8 +110,8 @@ STATIC_ASSERT( sizeof( subpixel_t ) == sizeof( uint16_t ) );
 // Subpixel diff
 //
 
-typedef int16_t subpixel_diff_t;
-STATIC_ASSERT( sizeof( subpixel_diff_t ) == sizeof( int16_t ) );
+typedef signed int subpixel_diff_t;
+STATIC_ASSERT( sizeof(subpixel_diff_t) == sizeof(int16_t) );
 
 #define subpixel_diff_make( p, pp )     ( (subpixel_diff_t)( p << 8 ) | (subpixel_diff_t)( pp ) )
 

@@ -49,14 +49,16 @@ enum
     _PLAYER_STATE_COUNT,
 };
 
-#define PLAYER_DAMAGE_MAX_QUEUE_LENGTH          (uint8_t)4
+enum
+{
+    PLAYER_DAMAGE_MAX_QUEUE_LENGTH = 4,
+    PLAYER_ACTION_MAX_QUEUE_LENGTH = 8,
+    PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK = PLAYER_ACTION_MAX_QUEUE_LENGTH - 1,
+
+    PLAYER_ANIMATION_NONE = 0xFF,
+}
 STATIC_ASSERT(IS_POW2(PLAYER_DAMAGE_MAX_QUEUE_LENGTH));
-
-#define PLAYER_ACTION_MAX_QUEUE_LENGTH           (uint8_t)8
-#define PLAYER_ACTION_MAX_QUEUE_LENGTH_MASK      (uint8_t)(PLAYER_ACTION_MAX_QUEUE_LENGTH - 1)
 STATIC_ASSERT(IS_POW2(PLAYER_ACTION_MAX_QUEUE_LENGTH));
-
-#define PLAYER_ANIMATION_NONE                   (uint8_t)0xFF
 
 enum
 {
@@ -377,7 +379,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // modify healing by attributes
-    //MOD_INCOMING_HEALING_FROM_ATTR(_temp_dmg);
+    MOD_INCOMING_HEALING_FROM_ATTR(_temp_dmg);
 
     // if no healing left, return
     if( _temp_dmg.damage == 0 )
@@ -386,7 +388,7 @@ static void __fastcall__ player_heal(void)
     }
 
     // modify healing by status effects
-    //MOD_INCOMING_HEALING_FROM_STATUS(_temp_dmg, player_damage_status);
+    MOD_INCOMING_HEALING_FROM_STATUS(_temp_dmg, player_damage_status);
 
     // if no healing left, return
     if( _temp_dmg.damage == 0 )
@@ -422,7 +424,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify dmage by attributes
-    //MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
+    MOD_INCOMING_DAMAGE_FROM_ATTR(_temp_dmg);
 
     // if no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -431,7 +433,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify damage from status effects
-    //MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
+    MOD_INCOMING_DAMAGE_FROM_STATUS(_temp_dmg, player_damage_status);
 
     // no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -440,7 +442,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // modify damage for resistences
-    //MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, player_damage_resistance_modifiers);
+    MOD_INCOMING_DAMAGE_FROM_RESISTANCE(_temp_dmg, player_damage_resistance_modifiers);
 
     // no damage left, return
     if( _temp_dmg.damage == 0 )
@@ -450,7 +452,7 @@ static void __fastcall__ player_take_damage(void)
 
     // build up damage
     b = player_damage_status;
-    //BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
+    BUILDUP_DAMAGE(_temp_dmg, player_damage_status_buildup, player_damage_status);
     if( b != player_damage_status )
     {
         flags_mark( player_changed_flags, PLAYER_CHANGED_STATUS );
@@ -493,12 +495,6 @@ static void __fastcall__ player_process_damage_queue(void)
 
     // clear damage queue
     player_damage_queue_length = 0;
-
-    // if the player has no more health once all damage/healing is processed, player is dead
-    if( player_health == 0 )
-    {
-        player_death();
-    }
 }
 
 static void __fastcall__ player_use_stamina(uint8_t stamina)
@@ -728,13 +724,19 @@ static void __fastcall__ player_process_action_queue(void)
 
 void __fastcall__ player_update(void)
 {
-    #if 0
     flags_reset( player_changed_flags );
 
     // process damage queue
     if( player_damage_queue_length > 0 )
     {
         player_process_damage_queue();
+    }
+
+    // if the player has no more health once all damage/healing is processed, player is dead
+    if( player_health == 0 )
+    {
+        player_death();
+        return;
     }
 
     // tick build up
@@ -777,7 +779,7 @@ void __fastcall__ player_update(void)
                 break;
 
             case PLAYER_STATE_USING_FLASK:
-                player_state_flash_leave();
+                player_state_flask_leave();
                 break;
 
             case PLAYER_STATE_BLOCKING:
@@ -799,7 +801,7 @@ void __fastcall__ player_update(void)
                 break;
 
             case PLAYER_STATE_USING_FLASK:
-                player_state_flash_enter();
+                player_state_flask_enter();
                 break;
 
             case PLAYER_STATE_BLOCKING:
@@ -837,16 +839,18 @@ void __fastcall__ player_update(void)
 
     subpixel_diff_set_zero( player_pos_dx );
     subpixel_diff_set_zero( player_pos_dy );
+}
 
+void __fastcall__ player_render(void)
+{
     // draw status bars
-    player_render_status_bars();
+    //player_render_status_bars();
 
     // draw character
     //player_render_character();
 
 #ifdef DEBUG
     player_render_debug();
-#endif
 #endif
 }
 

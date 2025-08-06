@@ -33,8 +33,8 @@ static void __fastcall__ game_data_clear_current_game_data(void)
     g_current_game_data.difficulties_defeated = 0;
     g_current_game_data.bosses_defeated[0] = 0;
 
-    g_current_game_data.currency_0 = 0;
-    g_current_game_data.currency_1 = 0;
+    g_current_game_data.currency[0] = 0;
+    g_current_game_data.currency[1] = 0;
 
     g_current_game_data.name_len = 0;
     g_current_game_data.name[0] = 0;

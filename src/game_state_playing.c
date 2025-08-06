@@ -178,6 +178,9 @@ void __fastcall__ game_state_playing_update()
 
             boss_update();
 
+            // render player and boss
+            player_render();
+
             // check if the player died first
             if( player_is_dead() )
             {

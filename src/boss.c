@@ -7,6 +7,8 @@
 #include "collision.h"
 #include "ppu.h"
 
+#pragma code-name("GAME_CODE")
+
 //
 //
 //

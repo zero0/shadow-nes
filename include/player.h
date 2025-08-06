@@ -16,6 +16,8 @@ uint8_t player_is_dead(void);
 
 void player_init(void);
 
-void player_update();
+void player_update(void);
+
+void player_render(void);
 
 #endif // PLAYER_H
