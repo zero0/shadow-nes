@@ -1516,6 +1516,16 @@ namespace img2chr
             s_StringBuilder.Push(sb);
         }
 
+        static StringBuilder Indent(StringBuilder sb, int indentLevel = 1, string tab = "    ")
+        {
+            for (int i = 0; i < indentLevel; ++i)
+            {
+                sb.Append(tab);
+            }
+
+            return sb;
+        }
+
         readonly struct AutoStringBuilder : IDisposable
         {
             public readonly StringBuilder sb;
@@ -2568,7 +2578,6 @@ namespace img2chr
                 }
             }
 
-
             // sprite region names
             Parameters regions = GetSubParameters(spriteParameters, "sprite.region");
 
@@ -2621,6 +2630,24 @@ namespace img2chr
                     chrCount = tileEntriesToConvert.Count,
                     is8x16 = false
                 });
+            }
+
+            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+            {
+                var sb = auto.sb;
+
+                sb.AppendLine("enum");
+                sb.AppendLine("{");
+
+                foreach ((string regionName, Rectangle region) in spriteRegions)
+                {
+                    Indent(sb).Append($"{$"SPRITE_{regionName.ToUpperInvariant()},",-32}").Append($" // [{region.X}, {region.Y}, {region.Width}, {region.Height}]").AppendLine();
+                }
+                sb.AppendLine("};");
+
+                WrapHeaderFile(sb, spriteFilename, spriteFilename);
+
+                WriteGeneratedHeaderFile(sb, spriteFilename, in cmdOptions);
             }
         }
         #endregion
@@ -4946,15 +4973,7 @@ namespace img2chr
             const string str_t = "str_t";
             const string uint8_t = "uint8_t";
 
-            static StringBuilder Indent(StringBuilder sb, int indentLevel = 1, string tab = "    ")
-            {
-                for (int i = 0; i < indentLevel; ++i)
-                {
-                    sb.Append(tab);
-                }
 
-                return sb;
-            }
 
             // generate each language header files
             foreach (var langToMap in textMap)
@@ -5167,7 +5186,7 @@ namespace img2chr
                 foreach (var chrRom in chrRomLayouts)
                 {
                     string key = $"{chrRom.chrRomKey.ToUpperInvariant()} =";
-                    sb.AppendLine($"    {key,-64} 0x{chrRom.offset:X2},");
+                    Indent(sb).AppendLine($"{key,-64} 0x{chrRom.offset:X2},");
                 }
                 sb.AppendLine("};");
 
