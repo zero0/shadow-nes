@@ -4,6 +4,8 @@
 
     <property environment="env"/>
 
+    <property name="game.name" value="shadow"/>
+
     <property name="tmp.dir" location="tmp"/>
     <property name="obj.dir" location="obj"/>
     <property name="bin.dir" location="bin"/>
@@ -20,8 +22,11 @@
     <property name="ld65.exe" value="ld65"/>
     <property name="dotnet.exe" value="dotnet"/>
 
-    <!-- NOTE: right now stored in ${env.CC65_HOME}/bin so this works -->
+    <!-- NOTE: right now stored in ${env.CC65_HOME} so this works -->
     <property name="edlink.exe" value="edlink-n8"/>
+
+    <!-- NOTE: right now stored in ${env.CC65_HOME} so this works -->
+    <property name="emulator.exe" value="mesen"/>
 
     <!-- TODO: fill in per platform -->
     <property name="cc65.lib.dir" value="${env.CC65_HOME}/lib"/>
@@ -43,7 +48,6 @@
 
     <property name="cpu.type" value="nes"/>
     <property name="cpu.mapper" value="mmc5"/>
-    <property name="game.name" value="shadow"/>
     <property name="game.filename" value="${game.name}.${build.lang}"/>
     <property name="dbg.path" location="${bin.dir}/${game.filename}.dbg"/>
     <property name="nes.path" location="${bin.dir}/${game.filename}.nes"/>
@@ -157,6 +161,13 @@
         <available property="nes.present" file="${nes.path}"/>
         <echo if:true="${nes.present}">Success ${nes.path}</echo>
         <fail unless="${nes.present}">Failed to find ${nes.path}</fail>
+    </target>
+
+    <target name="run-nes" description="run the .nes file in an emulator">
+        <available property="nes.present" file="${nes.path}"/>
+        <exec if:true="${nes.present}" executable="${emulator.exe}" dir="." failonerror="true">
+            <arg line="${nes.path}"/>
+        </exec>
     </target>
 
     <target name="deploy-nes" description="deploy the .nes file to the console">

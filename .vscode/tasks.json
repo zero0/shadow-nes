@@ -4,7 +4,7 @@
         {
             "label": "Build NES project",
             "type": "shell",
-            "command": "ant",
+            "command": "ant build-nes",
             "problemMatcher": [
                 {
                     "owner": "nesdev",
@@ -39,7 +39,39 @@
         {
             "label": "Deploy NES project",
             "type": "shell",
-            "command": "./deploy.bat shadow",
+            "command": "ant deploy-nes",
+            "problemMatcher": [
+                {
+                    "owner": "nesdev",
+                    "pattern": [
+                        {
+                            "regexp": "^([^:]*):([0-9]+): ?([^:]*): ?(.*)$",
+                            "file": 1,
+                            "location": 2,
+                            "severity": 3,
+                            "message": 4
+                        }
+                    ]
+                },
+                {
+                    "owner": "nesdev",
+                    "pattern": [
+                        {
+                            "regexp": "^([^:]*)\\(([0-9]+)\\): ?([^:]*): ?(.*)$",
+                            "file": 1,
+                            "location": 2,
+                            "severity": 3,
+                            "message": 4
+                        }
+                    ]
+                }
+            ],
+            "group": "none"
+        },
+        {
+            "label": "Run NES project",
+            "type": "shell",
+            "command": "ant run-nes",
             "problemMatcher": [
                 {
                     "owner": "nesdev",

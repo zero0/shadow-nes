@@ -2174,6 +2174,9 @@ namespace img2chr
             {
                 int rleBytes = 0;
 
+                auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
+                auto.sb.AppendLine($"_{exportName}_tiles:");
+
                 auto.sb.AppendLine("; tile index");
 
                 foreach (int idx in bytes)
@@ -2254,6 +2257,9 @@ namespace img2chr
             using (var auto = AutoStringBuilder.Auto())
             {
                 int rleBytes = 0;
+
+                auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
+                auto.sb.AppendLine($"_{exportName}_tiles:");
 
                 auto.sb.AppendLine("; tile count, tile index");
 
