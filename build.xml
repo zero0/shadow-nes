@@ -52,8 +52,11 @@
     <property name="dbg.path" location="${bin.dir}/${game.filename}.dbg"/>
     <property name="nes.path" location="${bin.dir}/${game.filename}.nes"/>
 
-    <property name="ca65.flags" value="--target ${cpu.type} --cpu 6502 -g -D DEBUG_BUILD=1 -D BUILD_LANG=${build.lang.id}"/>
-    <property name="cc65.flags" value="--target ${cpu.type} --cpu 6502 -g -DDEBUG_BUILD=1 -DBUILD_LANG=${build.lang.id} --add-source"/>
+    <property name="ca65.flags.build-type" value="-g -D DEBUG_BUILD=1 " />
+    <property name="cc65.flags.build-type" value="-g -DDEBUG_BUILD=1 --add-source" />
+
+    <property name="ca65.flags" value="--target ${cpu.type} --cpu 6502 ${ca65.flags.build-type} -D BUILD_LANG=${build.lang.id}"/>
+    <property name="cc65.flags" value="--target ${cpu.type} --cpu 6502 ${cc65.flags.build-type} -DBUILD_LANG=${build.lang.id}"/>
     <property name="ld65.flags" value="--dbgfile ${dbg.path}"/>
     <property name="ld65.config" location="${config.dir}/${cpu.type}_${cpu.mapper}.cfg"/>
 

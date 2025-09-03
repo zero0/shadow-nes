@@ -53,4 +53,25 @@ do                                  \
 #define timer_tick_unchecked( t )   --(t)
 #define timer_is_done( t )      ( (t) == 0 )
 
+//
+//
+//
+
+extern timer_t g_timers[8];
+#pragma zpsym("g_timers");
+
+typedef uint8_t timer_handle_t;
+
+extern void init_timers(void);
+
+extern void tick_timers(void);
+
+extern timer_handle_t request_timer(uint8_t ticks);
+
+#define is_timer_done(handle)       g_timers[handle] == 0
+
+extern void release_timer(timer_handle_t handle);
+
+#define set_timer(handle, ticks)    g_timers[handle] = ticks
+
 #endif // TIMER_H

@@ -18,7 +18,7 @@
 
 #ifdef USE_ASSERTS
 #define ASSERT(t)               ((t) ? (void)0 : __asm__("brk"))
-#define INVALID_CODE_PATH       __asm__("brk")
+#define INVALID_CODE_PATH       do { __asm__("brk"); } while(0)
 #else
 #define ASSERT(t)               (void)0
 #define INVALID_CODE_PATH       (void)0

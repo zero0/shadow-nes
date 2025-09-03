@@ -62,6 +62,8 @@ void main(void)
 
     rt_timer_reset( game_rt_timer );
 
+    init_timers();
+
     // set palettes to black initially
     ppu_tint_palelletes( PPU_PALETTE_TINT_BLACK );
 
@@ -76,6 +78,9 @@ void main(void)
 
         // update timer
         rt_timer_tick( game_rt_timer );
+
+        // update timers
+        tick_timers();
 
         // transition states
         if( game_state != next_game_state )

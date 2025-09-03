@@ -9,10 +9,12 @@
 #include "game_flow.h"
 #include "game_data.h"
 #include "apu.h"
+#include "timer.h"
 
 extern ptr_t shadow_font;
 
 static uint8_t arrow_sprite;
+static timer_handle_t anim_title_timer;
 
 void __fastcall__ game_state_title_enter(void)
 {
@@ -76,20 +78,21 @@ void __fastcall__ game_state_title_enter(void)
 
     b = 0;
     game_state_internal = 0;
-    timer_set( game_state_timer, 10 );
+
+    anim_title_timer = request_timer( 10 );
 }
 
 void __fastcall__ game_state_title_leave(void)
 {
     ppu_release_sprite( arrow_sprite );
+    release_timer(anim_title_timer);
 }
 
 void __fastcall__ game_state_title_update(void)
 {
-    timer_tick( game_state_timer );
-    if( timer_is_done( game_state_timer ) )
+    if( is_timer_done( anim_title_timer ) )
     {
-        timer_set( game_state_timer, 10 );
+        set_timer( anim_title_timer, 10 );
         ++b;
 
         switch( b )
