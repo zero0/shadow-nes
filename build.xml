@@ -91,7 +91,9 @@
 
     <target name="build-assets" depends="init" if="build.assets.run">
         <exec executable="${dotnet.exe}" dir="${tools.dir}/img2chr" failonerror="false">
-            <arg line="run -c Release"/>
+            <arg line="run"/>
+            <arg line="--configuration Release"/>
+            <arg line="--framework net8.0"/>
             <arg value="--"/>
             <arg path="${assets.dir}"/>
         </exec>

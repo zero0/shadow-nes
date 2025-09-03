@@ -13,15 +13,9 @@ typedef signed long     int32_t;
 
 typedef unsigned char   pixel_t;
 
-#if sizeof(int32_t) == sizeof(void*)
-typedef uint32_t        ptr_t;
-typedef int32_t         ptrdiff_t;
-#elif sizeof(int16_t) == sizeof(void*)
+STATIC_ASSERT(sizeof(int*) == sizeof(int));
 typedef uint16_t        ptr_t;
 typedef int16_t         ptrdiff_t;
-#else
-#error "Unknown pointer size"
-#endif
 
 typedef struct
 {

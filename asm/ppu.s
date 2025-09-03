@@ -1551,7 +1551,7 @@ _ppu_tint_reset_internal:
     rts
 .endproc
 
-;
+; load a background at index A
 .proc ppu_load_background
 
 

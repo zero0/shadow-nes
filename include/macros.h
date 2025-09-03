@@ -13,17 +13,16 @@
 
 #define UNUSED(x)               (void)x
 
-#define IS_POW2(t)                  ( ( (t) & ( (t) - 1 ) ) == 0 )
-#define STATIC_ASSERT(t)            //_Static_assert((t)) //static void __fastcall__ CONCAT(__static_assert__, __LINE__)( char [ (t) ? 1 : -1 ] )
-#define STATIC_ASSERT_MSG(t, msg)   //_Static_assert((t), msg) //static void __fastcall__ CONCAT(__static_assert__, __LINE__)( char [ (t) ? 1 : -1 ] )
+#define IS_POW2(t)              ( ( (t) & ( (t) - 1 ) ) == 0 )
+#define STATIC_ASSERT           _Static_assert
 
 #ifdef USE_ASSERTS
-#define ASSERT(t)               do { if( (t) ) {} else { __asm__("brk"); } } while( 0 )
-#define INVALID_CODE_PATH       do { __asm__("brk"); } while( 0 )
+#define ASSERT(t)               ((t) ? (void)0 : __asm__("brk"))
+#define INVALID_CODE_PATH       __asm__("brk")
 #else
 #define ASSERT(t)               (void)0
 #define INVALID_CODE_PATH       (void)0
-#endif
+#endif // USE_ASSERTS
 
 #define ARRAY_SIZE( arr )       ( sizeof(arr) / sizeof(arr[0]) )
 
