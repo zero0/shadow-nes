@@ -28,11 +28,12 @@ void __fastcall__ game_state_title_enter(void)
     // turn off ppu
     ppu_disable();
 
+    // mapper update
     mapper_reset();
     mapper_reset_irq();
 
     mapper_set_chr_bank_0(0);
-    mapper_set_chr_bank_1(2);
+    mapper_set_chr_bank_1(1);
 
     mapper_set_prg_bank(0);
 

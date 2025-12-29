@@ -22,7 +22,7 @@ _game_rt_timer:             .res 4
 ; IRQs
 ;
 
-.segment "CODE"
+.segment "RODATA"
 
 .export IRQ_SCANLINE_TABLE
 .export IRQ_STATE_TABLE
@@ -32,6 +32,8 @@ IRQ_SCANLINE_TABLE:
 
 IRQ_STATE_TABLE:
     .addr IrqExt
+
+.segment "LOWCODE"
 
 ;
 .proc IrqExt

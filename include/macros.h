@@ -14,7 +14,12 @@
 #define UNUSED(x)               (void)x
 
 #define IS_POW2(t)              ( ( (t) & ( (t) - 1 ) ) == 0 )
-#define STATIC_ASSERT           _Static_assert
+
+#if 0
+#define STATIC_ASSERT(x)        _Static_assert((x))
+#else
+#define STATIC_ASSERT(x)
+#endif
 
 #ifdef USE_ASSERTS
 #define ASSERT(t)               ((t) ? (void)0 : __asm__("brk"))

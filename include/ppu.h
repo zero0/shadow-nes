@@ -174,7 +174,7 @@ void __fastcall__ ppu_update_byte( uint8_t x, uint8_t y, uint8_t b );
 
 void __fastcall__ ppu_clear_nametable_internal(void);
 
-void __fastcall__ ppu_clear_palette();
+void __fastcall__ ppu_clear_palette(void);
 
 #define ppu_set_palette_background( c0 )            \
     PPU_ARGS[0] = (c0);                             \

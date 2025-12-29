@@ -84,7 +84,7 @@ MMC5_VERTICAL_SPLIT_BANK            =$5202
 .define MMC5_IRQ_SCANLINE_STATUS_PENDING_MASK   #$80
 
 MMC5_IRQ_SCANLINE_CMP               =$5203
-.export MMC5_IRQ_SCANLINE_STATIS    =$5204
+MMC5_IRQ_SCANLINE_STATUS            =$5204
 
 MMC5_MUL_UINT8_LH                   =$5205
 MMC5_MUL_UINT8_RH                   =$5206
@@ -205,13 +205,17 @@ MMC5_MUL_UINT16_HI                  =$5206
     ;sta MMC5_CHR_ROM_BANKA
     ;sta MMC5_CHR_ROM_BANKB
 
+    ; disable irq scanline
+    lda MMC5_IRQ_SCANLINE_STATUS_DISABLE
+    sta MMC5_IRQ_SCANLINE_STATUS
+
 .endmacro
 
 ;
 .macro mapper_reset_irq_impl
 
     ; read IRQ status to reset
-    bit MMC5_IRQ_SCANLINE_STATIS
+    bit MMC5_IRQ_SCANLINE_STATUS
 
 .endmacro
 
@@ -223,6 +227,6 @@ MMC5_MUL_UINT16_HI                  =$5206
 
     ; enable IRP
     lda MMC5_IRQ_SCANLINE_STATUS_ENABLE
-    sta MMC5_IRQ_SCANLINE_STATIS
+    sta MMC5_IRQ_SCANLINE_STATUS
 
 .endmacro

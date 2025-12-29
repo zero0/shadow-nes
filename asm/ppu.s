@@ -214,7 +214,6 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export ppu_enable_default
 
 .export ppu_clear_nametable
-.export ppu_clear_palette
 .export ppu_clear_chr_ram
 .export ppu_clear_oam
 
@@ -237,8 +236,9 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_fill_nametable_attr
 .export _ppu_set_nametable_attr_internal
 
-.export _ppu_clear_palette
-.export _ppu_set_palette_internal
+.export ppu_clear_palette
+.export _ppu_clear_palette = ppu_clear_palette
+.export _ppu_set_palette_internal = ppu_set_palette_internal
 .export _ppu_set_palette_background_internal
 
 .export _ppu_clear_oam = ppu_clear_oam
@@ -677,8 +677,6 @@ ppu_clear_nametable:
 .endproc
 
 ; ppu_clear_palette: clear all palettes
-_ppu_clear_palette:
-
 .proc ppu_clear_palette
     lda #0
     ldx PALETTE_BYTE_COUNT
@@ -693,8 +691,8 @@ _ppu_clear_palette:
     rts
 .endproc
 
-; Updates
-_ppu_set_palette_internal:
+; Update
+.proc ppu_set_palette_internal
 
     ; convert palette index to memory location (mul 4)
     lda _PPU_ARGS+0;
@@ -716,6 +714,7 @@ _ppu_set_palette_internal:
     inc PALETTE_UPDATE_LEN
 
     rts
+.endproc
 
 ; Set the background for all palettes
 _ppu_set_palette_background_internal:
