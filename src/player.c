@@ -13,6 +13,8 @@
 #include "game_data.h"
 #include "math.h"
 
+#pragma code-name("GAME_CODE")
+
 #define PLAYER_HEALTH_LIMIT                     (uint8_t)224
 #define PLAYER_STAMINA_LIMIT                    (uint8_t)112
 

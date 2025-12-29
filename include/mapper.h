@@ -11,7 +11,11 @@ extern uint8_t PRG_BANK_STACK_LEVEL;
 extern uint8_t PRG_BANK_STACK[PRG_BANK_STACK_SIZE];
 #pragma zpsym("PRG_BANK_STACK");
 
-void __fastcall__ mapper_reset();
+void __fastcall__ mapper_reset(void);
+
+void __fastcall__ mapper_reset_irq(void);
+
+void __fastcall__ mapper_set_scanline_irq(uint8_t scanline);
 
 void __fastcall__ mapper_set_mirroring(uint8_t mirror);
 

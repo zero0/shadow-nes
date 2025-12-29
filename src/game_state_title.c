@@ -10,11 +10,16 @@
 #include "game_data.h"
 #include "apu.h"
 #include "timer.h"
+#include "mapper.h"
+#include "chr_02.h"
+#include "hud.png.sprite.h"
 
 extern ptr_t shadow_font;
 
 static uint8_t arrow_sprite;
 static timer_handle_t anim_title_timer;
+
+#define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
 
 void __fastcall__ game_state_title_enter(void)
 {
@@ -22,6 +27,14 @@ void __fastcall__ game_state_title_enter(void)
 
     // turn off ppu
     ppu_disable();
+
+    mapper_reset();
+    mapper_reset_irq();
+
+    mapper_set_chr_bank_0(0);
+    mapper_set_chr_bank_1(2);
+
+    mapper_set_prg_bank(0);
 
     //ppu_disable_scope()
     {
@@ -67,14 +80,14 @@ void __fastcall__ game_state_title_enter(void)
 
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 
-        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, 0x17 );
+        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
     }
 
     // turn on ppu
     ppu_enable();
 
     // reset game flow
-    reset_game_flow();
+    game_flow_reset();
 
     b = 0;
     game_state_internal = 0;
@@ -131,7 +144,7 @@ void __fastcall__ game_state_title_update(void)
             {
                 game_data_load_for_new_game();
 
-                advance_game_flow();
+                game_flow_advance();
             }
             break;
 

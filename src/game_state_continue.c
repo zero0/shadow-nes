@@ -91,7 +91,7 @@ void __fastcall__ game_state_continue_update(void)
         {
             game_data_load_from_save_slot( game_state_internal );
 
-            advance_game_flow();
+            game_flow_advance();
         }
         return;
     }

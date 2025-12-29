@@ -108,24 +108,24 @@ STATIC_ASSERT( ARRAY_SIZE(game_flow_steps) < 0xFF );
 //
 //
 
-void __fastcall__ reset_game_flow(void)
+void __fastcall__ game_flow_reset(void)
 {
     g_current_game_data.current_game_flow = 0;
     g_current_game_data.current_game_flow_last_checkpoint = 0;
 }
 
-void __fastcall__ checkpoint_game_flow(void)
+void __fastcall__ game_flow_checkpoint(void)
 {
     g_current_game_data.current_game_flow_last_checkpoint = g_current_game_data.current_game_flow;
 }
 
-void __fastcall__ restore_game_flow_from_checkpoint(void)
+void __fastcall__ game_flow_restore_from_checkpoint(void)
 {
     // add 1 so it starts from the step after the checkpoint
     g_current_game_data.current_game_flow = g_current_game_data.current_game_flow_last_checkpoint + 1;
 }
 
-void __fastcall__ advance_game_flow(void)
+void __fastcall__ game_flow_advance(void)
 {
     // at the end of the game flow, go back to the title screen
     if( g_current_game_data.current_game_flow >= ARRAY_SIZE(game_flow_steps) )

@@ -1,12 +1,12 @@
 #ifndef GAME_FLOW_H
 #define GAME_FLOW_H
 
-void reset_game_flow(void);
+void game_flow_reset(void);
 
-void checkpoint_game_flow(void);
+void game_flow_checkpoint(void);
 
-void restore_game_flow_from_checkpoint(void);
+void game_flow_restore_from_checkpoint(void);
 
-void advance_game_flow(void);
+void game_flow_advance(void);
 
 #endif // GAME_FLOW_H

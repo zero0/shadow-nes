@@ -50,4 +50,8 @@ void game_data_load_from_save_slot(uint8_t saveSlot);
 
 void game_data_save_to_save_slot(uint8_t saveSlot);
 
+void game_data_load_from_code(uint8_t code);
+
+void game_data_save_to_code(uint16_t code);
+
 #endif // GAME_DATA_H

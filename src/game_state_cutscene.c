@@ -159,7 +159,7 @@ void __fastcall__ game_state_cutscene_leave(void)
 
 static void __fastcall__ end_cutscene(void)
 {
-    advance_game_flow();
+    game_flow_advance();
 }
 
 static void __fastcall__ advance_cutscene(void)
