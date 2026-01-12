@@ -47,6 +47,11 @@ MMC5_RAM_PROTECT_2                  =$5103
 MMC5_EXT_RAM_MODE                   =$5104
 MMC5_NAMETABLE_MAPPING              =$5105
 
+.define MMC5_NAMETABLE_MAPPING_MODE_0   #$00    ; CIRAM page 0
+.define MMC5_NAMETABLE_MAPPING_MODE_1   #$01    ; CIRAM page 1
+.define MMC5_NAMETABLE_MAPPING_MODE_2   #$02    ; Internal Extended RAM
+.define MMC5_NAMETABLE_MAPPING_MODE_3   #$03    ; Fill-mode data
+
 MMC5_FILL_TILE                      =$5106
 MMC5_FILL_COLOR                     =$5107
 
@@ -74,17 +79,23 @@ MMC5_CHR_ROM_BANKB                  =MMC5_CHR_BANKSWITCH_BASE+11
 MMC5_CHR_UPPER_BITS                 =$5130
 
 MMC5_VERTICAL_SPLIT_MODE            =$5200
+
+.define MMC5_VERTICAL_SPLIT_ENABLE          #%10000000
+.define MMC5_VERTICAL_SPLIT_REGION_LEFT     #%10000000
+.define MMC5_VERTICAL_SPLIT_REGION_RIGHT    #%01000000
+.define MMC5_VERTICAL_SPLIT_TILE_COUNT_MASK #%00011111
+
 MMC5_VERTICAL_SPLIT_SCROLL          =$5201
 MMC5_VERTICAL_SPLIT_BANK            =$5202
+
+MMC5_IRQ_SCANLINE_CMP               =$5203
+MMC5_IRQ_SCANLINE_STATUS            =$5204
 
 .define MMC5_IRQ_SCANLINE_STATUS_ENABLE     #$80
 .define MMC5_IRQ_SCANLINE_STATUS_DISABLE    #$00
 
 .define MMC5_IRQ_SCANLINE_STATUS_IN_FRAME_MASK  #$40
 .define MMC5_IRQ_SCANLINE_STATUS_PENDING_MASK   #$80
-
-MMC5_IRQ_SCANLINE_CMP               =$5203
-MMC5_IRQ_SCANLINE_STATUS            =$5204
 
 MMC5_MUL_UINT8_LH                   =$5205
 MMC5_MUL_UINT8_RH                   =$5206
@@ -159,12 +170,18 @@ MMC5_MUL_UINT16_HI                  =$5206
 .macro mapper_init_impl
 
     ; use PRG mode 0
-    lda MMC5_PRG_MODE_3
+    lda MMC5_PRG_MODE_0
     sta MMC5_PRG_MODE
 
     ; use CHR mode 0
-    lda MMC5_CHR_MODE_3
+    lda MMC5_CHR_MODE_0
     sta MMC5_CHR_MODE
+
+    ; uncomment to enable RAM protection
+    ;lda #%10
+    ;sta MMC5_RAM_PROTECT_1
+    ;lda #%01
+    ;sta MMC5_RAM_PROTECT_2
 
     ;lda #1
     ;sta MMC5_CHR_ROM_BANK0
@@ -177,7 +194,7 @@ MMC5_MUL_UINT16_HI                  =$5206
     sta MMC5_EXT_RAM_MODE
 
     ; mapping
-    _lda_make_nametable_mapping 0, 2, 2, 3
+    _lda_make_nametable_mapping 0, 1, 0, 1
     sta MMC5_NAMETABLE_MAPPING
 
     ;
