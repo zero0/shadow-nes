@@ -39,7 +39,7 @@ _temp_text_table:   .res  2 ;
 
 .define TEXT_LANGUAGE   "en"
 .define VERSION         "0.1.0"
-.define COPYRIGHT_YEAR  "2025"
+.define COPYRIGHT_YEAR  "2026"
 
 include_asset .concat("shadow-font.", TEXT_LANGUAGE, ".png.font.s")
 
