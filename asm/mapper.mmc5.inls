@@ -20,10 +20,10 @@ MMC5_APU_PULSE_2_LEN_COUNTER        =$5007
 MMC5_APU_PCM_IRQ                    =$5010
 MMC5_APU_PCM_RAW                    =$5011
 
-.define MMC5_PRG_MODE_0             #$00
-.define MMC5_PRG_MODE_1             #$01
-.define MMC5_PRG_MODE_2             #$02
-.define MMC5_PRG_MODE_3             #$03
+.define MMC5_PRG_MODE_0_1x_32KB         #$00    ; 1x 32KiB
+.define MMC5_PRG_MODE_1_2x_16KB         #$01    ; 2x 16KiB
+.define MMC5_PRG_MODE_2_1x_16KB_2x_8KB  #$02    ; 1x 16KiB, 2x 8KiB
+.define MMC5_PRG_MODE_3_4x_8KB          #$03    ; 4x 8KiB
 
 .define MMC5_CHR_MODE_0_8KB         #$00    ; 8 KiB
 .define MMC5_CHR_MODE_1_4KB         #$01    ; 4 KiB
@@ -184,10 +184,16 @@ MMC5_MUL_UINT16_HI                  =$5206
 
 ;
 .macro mapper_set_chr_bank_0_impl
+
+    sta MMC5_CHR_ROM_4KB_OAM_BANK0
+
 .endmacro
 
 ;
 .macro mapper_set_chr_bank_1_impl
+
+    sta MMC5_CHR_ROM_4KB_OAM_BANK1
+
 .endmacro
 
 ;
@@ -201,7 +207,7 @@ MMC5_MUL_UINT16_HI                  =$5206
 .macro mapper_init_impl
 
     ; set PRG mode
-    lda MMC5_PRG_MODE_0
+    lda MMC5_PRG_MODE_0_1x_32KB
     sta MMC5_PRG_MODE
 
     ; set CHR mode
@@ -211,7 +217,7 @@ MMC5_MUL_UINT16_HI                  =$5206
     ; set CHR banks
     lda #0
     sta MMC5_CHR_ROM_4KB_OAM_BANK0
-    lda #2
+    lda #1
     sta MMC5_CHR_ROM_4KB_OAM_BANK1
 
 
