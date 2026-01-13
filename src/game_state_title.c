@@ -11,7 +11,7 @@
 #include "apu.h"
 #include "timer.h"
 #include "mapper.h"
-#include "chr_02.h"
+#include "chr_rom.h"
 #include "hud.png.sprite.h"
 
 extern ptr_t shadow_font;
@@ -32,8 +32,8 @@ void __fastcall__ game_state_title_enter(void)
     mapper_reset();
     mapper_reset_irq();
 
-    mapper_set_chr_bank_0(0);
-    mapper_set_chr_bank_1(1);
+    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
 
     mapper_set_prg_bank(0);
 
@@ -113,15 +113,15 @@ void __fastcall__ game_state_title_update(void)
         {
             case 0:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
-                ppu_update_sprite_sprite( arrow_sprite, 0x1C );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
                 break;
             case 1:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x37, 0x15, 0x26 );
-                ppu_update_sprite_sprite( arrow_sprite, 0x21 );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_2) );
                 break;
             case 2:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x26, 0x37, 0x15 );
-                ppu_update_sprite_sprite( arrow_sprite, 0x26 );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_4) );
                 b = -1;
                 break;
         }
