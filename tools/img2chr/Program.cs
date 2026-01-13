@@ -2032,13 +2032,19 @@ namespace img2chr
             }
         }
 
+        private static string GetGeneratedHeaderFilePath(string filename, in ConvertOptions cmdOptions)
+        {
+            string hFilename = PathCombine(Path.GetDirectoryName(filename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{Path.GetFileName(filename)}.h");
+            return hFilename;
+        }
+
         private static void WriteGeneratedHeaderFile(StringBuilder sb, string filename, in ConvertOptions cmdOptions)
         {
             if (sb.Length > 0)
             {
                 try
                 {
-                    string hFilename = PathCombine(Path.GetDirectoryName(filename), cmdOptions.defaultGeneratedAssetFolder, "include", $"{Path.GetFileName(filename)}.h");
+                    string hFilename = GetGeneratedHeaderFilePath(filename, in cmdOptions);
                     File.WriteAllText(hFilename, sb.ToString(), UTF8);
 
                     LogInfo($"Converted {filename} -> {hFilename}");
@@ -5187,12 +5193,20 @@ namespace img2chr
             {
                 StringBuilder sb = auto.sb;
 
-                sb.Append("enum ").Append(chrSegment).AppendLine();
+                string chrSeg = chrSegment[^2..].ToUpperInvariant();
+                string chrSegRom = $"CHR_ROM_{chrSeg}";
+
+                sb.AppendLine("enum ");
                 sb.AppendLine("{");
+                string chrSegmentStr = $"{chrSegRom} =";
+                Indent(sb).AppendLine($"{chrSegmentStr,-64} 0x{chrSeg},");
+                sb.AppendLine();
                 foreach (var chrRom in chrRomLayouts)
                 {
                     string key = $"{chrRom.chrRomKey.ToUpperInvariant()} =";
+                    string keyChr = $"{chrRom.chrRomKey.ToUpperInvariant()}_CHR_ROM =";
                     Indent(sb).AppendLine($"{key,-64} 0x{chrRom.offset:X2},");
+                    Indent(sb).AppendLine($"{keyChr,-64} {chrSegRom},");
                 }
                 sb.AppendLine("};");
 
@@ -5201,6 +5215,51 @@ namespace img2chr
 
                 // write output file
                 WriteGeneratedHeaderFile(sb, exportPath, in cmdOptions);
+            }
+
+            // write common chr header
+            string chrRomExportPath = PathCombine(Path.GetDirectoryName(layoutFilename), "chr_rom");
+            string commonChrHeaderFilename = GetGeneratedHeaderFilePath(chrRomExportPath, in cmdOptions);
+
+            // parse existing chr rom file
+            List<string> existingChrHeaders = new();
+            if (File.Exists(commonChrHeaderFilename))
+            {
+                string[] lines = File.ReadAllLines(commonChrHeaderFilename);
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("#include "))
+                    {
+                        string l = line.Replace("#include ", string.Empty).Replace("\"", string.Empty);
+                        existingChrHeaders.Add(l);
+                    }
+                }
+            }
+
+            // add current chr rom
+            string chrHeaderPath = $"{Path.GetFileNameWithoutExtension(layoutFilename)}.h";
+            AssertWarn(!existingChrHeaders.Contains(chrHeaderPath), $"{chrHeaderPath} already exists in includes [{string.Join(',', existingChrHeaders.ToArray())}]");
+            if (!existingChrHeaders.Contains(chrHeaderPath))
+            {
+                existingChrHeaders.Add(chrHeaderPath);
+            }
+
+            // sort chr rom names
+            existingChrHeaders.Sort();
+
+            // re-write out common header file
+            using (var auto = AutoStringBuilder.Auto())
+            {
+                StringBuilder sb = auto.sb;
+
+                foreach (var chr in existingChrHeaders)
+                {
+                    sb.Append("#include ").Append('"').Append(chr).Append('"').AppendLine();
+                }
+
+                WrapHeaderFile(sb, layoutFilename, chrRomExportPath);
+
+                WriteGeneratedHeaderFile(sb, chrRomExportPath, in cmdOptions);
             }
         }
         #endregion
