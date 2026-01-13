@@ -25,10 +25,10 @@ MMC5_APU_PCM_RAW                    =$5011
 .define MMC5_PRG_MODE_2             #$02
 .define MMC5_PRG_MODE_3             #$03
 
-.define MMC5_CHR_MODE_0             #$00
-.define MMC5_CHR_MODE_1             #$01
-.define MMC5_CHR_MODE_2             #$02
-.define MMC5_CHR_MODE_3             #$03
+.define MMC5_CHR_MODE_0_8KB         #$00    ; 8 KiB
+.define MMC5_CHR_MODE_1_4KB         #$01    ; 4 KiB
+.define MMC5_CHR_MODE_2_2KB         #$02    ; 2 KiB
+.define MMC5_CHR_MODE_3_1KB         #$03    ; 1 KiB
 
 .define MMC5_RAM_PROTECT_MODE_0     #$00
 .define MMC5_RAM_PROTECT_MODE_1     #$01
@@ -75,6 +75,37 @@ MMC5_CHR_ROM_BANK8                  =MMC5_CHR_BANKSWITCH_BASE+8
 MMC5_CHR_ROM_BANK9                  =MMC5_CHR_BANKSWITCH_BASE+9
 MMC5_CHR_ROM_BANKA                  =MMC5_CHR_BANKSWITCH_BASE+10
 MMC5_CHR_ROM_BANKB                  =MMC5_CHR_BANKSWITCH_BASE+11
+
+; 1KiB mode
+MMC5_CHR_ROM_1KB_OAM_BANK0          =MMC5_CHR_ROM_BANK0
+MMC5_CHR_ROM_1KB_OAM_BANK1          =MMC5_CHR_ROM_BANK1
+MMC5_CHR_ROM_1KB_OAM_BANK2          =MMC5_CHR_ROM_BANK2
+MMC5_CHR_ROM_1KB_OAM_BANK3          =MMC5_CHR_ROM_BANK3
+MMC5_CHR_ROM_1KB_OAM_BANK4          =MMC5_CHR_ROM_BANK4
+MMC5_CHR_ROM_1KB_OAM_BANK5          =MMC5_CHR_ROM_BANK5
+MMC5_CHR_ROM_1KB_OAM_BANK6          =MMC5_CHR_ROM_BANK6
+MMC5_CHR_ROM_1KB_OAM_BANK7          =MMC5_CHR_ROM_BANK7
+MMC5_CHR_ROM_1KB_BG_BANK0           =MMC5_CHR_ROM_BANK8
+MMC5_CHR_ROM_1KB_BG_BANK1           =MMC5_CHR_ROM_BANK9
+MMC5_CHR_ROM_1KB_BG_BANK2           =MMC5_CHR_ROM_BANKA
+MMC5_CHR_ROM_1KB_BG_BANK3           =MMC5_CHR_ROM_BANKB
+
+; 2 KiB mode
+MMC5_CHR_ROM_2KB_OAM_BANK0          =MMC5_CHR_ROM_BANK1
+MMC5_CHR_ROM_2KB_OAM_BANK1          =MMC5_CHR_ROM_BANK3
+MMC5_CHR_ROM_2KB_OAM_BANK2          =MMC5_CHR_ROM_BANK5
+MMC5_CHR_ROM_2KB_OAM_BANK3          =MMC5_CHR_ROM_BANK7
+MMC5_CHR_ROM_2KB_BG_BANK0           =MMC5_CHR_ROM_BANK9
+MMC5_CHR_ROM_2KB_BG_BANK1           =MMC5_CHR_ROM_BANKB
+
+; 4 KiB mode
+MMC5_CHR_ROM_4KB_OAM_BANK0          =MMC5_CHR_ROM_BANK3
+MMC5_CHR_ROM_4KB_OAM_BANK1          =MMC5_CHR_ROM_BANK7
+MMC5_CHR_ROM_4KB_BG_BANK0           =MMC5_CHR_ROM_BANKB
+
+; 8 KiB mode
+MMC5_CHR_ROM_8KB_OAM_BANK0          =MMC5_CHR_ROM_BANK7
+MMC5_CHR_ROM_8KB_BG_BANK0           =MMC5_CHR_ROM_BANKB
 
 MMC5_CHR_UPPER_BITS                 =$5130
 
@@ -169,13 +200,20 @@ MMC5_MUL_UINT16_HI                  =$5206
 ;
 .macro mapper_init_impl
 
-    ; use PRG mode 0
+    ; set PRG mode
     lda MMC5_PRG_MODE_0
     sta MMC5_PRG_MODE
 
-    ; use CHR mode 0
-    lda MMC5_CHR_MODE_0
+    ; set CHR mode
+    lda MMC5_CHR_MODE_1_4KB
     sta MMC5_CHR_MODE
+
+    ; set CHR banks
+    lda #0
+    sta MMC5_CHR_ROM_4KB_OAM_BANK0
+    lda #2
+    sta MMC5_CHR_ROM_4KB_OAM_BANK1
+
 
     ; uncomment to enable RAM protection
     ;lda #%10
