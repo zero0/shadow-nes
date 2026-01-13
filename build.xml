@@ -103,6 +103,7 @@
     </target>
 
     <target name="compile-asm" depends="build-assets" description="compile asm files .s to .o">
+        <!-- compile regular ASM files -->
         <apply executable="${ca65.exe}" dir="." dest="${obj.dir}" failonerror="true">
             <arg line="-I ${lib.dir}"/>
             <arg line="-I ${cc65.asminc.dir}"/>
@@ -113,6 +114,15 @@
             <srcfile/>
             <fileset dir="${asm.dir}" includes="*.s"/>
             <mapper type="glob" from="*.s" to="*.o"/>
+        </apply>
+        <!-- compile CHR ROM files -->
+        <apply executable="${ca65.exe}" dir="." dest="${obj.dir}" failonerror="true">
+            <arg line="${ca65.flags}"/>
+            <arg value="-o"/>
+            <targetfile/>
+            <srcfile/>
+            <fileset dir="${assets.gen.asm.dir}" includes="*.s"/>
+            <mapper type="regexp" from="^(chr_\w\w)\.s$$" to="\1.o"/>
         </apply>
     </target>
 

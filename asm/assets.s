@@ -1,14 +1,10 @@
 ;
-; CHR ROMs
+; Macros
 ;
 
 .macro include_asset file
 .include file
 .endmacro
-
-include_asset "chr_00.s"
-
-include_asset "chr_01.s"
 
 ;
 ; Meta-sprites
@@ -17,7 +13,6 @@ include_asset "chr_01.s"
 .segment "RODATA"
 
 ;include_asset "knight.s"
-
 
 ;
 ; Text
