@@ -196,6 +196,10 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 ;
 ;
 
+.enum
+
+.endenum
+
 .define APU_MUSIC_CHANNEL_COUNT     1
 .define APU_SFX_CHANNEL_COUNT       4
 .define APU_CHANNEL_COUNT           APU_SFX_CHANNEL_COUNT + APU_MUSIC_CHANNEL_COUNT
@@ -294,7 +298,11 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lsr
     tay
 
-    ; TODO: store music ptr
+    ; store music ptr
+    lda _APU_ARGS+0,Y
+    sta APU_MUSIC_TABLE_PTR+0
+    lda _APU_ARGS+1,Y
+    sta APU_MUSIC_TABLE_PTR+1
 
     rts
 
@@ -312,6 +320,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     tay
 
     ; TODO: store sfx pointer
+
 
     rts
 
@@ -486,6 +495,12 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 ; Play music at index A
 .proc apu_play_music
+
+    ; convert index to offset
+    tay
+    asl y
+
+
 
     rts
 
