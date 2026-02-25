@@ -497,10 +497,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 .proc apu_play_music
 
     ; convert index to offset
-    tay
-    asl y
-
-
+    asl
 
     rts
 

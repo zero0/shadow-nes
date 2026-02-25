@@ -93,10 +93,22 @@
     </target>
 
     <target name="build-assets" depends="init" if="build.assets.run">
+        <!-- Get current version of dotnet SDK -->
+        <exec executable="${dotnet.exe}" dir="${tools.dir}/img2chr" failonerror="false" outputproperty="dotnet.sdk.version">
+            <arg value="--version"/>
+        </exec>
+        <!-- Extract major version number -->
+        <loadresource property="dotnet.sdk.version.major">
+            <string value="${dotnet.sdk.version}"/>
+            <filterchain>
+                <replaceregex pattern="(\d+)\..*" replace="\1"/>
+            </filterchain>
+        </loadresource>
+        <!-- Run dotnet -->
         <exec executable="${dotnet.exe}" dir="${tools.dir}/img2chr" failonerror="false">
             <arg line="run"/>
             <arg line="--configuration Release"/>
-            <arg line="--framework net8.0"/>
+            <arg line="--framework net${dotnet.sdk.version.major}.0"/>
             <arg value="--"/>
             <arg path="${assets.dir}"/>
         </exec>
