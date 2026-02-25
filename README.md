@@ -15,8 +15,13 @@ C# command line tool to process images (now text files and other assets) into a 
 - cc65
   - Currently hardcoded to `C:\cc65\`
 - Mesen (not required, but it works well)
-- Windows (haven't tested build process on other platforms)
+- .NET SDK
+- Apache Ant (for building)
+
+### Supported Platforms
+- Windows
+- macOS
 
 ## Build
-- Run `build.bat shadow` or in VSCode `Ctrl+Shift+B`
-- Open `bin/shadow.nes` in Mesen
+- Run `ant build-nes` or in VSCode `Ctrl+Shift+B`
+- Open `bin/shadow.{language}.nes` in Mesen
