@@ -105,10 +105,11 @@ void __fastcall__ ppu_on(void);
 
 void __fastcall__ ppu_skip(void);
 
-#define ppu_set_scroll( x, y )  \
-    PPU_ARGS[0] = (x);          \
-    PPU_ARGS[1] = (y);          \
-    ppu_set_scroll_internal()
+#define ppu_set_scroll( x, y )  do {    \
+    PPU_ARGS[0] = (x);                  \
+    PPU_ARGS[1] = (y);                  \
+    ppu_set_scroll_internal();          \
+} while( 0 )
 
 void __fastcall__ ppu_set_scroll_internal(void);
 
@@ -123,11 +124,12 @@ void __fastcall__ ppu_set_address_tile_internal(void);
     __asm__("lda %v", b);           \
     __asm__("sta %v", PPU_DATA)
 
-#define ppu_update_tile( px, py, t )    \
-    PPU_ARGS[0] = (px);                 \
-    PPU_ARGS[1] = (py);                 \
-    PPU_ARGS[2] = (t);                  \
-    ppu_update_tile_internal()
+#define ppu_update_tile( px, py, t ) do {   \
+    PPU_ARGS[0] = (px);                     \
+    PPU_ARGS[1] = (py);                     \
+    PPU_ARGS[2] = (t);                      \
+    ppu_update_tile_internal();             \
+} while( 0 )
 
 void __fastcall__ ppu_update_tile_internal(void);
 

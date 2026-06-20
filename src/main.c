@@ -57,9 +57,11 @@ STATIC_ASSERT( ARRAY_SIZE( game_state_update_func ) == _GAME_STATE_COUNT );
 
 void main(void)
 {
+    // initialize game state
     game_state = GAME_STATE_INIT;
     set_next_game_state( GAME_STATE_TITLE );
 
+    // clear timers
     rt_timer_reset( game_rt_timer );
 
     init_timers();
@@ -67,7 +69,7 @@ void main(void)
     // set palettes to black initially
     ppu_tint_palelletes( PPU_PALETTE_TINT_BLACK );
 
-    while( 1 )
+    for(;;)
     {
         // poll game pad
         gamepad_poll( GAMEPAD_1 );
@@ -76,7 +78,7 @@ void main(void)
         gamepad_poll( GAMEPAD_2 );
 #endif
 
-        // update timer
+        // update realtime timer
         rt_timer_tick( game_rt_timer );
 
         // update timers
