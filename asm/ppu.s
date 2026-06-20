@@ -156,7 +156,9 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .define NMI_DIRTY_UPLOAD_MASK_NAMETABLE_D               %01000000 ;
 
 .define NMI_DIRTY_UPLOAD_MASK_PALETTE                   NMI_DIRTY_UPLOAD_MASK_PALETTE_BACKGROUND | NMI_DIRTY_UPLOAD_MASK_PALETTE_OAM
+.define NMI_DIRTY_UPLOAD_MASK_PALETTE_CLEAR_ALL         %11111001 ;
 .define NMI_DIRTY_UPLOAD_MASK_NAMETABLE                 NMI_DIRTY_UPLOAD_MASK_NAMETABLE_A | NMI_DIRTY_UPLOAD_MASK_NAMETABLE_B | NMI_DIRTY_UPLOAD_MASK_NAMETABLE_C | NMI_DIRTY_UPLOAD_MASK_NAMETABLE_D
+
 ;
 ;
 ;
@@ -171,7 +173,6 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     PPU_MASK_BUFFER:            .res 1 ;
     NAMETABLE_UPDATE_LEN:       .res 1 ;
     NAMETABLE_UPDATE_POS:       .res 1 ;
-    PALETTE_UPDATE_LEN:         .res 1 ; TODO: remove this and move to NMI_DIRTY_UPLOAD_MASK
     OAM_UPDATE_LEN:             .res 1 ;
     OAM_SPRITE_LEN:             .res 1 ;
     OAM_SPRITE_FREE_LIST_LEN:   .res 1 ;
@@ -721,13 +722,15 @@ _ppu_end_tile_batch_internal:
 .endif
 
     ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora NMI_DIRTY_UPLOAD_MASK_PALETTE
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
 
 .endproc
 
-; Update
+; Update palette index PPU_ARGS[0] colors PPU_ARGS[1..3]
 .proc ppu_set_palette_internal
 
     ; convert palette index to memory location (mul 4)
@@ -747,12 +750,15 @@ _ppu_end_tile_batch_internal:
     sta PALETTE_UPDATE+3, x
 
     ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora NMI_DIRTY_UPLOAD_MASK_PALETTE
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
 .endproc
 
-; Set the background for all palettes
+; Set the background for all palettes from PPU_ARGS[0]
 _ppu_set_palette_background_internal:
 
 .proc ppu_set_palette_background
@@ -773,9 +779,12 @@ _ppu_set_palette_background_internal:
     sta PALETTE_UPDATE+28
 
     ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora NMI_DIRTY_UPLOAD_MASK_PALETTE
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
 .endproc
 
 ; fill nametable at $ARGS+0/ARGS+1 with table ARGS+2 and attr ARGS+3
@@ -1468,8 +1477,13 @@ ppu_clear_chr_ram:
 .proc _ppu_upload_palette
 
     ; perform palette update if needed
-    lda PALETTE_UPDATE_LEN
-    beq @end
+    lda NMI_DIRTY_UPLOAD_MASK
+    and NMI_DIRTY_UPLOAD_MASK_PALETTE
+
+    ; palette not updated, goto end
+    bne :+
+        jmp @end
+    :
 
     ; reset latch
     bit PPU_STATUS
@@ -1480,6 +1494,12 @@ ppu_clear_chr_ram:
     lda #(<PALETTE_BASE_ADDR)
     sta PPU_ADDR
 
+.if 1
+    .repeat PALETTE_BYTE_COUNT, I
+        lda PALETTE_UPDATE+I
+        sta PPU_DATA
+    .endrepeat
+.else
     ldx #0
     :
         lda PALETTE_UPDATE, x
@@ -1489,13 +1509,16 @@ ppu_clear_chr_ram:
         ; fill all palette data
         cpx #PALETTE_BYTE_COUNT
         bcc :-
+.endif
 
     ; clear palette update
-    lda #0
-    sta PALETTE_UPDATE_LEN
+    lda NMI_DIRTY_UPLOAD_MASK
+    and NMI_DIRTY_UPLOAD_MASK_PALETTE_CLEAR_ALL
+    sta NMI_DIRTY_UPLOAD_MASK
 
 @end:
     rts
+
 .endproc
 
 ; _ppu_upload_nametable: uploads nametable updates while PPU is off
@@ -1602,8 +1625,10 @@ _ppu_tint_palellete_oam_internal:
     lda _PPU_ARGS+0
     sta PALETTE_TINT_OAM_INDEX
 
-    ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    ; mark oam palette as dirty
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora NMI_DIRTY_UPLOAD_MASK_PALETTE_OAM
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
 .endproc
@@ -1616,8 +1641,10 @@ _ppu_tint_palellete_background_internal:
     lda _PPU_ARGS+0
     sta PALETTE_TINT_BACKGROUND_INDEX
 
-    ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    ; mark background palette as dirty
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora NMI_DIRTY_UPLOAD_MASK_PALETTE_BACKGROUND
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
 .endproc
@@ -1642,8 +1669,10 @@ _ppu_tint_reset_internal:
     sta PALETTE_TINT_OAM_INDEX
     sta PALETTE_TINT_BACKGROUND_INDEX
 
-    ; mark palette as dirty
-    inc PALETTE_UPDATE_LEN
+    ; mark oam and background palette as dirty
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora #NMI_DIRTY_UPLOAD_MASK_PALETTE
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
 .endproc
@@ -1717,7 +1746,7 @@ _ppu_tint_reset_internal:
         ; nothing is dirty, jump to upload end
         jmp @nmi_upload_end
 
-        :
+    :
 
 ;
 ; OAM Upload
@@ -1753,7 +1782,7 @@ _ppu_tint_reset_internal:
         ; no palette updates, jump to name table updates
         jmp @nmi_upload_nametable
 
-        :
+    :
 
 @nmi_upload_palette_start:
 
@@ -1778,7 +1807,7 @@ _ppu_tint_reset_internal:
         ; upload raw palette when index is default
         jmp @nmi_upload_palette_background_raw
 
-        :
+    :
 
 @nmi_upload_palette_background_tint:
 
@@ -1842,7 +1871,7 @@ _ppu_tint_reset_internal:
         ; upload raw palette when index is default
         jmp @nmi_upload_palette_oam_raw
 
-        :
+    :
 
 @nmi_upload_palette_oam_tint:
 
@@ -1914,7 +1943,7 @@ _ppu_tint_reset_internal:
         ; otherwise skip to the upload end
         jmp @nmi_upload_end
 
-        :
+    :
 
     ; count nametable updates
     lda #0
@@ -2049,14 +2078,14 @@ _ppu_tint_reset_internal:
     lda PPU_MASK_BUFFER
     sta PPU_MASK
 
-@nmi_ready:
-
     ; set scroll x, y
     lda SCROLL_X
     sta PPU_SCROLL
 
     lda SCROLL_Y
     sta PPU_SCROLL
+
+@nmi_ready:
 
     ; NMI ready
     lda #0
