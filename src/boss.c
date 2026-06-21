@@ -6,6 +6,7 @@
 #include "subpixel.h"
 #include "collision.h"
 #include "ppu.h"
+#include <gametext.h>
 
 #pragma code-name("GAME_CODE")
 
@@ -153,22 +154,21 @@ static const uint8_t all_boss_resistances[_BOSS_COUNT][_DAMAGE_TYPE_COUNT] = {
     {},
 };
 
-static const str_t all_boss_names[_BOSS_COUNT] = {
-    BOSS_0_NAME,
-    tr_boss_1_name,
-    tr_boss_2_name,
-    tr_boss_3_name,
-    tr_boss_4_name,
-    tr_boss_5_name,
-    tr_boss_6_name,
-    tr_boss_7_name,
-
-    tr_boss_8_name,
-    tr_boss_9_name,
+static const char* all_boss_names[_BOSS_COUNT] = {
+    0, //tr_boss_0_name,
+    0, //tr_boss_1_name,
+    0, //tr_boss_2_name,
+    0, //tr_boss_3_name,
+    0, //tr_boss_4_name,
+    0, //tr_boss_5_name,
+    0, //tr_boss_6_name,
+    0, //tr_boss_7_name,
+    0, //tr_boss_8_name,
+    0, //tr_boss_9_name,
 };
 
-static const str_t all_boss_location_names[_BOSS_COUNT] = {
-    BOSS_0_LOCATION,
+static const char* all_boss_location_names[_BOSS_COUNT] = {
+    0,
     0,
     0,
     0,

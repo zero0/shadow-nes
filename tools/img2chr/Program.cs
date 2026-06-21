@@ -528,7 +528,6 @@ namespace img2chr
                 ok &= TryReadUInt8(stream, out byte filterMethod);
                 ok &= TryReadUInt8(stream, out byte interlaceMethod);
 
-                LogInfo("IHDR");
                 if (ok)
                 {
                     context.width = width;
@@ -538,7 +537,6 @@ namespace img2chr
                     context.compressionMethod = (PNGCompressionMethod)compressionMethod;
                     context.filterMethod = (PNGFilterMethod)filterMethod;
                     context.interlaceMethod = (PNGInterlaceMethod)interlaceMethod;
-                    LogInfo($"- {width} x {height} {bitDepth}bit {context.colorType} {context.compressionMethod} {context.filterMethod} {context.interlaceMethod}");
                 }
 
                 return ok;
@@ -551,9 +549,6 @@ namespace img2chr
 
                 uint entryCount = length / 3;
                 context.palette = new ColorRGB8[entryCount];
-
-                LogInfo("PLTE");
-                LogInfo($"- {entryCount}");
 
                 bool ok = true;
                 for (uint i = 0; i < entryCount && ok; ++i)
@@ -577,9 +572,6 @@ namespace img2chr
                 bool ok = true;
                 context.compressedData ??= new MemoryStream();
 
-                LogInfo("IDAT");
-                LogInfo($"- {length}");
-
                 uint i = 0;
                 while (i < length)
                 {
@@ -599,7 +591,6 @@ namespace img2chr
 
             private static bool ParseChunk_IEND(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("IEND");
                 return length == 0;
             }
 
@@ -607,7 +598,6 @@ namespace img2chr
 
             private static bool ParseChunk_tRNS(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("tRNS");
                 bool ok = true;
                 switch (context.colorType)
                 {
@@ -643,7 +633,6 @@ namespace img2chr
 
             private static bool ParseChunk_cHRM(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("cHRM");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out var whitePointX);
@@ -668,7 +657,6 @@ namespace img2chr
 
             private static bool ParseChunk_gAMA(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("gAMA");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out var imageGamma);
@@ -677,7 +665,6 @@ namespace img2chr
                 {
                     const float kScaleFactor = 100000.0f;
                     context.gamma = imageGamma / kScaleFactor;
-                    LogInfo($"- {context.gamma}");
                 }
 
                 return ok;
@@ -685,7 +672,6 @@ namespace img2chr
 
             private static bool ParseChunk_iCCP(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("iCCP");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out var imageGamma);
@@ -694,7 +680,6 @@ namespace img2chr
                 {
                     const float kScaleFactor = 100000.0f;
                     context.gamma = imageGamma / kScaleFactor;
-                    LogInfo($"- {context.gamma}");
                 }
 
                 return ok;
@@ -702,7 +687,6 @@ namespace img2chr
 
             private static bool ParseChunk_sBIT(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("sBIT");
                 bool ok = true;
 
                 switch (context.colorType)
@@ -736,7 +720,6 @@ namespace img2chr
 
             private static bool ParseChunk_cICP(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("cICP");
                 bool ok = true;
 
                 ok &= TryReadUInt8(stream, out byte colorPrimaries);
@@ -749,7 +732,6 @@ namespace img2chr
 
             private static bool ParseChunk_mDCV(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("mDCV");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out uint primaryChromaR); // x / 0.00002
@@ -764,7 +746,6 @@ namespace img2chr
 
             private static bool ParseChunk_cLLI(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("cLLI");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out uint maxContentLightLevel); // x / 0.0001
@@ -775,14 +756,12 @@ namespace img2chr
 
             private static bool ParseChunk_sRGB(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("sRGB");
                 bool ok = true;
 
                 ok &= TryReadUInt8(stream, out var renderingIntent);
 
                 if (ok)
                 {
-                    LogInfo($"- {renderingIntent}");
                 }
 
                 return ok;
@@ -790,7 +769,6 @@ namespace img2chr
 
             private static bool ParseChunk_tIME(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("tIME");
                 bool ok = true;
 
                 ok &= TryReadUInt16(stream, out var year);
@@ -806,7 +784,6 @@ namespace img2chr
 
             private static bool ParseChunk_tEXt(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("tEXt");
                 bool ok = true;
 
                 string keyword;
@@ -822,7 +799,6 @@ namespace img2chr
 
                 if (ok)
                 {
-                    LogInfo($"- {keyword} -> '{text}'");
                     context.text ??= new();
                     context.text[keyword] = text;
                 }
@@ -859,7 +835,6 @@ namespace img2chr
 
             private static bool ParseChunk_iTXt(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("iTXt");
                 bool ok = true;
                 StringBuilder sb = new();
 
@@ -889,7 +864,6 @@ namespace img2chr
 
             private static bool ParseChunk_bKGD(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("bKGB");
                 bool ok = true;
 
                 switch (context.colorType)
@@ -916,7 +890,6 @@ namespace img2chr
             }
             private static bool ParseChunk_hIST(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("hIST");
                 bool ok = true;
 
                 for (uint i = 0; ok && i < length; ++i)
@@ -928,7 +901,6 @@ namespace img2chr
             }
             private static bool ParseChunk_pHYs(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("pHYs");
                 bool ok = true;
 
                 ok &= TryReadUInt32(stream, out uint pixelsPerUnitX);
@@ -937,7 +909,6 @@ namespace img2chr
 
                 if (ok)
                 {
-                    LogInfo($"- {pixelsPerUnitX} x {pixelsPerUnitY} @ {unitSpecifier}");
                 }
 
                 return ok;
@@ -945,7 +916,6 @@ namespace img2chr
 
             private static bool ParseChunk_sPLT(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("sPLT");
                 bool ok = true;
 
                 for (int p = 0; ok && p < context.palette.Length; ++p)
@@ -978,7 +948,6 @@ namespace img2chr
 
             private static bool ParseChunk_eXIf(Stream stream, uint length, ref PNGContext context)
             {
-                LogInfo("eXIf");
                 bool ok = true;
 
                 ok &= TrySkip(stream, length);
@@ -1019,7 +988,6 @@ namespace img2chr
 
                 if (ok)
                 {
-                    LogInfo("Ok");
                     width = (int)context.width;
                     height = (int)context.height;
 
@@ -4927,6 +4895,7 @@ namespace img2chr
             }
 
             string filename = Path.GetFileNameWithoutExtension(textFilename);
+            const int kTextWidth = 64;
 
             // generate each language text files
             foreach (var langToMap in textMap)
@@ -4941,18 +4910,13 @@ namespace img2chr
 
 
                 sb.AppendLine(";");
-                sb.AppendLine("; Text Table");
+                sb.AppendLine("; Text Exports");
                 sb.AppendLine(";");
-                sb.AppendLine();
-
-                sb.AppendLine($".segment    \"{kRODATASegment}\"");
-                sb.AppendLine($"_text_table:");
-                sb.AppendLine($".export _text_table");
                 sb.AppendLine();
 
                 foreach (var kv in langToMap.Value)
                 {
-                    sb.AppendLine($".addr   {kv.Key}");
+                    sb.AppendLine($".export _{kv.Key} = {kv.Key}");
                 }
                 sb.AppendLine();
 
@@ -4961,7 +4925,7 @@ namespace img2chr
                 sb.AppendLine(";");
                 sb.AppendLine();
 
-                sb.AppendLine($".segment    \"{kRODATASegment}\"");
+                sb.AppendLine($".segment \"{kRODATASegment}\"");
                 sb.AppendLine();
 
                 foreach (var kv in langToMap.Value)
@@ -4969,11 +4933,11 @@ namespace img2chr
                     string tr = $"{kv.Key}:";
                     if (IsVerbatumString(kv.Value))
                     {
-                        sb.AppendLine($"{tr,-64} TR {kv.Value[1..^1]}");
+                        sb.AppendLine($"{tr,-kTextWidth} TR {kv.Value[1..^1]}");
                     }
                     else
                     {
-                        sb.AppendLine($"{tr,-64} TR \"{kv.Value}\"");
+                        sb.AppendLine($"{tr,-kTextWidth} TR \"{kv.Value}\"");
                     }
                 }
 
@@ -4984,8 +4948,6 @@ namespace img2chr
 
             const string str_t = "str_t";
             const string uint8_t = "uint8_t";
-
-
 
             // generate each language header files
             foreach (var langToMap in textMap)
@@ -4998,18 +4960,13 @@ namespace img2chr
                 sb.AppendLine();
 
                 sb.AppendLine("// string keys");
-                sb.AppendLine("enum");
-                sb.AppendLine("{");
 
-                int i = 0;
                 // output string keys
-                // TODO: update this so there's not an implicit cap
                 foreach (var kv in langToMap.Value)
                 {
-                    Indent(sb).Append($"{kv.Key,-64} = ({i++} << 1)").AppendLine(",");
+                    sb.AppendLine($"extern const char* {kv.Key};");
                 }
 
-                sb.AppendLine("};");
                 sb.AppendLine();
 
                 sb.AppendLine("// string lengths");
@@ -5020,7 +4977,7 @@ namespace img2chr
                 foreach (var kv in langToMap.Value)
                 {
                     string key = $"{kv.Key}_length";
-                    Indent(sb).Append($"{key,-64} = {kv.Value.Length}").AppendLine(",");
+                    Indent(sb).Append($"{key,-kTextWidth} = {kv.Value.Length}").AppendLine(",");
                 }
 
                 sb.AppendLine("};");
@@ -5042,7 +4999,7 @@ namespace img2chr
                     }
                     Assert(maxWidth > 0);
 
-                    Indent(sb).Append($"{$"{kv.Key}_width",-64} = {maxWidth}").AppendLine(",");
+                    Indent(sb).Append($"{$"{kv.Key}_width",-kTextWidth} = {maxWidth}").AppendLine(",");
                 }
 
                 sb.AppendLine("};");
@@ -5064,7 +5021,7 @@ namespace img2chr
                     }
                     Assert(maxWidth > 0);
 
-                    Indent(sb).Append($"{$"{kv.Key}_height",-64} = {lines.Length}").AppendLine(",");
+                    Indent(sb).Append($"{$"{kv.Key}_height",-kTextWidth} = {lines.Length}").AppendLine(",");
                 }
 
                 sb.AppendLine("};");

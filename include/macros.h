@@ -31,6 +31,16 @@
 
 #define ARRAY_SIZE( arr )       ( sizeof(arr) / sizeof(arr[0]) )
 
+#define PTR_TO_ARGS(arg, i, ptr)            \
+    (arg)[(i) + 0] = 0xFF & ((ptr) >> 8);   \
+    (arg)[(i) + 1] = 0xFF & (ptr)
+
+#define ARGS_TO_PTR(arg, i, ptr) do { \
+    ptr = 0; \
+    ptr |= (ptr_t)((arg)[(i) + 0]) << 8; \
+    ptr |= (ptr_t)(arg)[(i) + 1];  \
+} while( 0 )
+
 #ifndef offsetof
 #define offsetof( t, m )        ((uint8_t)&(((t *)0)->m))
 #endif // offsetof

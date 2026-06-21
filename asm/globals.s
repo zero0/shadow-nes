@@ -37,6 +37,8 @@ _y16:   .res 2
 _z16:   .res 2
 _w16:   .res 2
 
+_c_ptr: .res 2
+
 .export _c
 
 .export _i
@@ -69,3 +71,5 @@ _w16:   .res 2
 .export _y16
 .export _z16
 .export _w16
+
+.export _c_ptr

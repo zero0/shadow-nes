@@ -104,7 +104,7 @@ static void __fastcall__ game_state_playing_paused_enter(void)
 
     ppu_set_scroll(0, SCREEN_HEIGH_PIXELS);
 
-    text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_paused_width), SCREEN_HEIGH + ALIGN_SCREEN_HEIGHT_CENTER(tr_paused_height), PALETTE_BACKGROUND_0, tr_paused );
+    //text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_paused_width), SCREEN_HEIGH + ALIGN_SCREEN_HEIGHT_CENTER(tr_paused_height), PALETTE_BACKGROUND_0, tr_paused );
 
     ppu_wait_vblank();
     ppu_on();

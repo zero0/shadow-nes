@@ -13,11 +13,13 @@
 #include "mapper.h"
 #include "chr_rom.h"
 #include "hud.png.sprite.h"
+#include <gametext.h>
 
 extern ptr_t shadow_font;
 
 static uint8_t arrow_sprite;
 static timer_handle_t anim_title_timer;
+static timer_handle_t anim_text_timer;
 
 #define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
 
@@ -69,7 +71,7 @@ void __fastcall__ game_state_title_enter(void)
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
         // draw title screen
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
+        //text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
 
         ppu_set_nametable_attr( NAMETABLE_A_ATTR,  0, ALIGN_SCREEN_HEIGHT_TOP(5),  PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
@@ -78,7 +80,6 @@ void __fastcall__ game_state_title_enter(void)
 
         // NOTE: these strings are generated, no way to get length properly, hardcoded for now
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
-
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 
         ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
@@ -94,16 +95,28 @@ void __fastcall__ game_state_title_enter(void)
     game_state_internal = 0;
 
     anim_title_timer = request_timer( 10 );
+    anim_text_timer = request_timer( 15 );
+
+    text_delay_start();
 }
 
 void __fastcall__ game_state_title_leave(void)
 {
     ppu_release_sprite( arrow_sprite );
     release_timer(anim_title_timer);
+    release_timer(anim_text_timer);
 }
 
 void __fastcall__ game_state_title_update(void)
 {
+    if( is_timer_done(  anim_text_timer ) )
+    {
+        text_delay_advance();
+        set_timer( anim_text_timer, 15 );
+    }
+
+    text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
+
     if( is_timer_done( anim_title_timer ) )
     {
         set_timer( anim_title_timer, 10 );

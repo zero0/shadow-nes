@@ -18,11 +18,6 @@
 ; Text
 ;
 
-.segment        "ZEROPAGE"
-_temp_text_table:   .res  2 ;
-
-.export         _temp_text_table
-
 ; Translate macro
 .macro TR arg
     .byte   .strlen(arg), arg

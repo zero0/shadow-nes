@@ -3,71 +3,28 @@
 #include "globals.h"
 #include "gametext.h"
 
+extern uint8_t text_delay_position;
+#pragma zpsym("text_delay_position")
+
 #define EMPTY_TILE          0xFF
+#define TAB_COUNT           3
 
-
-
-// draw string directly to nametable while nmi is off
-void __fastcall__ text_draw_string_direct_impl(void)
-{
-    x = ARGS[0];
-    y = ARGS[1];
-
-    text_begin_str_at(ARGS[3]);
-    for( i = 0, imax = text_strlen() ; i < imax ; ++i )
-    {
-        c = text_str_at( i );
-        if( c == FONT_CHAR_SPACE )
-        {
-            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
-            ++x;
-            continue;
-        }
-        if( c == FONT_CHAR_NEW_LINE )
-        {
-            ppu_end_tile_batch();
-
-            x = ARGS[0];
-            ++y;
-
-            ppu_begin_tile_batch( x, y );
-            continue;
-        }
-        if( c == FONT_CHAR_CARAGE_RETURN )
-        {
-            ppu_end_tile_batch();
-
-            x = ARGS[0];
-            y = ARGS[1];
-            ++y;
-
-            ppu_begin_tile_batch( x, y );
-            continue;
-        }
-        if( c == FONT_CHAR_TAB )
-        {
-            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
-            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
-            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
-            x += 3;
-            continue;
-        }
-
-        ppu_push_tile_batch( c );
-        ++x;
-    }
-}
-
+// draw string
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: update to allow for palette changes)
+//  ARGS_PTR[0] = string ptr
 void __fastcall__ text_draw_string_impl(void)
 {
     x = ARGS[0];
     y = ARGS[1];
     ppu_begin_tile_batch( x, y );
 
-    text_begin_str_at(ARGS[3]);
-    for( i = 0, imax = text_strlen() ; i < imax ; ++i )
+    c_ptr = ARGS_PTR[0];
+
+    for( i = 1, j = 1, imax = c_ptr[0]; i != imax; ++i, ++j )
     {
-        c = text_str_at( i );
+        c = c_ptr[j];
         if( c == FONT_CHAR_SPACE )
         {
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
@@ -89,7 +46,6 @@ void __fastcall__ text_draw_string_impl(void)
             ppu_end_tile_batch();
 
             x = ARGS[0];
-            y = ARGS[1];
             ++y;
 
             ppu_begin_tile_batch( x, y );
@@ -97,10 +53,89 @@ void __fastcall__ text_draw_string_impl(void)
         }
         if( c == FONT_CHAR_TAB )
         {
+#if TAB_COUNT > 1
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 1
+#if TAB_COUNT > 2
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 2
+#if TAB_COUNT > 3
             ppu_push_tile_batch(EMPTY_TILE); // push empty tile
-            x += 3;
+#endif // TAB_COUNT > 3
+#if TAB_COUNT > 4
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 4
+
+            x += TAB_COUNT;
+            continue;
+        }
+
+        ppu_push_tile_batch( c );
+        ++x;
+    }
+
+    ppu_end_tile_batch();
+}
+
+// draw string
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: update to allow for palette changes)
+//  ARGS_PTR[0] = string ptr
+void __fastcall__ text_draw_string_delay_impl(void)
+{
+    x = ARGS[0];
+    y = ARGS[1];
+    w = text_delay_position;
+    ppu_begin_tile_batch( x, y );
+
+    c_ptr = ARGS_PTR[0];
+
+    for( i = 0, j = 1, imax = c_ptr[0]; i != imax && i != w; ++i, ++j )
+    {
+        c = c_ptr[j];
+        if( c == FONT_CHAR_SPACE )
+        {
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+            ++x;
+            continue;
+        }
+        if( c == FONT_CHAR_NEW_LINE )
+        {
+            ppu_end_tile_batch();
+
+            x = ARGS[0];
+            ++y;
+
+            ppu_begin_tile_batch( x, y );
+            continue;
+        }
+        if( c == FONT_CHAR_CARAGE_RETURN )
+        {
+            ppu_end_tile_batch();
+
+            x = ARGS[0];
+            ++y;
+
+            ppu_begin_tile_batch( x, y );
+            continue;
+        }
+        if( c == FONT_CHAR_TAB )
+        {
+#if TAB_COUNT > 0
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 0
+#if TAB_COUNT > 1
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 1
+#if TAB_COUNT > 2
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 2
+#if TAB_COUNT > 3
+            ppu_push_tile_batch(EMPTY_TILE); // push empty tile
+#endif // TAB_COUNT > 3
+
+            x += TAB_COUNT;
             continue;
         }
 
@@ -137,10 +172,13 @@ void __fastcall__ text_draw_string_impl(void)
 
 static uint8_t _bcd[5];
 
+// draw an 8bit number in base 10 [0..255]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS[3] = 8bit number
 void __fastcall__ text_draw_uint8_impl(void)
 {
-    x = ARGS[0];
-    y = ARGS[1];
     c = ARGS[3];
 
     _bcd[0] = 0;
@@ -186,9 +224,101 @@ void __fastcall__ text_draw_uint8_impl(void)
     ppu_end_tile_batch();
 }
 
+// TODO: implement 16bit ARGS
+// draw a 16bit number in base 10 [0..65535]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS[3] = 8bit number
+void __fastcall__ text_draw_uint16_impl(void)
+{
+    c = ARGS[3];
+
+    _bcd[0] = 0;
+    _bcd[1] = 0;
+
+    // Double Dabble algorithm
+    for( i = 0; i < 16; ++i)
+    {
+        if( BDC_ONES_MASK(_bcd) >= BDC_ONES_SHIFT(5) )
+        {
+            _bcd[BDC_ONES_INDEX] += BDC_ONES_SHIFT(3);
+        }
+        if( BDC_TENS_MASK(_bcd) >= BDC_TENS_SHIFT(5) )
+        {
+            _bcd[BDC_TENS_INDEX] += BDC_TENS_SHIFT(3);
+        }
+        if( BDC_HUNDREDS_MASK(_bcd) >= BDC_HUNDREDS_SHIFT(5) )
+        {
+            _bcd[BDC_HUNDREDS_INDEX] += BDC_HUNDREDS_SHIFT(3);
+        }
+        if( BDC_THOUSANDS_MASK(_bcd) >= BDC_THOUSANDS_SHIFT(5) )
+        {
+            _bcd[BDC_THOUSANDS_INDEX] += BDC_THOUSANDS_SHIFT(3);
+        }
+        if( BDC_TEN_THOUSANDS_MASK(_bcd) >= BDC_TEN_THOUSANDS_SHIFT(5) )
+        {
+            _bcd[BDC_TEN_THOUSANDS_INDEX] += BDC_TEN_THOUSANDS_SHIFT(3);
+        }
+
+        // clear carry
+        __asm__("clc");
+
+        // roll c -> carry
+        __asm__("rol %v", c);
+
+        // roll carry to ones -> tens -> hundreds -> thousands -> ten thousand
+        __asm__("rol %v+0", _bcd);
+        __asm__("rol %v+1", _bcd);
+        __asm__("rol %v+2", _bcd);
+        __asm__("rol %v+3", _bcd);
+    }
+
+    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    if( BDC_TEN_THOUSANDS_VALUE(_bcd) > 0 )
+    {
+        ppu_push_tile_batch(BDC_TEN_THOUSANDS_VALUE(_bcd));
+    }
+    if( BDC_THOUSANDS_VALUE(_bcd) > 0 )
+    {
+        ppu_push_tile_batch(BDC_THOUSANDS_VALUE(_bcd));
+    }
+    if( BDC_HUNDREDS_VALUE(_bcd) > 0 )
+    {
+        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(_bcd));
+    }
+    if( BDC_TENS_VALUE(_bcd) > 0 )
+    {
+        ppu_push_tile_batch(BDC_TENS_VALUE(_bcd));
+    }
+    ppu_push_tile_batch(BDC_ONES_VALUE(_bcd));
+    ppu_end_tile_batch();
+}
+
+// draw an 8bit number in base 16 [00..FF]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS[3] = 8bit number
 void __fastcall__ text_draw_uint8_x2_impl(void)
 {
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
+    ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
+    ppu_end_tile_batch();
+}
+
+// TODO: implement 16bit ARGS passing
+// draw a 16bit number in base 16 [0000..FFFF]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS[3] = 8bit number
+void __fastcall__ text_draw_uint16_x2_impl(void)
+{
+    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
+    ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
     ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
     ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
     ppu_end_tile_batch();

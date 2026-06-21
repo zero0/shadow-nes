@@ -52,12 +52,14 @@ PAL_BUF             =$01c0
 
 .segment "ZEROPAGE"
 
-_ARGS:              .res 8
+_ARGS:              .res 4
+_ARGS_PTR:          .res 4
 TEMP:               .res 2
 IRQ_PTR:            .res 2
 IRQ_WAIT:           .res 1
 
 .exportzp _ARGS
+.exportzp _ARGS_PTR
 .exportzp TEMP
 
 ;

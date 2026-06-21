@@ -43,7 +43,7 @@ typedef struct
 {
     uint8_t attr;
     uint8_t palettes;
-    str_t t[MAX_CUTSCENE_TEXTS];
+    const char* t[MAX_CUTSCENE_TEXTS];
 } cutscene_desc_t;
 
 static const cutscene_desc_t all_cutscenes[] = {
@@ -51,10 +51,10 @@ static const cutscene_desc_t all_cutscenes[] = {
         MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
         MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
         {
-            tr_cutscene_intro_0,
-            tr_cutscene_intro_1,
-            tr_cutscene_intro_2,
-            tr_cutscene_intro_3
+            0, //tr_cutscene_intro_0,
+            0, //tr_cutscene_intro_1,
+            0, //tr_cutscene_intro_2,
+            0, //tr_cutscene_intro_3
         }
     },
 
@@ -62,20 +62,20 @@ static const cutscene_desc_t all_cutscenes[] = {
         MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
         MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
         {
-            tr_cutscene_intro_0,
-            tr_cutscene_intro_1,
-            tr_cutscene_intro_2,
-            tr_cutscene_intro_3
+            0, //tr_cutscene_intro_0,
+            0, //tr_cutscene_intro_1,
+            0, //tr_cutscene_intro_2,
+            0, //tr_cutscene_intro_3
         }
     },
     {
         MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
         MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
         {
-            tr_cutscene_intro_0,
-            tr_cutscene_intro_1,
-            tr_cutscene_intro_2,
-            tr_cutscene_intro_3
+            0, //tr_cutscene_intro_0,
+            0, //tr_cutscene_intro_1,
+            0, //tr_cutscene_intro_2,
+            0, //tr_cutscene_intro_3
         },
     },
 
@@ -83,10 +83,10 @@ static const cutscene_desc_t all_cutscenes[] = {
         MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 3 ),
         MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
         {
-            tr_cutscene_intro_0,
-            tr_cutscene_intro_1,
-            tr_cutscene_intro_2,
-            tr_cutscene_intro_3
+            0, //tr_cutscene_intro_0,
+            0, //tr_cutscene_intro_1,
+            0, //tr_cutscene_intro_2,
+            0, //tr_cutscene_intro_3
          },
     }
 };
@@ -124,12 +124,12 @@ static void __fastcall__ draw_cutscene_part(void)
         switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes[ current_cutscene_index ].attr ) )
         {
             case CUTSCENE_TYPE_TEXT:
-                text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] );
+                //text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] );
                 break;
 
             case CUTSCENE_TYPE_DIALOG:
-                text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 0 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 0 ] );
-                text_draw_string( 0, 2, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 1 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 1 ] );
+                //text_draw_string( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 0 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 0 ] );
+                //text_draw_string( 0, 2, GET_CUTSCENE_PALLETE( all_cutscenes[ current_cutscene_index ].palettes, game_state_internal + 1 ), all_cutscenes[ current_cutscene_index ].t[ game_state_internal + 1 ] );
                 break;
 
             default:
@@ -185,7 +185,7 @@ static void __fastcall__ advance_cutscene(void)
         end_cutscene();
     }
     // if there's no more text, end the cutscene
-    else if( all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] == (uint8_t)END_CUTSCENE )
+    else if( all_cutscenes[ current_cutscene_index ].t[ game_state_internal ] == 0 )
     {
         end_cutscene();
     }

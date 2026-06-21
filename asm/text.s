@@ -2,14 +2,19 @@
 ; Text
 ;
 
-.export _text_strlen_str
-.export _text_begin_str_at
-.export _text_strlen
-.export _text_str_at
+.export _text_delay_start = text_delay_start
+.export _text_delay_advance = text_delay_advance
+.export _text_delay_display_full = text_delay_display_full
 
-.importzp _ARGS;
-.importzp _temp_text_table;
-.import _text_table;
+;
+;
+;
+
+.segment "ZEROPAGE"
+
+text_delay_position:    .res 1 ;
+
+.export _text_delay_position = text_delay_position
 
 ;
 ;
@@ -17,61 +22,33 @@
 
 .segment "CODE"
 
-; Get the string length of A, returned in A
-.proc _text_strlen_str
+.proc text_delay_start
 
-    ; transfer A -> X
-    tax
-
-    ; transfer address from text_table X to temp_text_table
-    lda _text_table+0, x
-    sta _temp_text_table+0
-    lda _text_table+1, x
-    sta _temp_text_table+1
-
-    ; load first byte of text as it's the length
-    ldy #0
-    lda (_temp_text_table), y
+    lda #1
+    sta text_delay_position
 
     rts
+
 .endproc
 
-; Transfer string address to temp location at A
-.proc _text_begin_str_at
+.proc text_delay_advance
 
-    ; transfer A -> X
-    tax
-
-    ; store text table address in temp storage
-    lda _text_table+0, x
-    sta _temp_text_table+0
-    lda _text_table+1, x
-    sta _temp_text_table+1
+    lda text_delay_position
+    cmp #$FF
+    beq :+
+        inc text_delay_position
+    :
 
     rts
+
 .endproc
 
-; Get the length of the cached string
-.proc _text_strlen
+.proc text_delay_display_full
 
-    ; load index Y
-    ldy #0
-    lda (_temp_text_table), y
+    lda #$FF
+    sta text_delay_position
 
     rts
+
 .endproc
 
-; Get the char of the stored string at A
-.proc _text_str_at
-
-    ; transfer A -> Y
-    tay
-
-    ; inc y since strings are 1-based
-    iny
-
-    ; load index Y
-    lda (_temp_text_table), y
-
-    rts
-.endproc

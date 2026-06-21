@@ -73,9 +73,9 @@ extern ptr_t NAMETABLE_D_ATTR;
     (arg)[0] = (uint8_t)(base) | (uint8_t)( (idx) >> 4 );   \
     (arg)[1] = 0xFF & (uint8_t)( (idx) << 4 )
 
-#define PTR_TO_ARGS(arg, i, ptr)            \
-    (arg)[(i) + 0] = 0xFF & ((ptr) >> 8);   \
-    (arg)[(i) + 1] = 0xFF & (ptr)
+//#define PTR_TO_ARGS(arg, i, ptr)            \
+//    (arg)[(i) + 0] = 0xFF & ((ptr) >> 8);   \
+//    (arg)[(i) + 1] = 0xFF & (ptr)
 
 #define ADDRESS_TO_ARGS(arg, i, ptr)                \
     (arg)[(i) + 0] = 0xFF & ((ptr_t)&(ptr) >> 8);   \

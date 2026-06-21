@@ -142,7 +142,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .define PPU_MASK_EMPHASIZE_BLUE_ON                  $80 ; %10000000
 .define PPU_MASK_EMPHASIZE_ALL_ON                   PPU_MASK_EMPHASIZE_RED_ON | PPU_MASK_EMPHASIZE_GREEN_ON | PPU_MASK_EMPHASIZE_BLUE_ON
 
-.define NMI_NAMETABLE_UPDATE_COUNT_MAX              #32
+.define NMI_NAMETABLE_UPDATE_COUNT_MAX              32
 
 .define PALETTE_TINT_DEFAULT_INDEX                  #4
 
@@ -243,7 +243,7 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_begin_tile_batch_internal = ppu_begin_tile_batch_internal
 .export _ppu_push_tile_batch_internal = ppu_push_tile_batch_internal
 .export _ppu_repeat_tile_batch_internal = ppu_repeat_tile_batch_internal
-.export _ppu_end_tile_batch_internal = ppu_push_tile_batch_internal
+.export _ppu_end_tile_batch_internal = ppu_end_tile_batch_internal
 
 .export _ppu_update_byte
 .export _ppu_clear_nametable_internal = ppu_clear_nametable, ppu_clear_nametable
@@ -273,10 +273,10 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_write_chr_ram_internal
 .export _ppu_end_write_chr_ram_internal
 
-.export _ppu_tint_palellete_oam_internal
-.export _ppu_tint_palellete_background_internal
-.export _ppu_tint_palelletes_internal
-.export _ppu_tint_reset_internal
+.export _ppu_tint_palellete_oam_internal = ppu_tint_palellete_oam
+.export _ppu_tint_palellete_background_internal = ppu_tint_palellete_background
+.export _ppu_tint_palelletes_internal = ppu_tint_palelletes
+.export _ppu_tint_reset_internal = ppu_tint_reset
 
 .export _ppu_load_background_impl = ppu_load_background
 
@@ -407,10 +407,10 @@ ppu_enable_default:
 .proc _ppu_on
 
     ; upload palette updates
-    jsr _ppu_upload_palette
+    ;jsr _ppu_upload_palette
 
     ; upload nametable updates
-    jsr _ppu_upload_nametable
+    ;jsr _ppu_upload_nametable
 
     lda #3
     sta NMI_READY
@@ -692,17 +692,17 @@ _ppu_update_byte:
 .proc ppu_end_tile_batch_internal
 
     ; load length
-    ldx NAMETABLE_UPDATE_LEN
+    ;ldx NAMETABLE_UPDATE_LEN
 
     ; store end of stream 0
-    lda #0
-    sta NAMETABLE_UPDATE, x
+    ;lda #0
+    ;sta NAMETABLE_UPDATE, x
 
     ; increment count
-    inx
+    ;inx
 
     ; store new length for next stream
-    stx NAMETABLE_UPDATE_LEN
+    ;stx NAMETABLE_UPDATE_LEN
 
     ; mark nametable dirty for upload
     lda NMI_DIRTY_UPLOAD_MASK
@@ -1599,32 +1599,30 @@ ppu_clear_chr_ram:
     bit PPU_STATUS
 
 @update_nametable_loop:
+
     ; high byte address
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
-    inx
 
     ; low byte address
+    inx
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
-    inx
 
     ; tile count (bit7 0 = individualt, 1 = repeat)
+    inx
     lda NAMETABLE_UPDATE, x
     bpl @update_nametable_individual
 
 @update_nametable_repeat:
-
-    ; load tile count
-    inx
 
     ; mask out bit7 and move to Y
     and #$7F
     tay
 
     ; tile to repeat
-    lda NAMETABLE_UPDATE, x
     inx
+    lda NAMETABLE_UPDATE, x
 
     ; write tile to PPU_DATA Y times
     :
@@ -1634,6 +1632,9 @@ ppu_clear_chr_ram:
         sta PPU_DATA
         dey
         bne :-
+
+    ; increment to next byte to read
+    inx
 
     ; jump to end
     jmp @update_nametable_loop_compare
@@ -1676,11 +1677,12 @@ ppu_clear_chr_ram:
     stx NAMETABLE_UPDATE_POS
 
 @end:
+
     rts
+
 .endproc
 
 ;
-_ppu_tint_palellete_oam_internal:
 .proc ppu_tint_palellete_oam
 
     ; load tint
@@ -1693,10 +1695,10 @@ _ppu_tint_palellete_oam_internal:
     sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
 .endproc
 
 ;
-_ppu_tint_palellete_background_internal:
 .proc ppu_tint_palellete_background
 
     ; load tint
@@ -1709,10 +1711,10 @@ _ppu_tint_palellete_background_internal:
     sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
 .endproc
 
 ;
-_ppu_tint_palelletes_internal:
 .proc ppu_tint_palelletes
 
     ; update each palette
@@ -1720,10 +1722,10 @@ _ppu_tint_palelletes_internal:
     jsr ppu_tint_palellete_background
 
     rts
+
 .endproc
 
 ;
-_ppu_tint_reset_internal:
 .proc ppu_tint_reset
 
     ; clear tint indices
@@ -1737,14 +1739,14 @@ _ppu_tint_reset_internal:
     sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
 .endproc
 
 ; load a background at index A
 .proc ppu_load_background
 
-
-
     rts
+
 .endproc
 
 ;
@@ -1967,6 +1969,7 @@ _ppu_tint_reset_internal:
     jmp @nmi_upload_palette_end
 
 @nmi_upload_palette_oam_raw:
+
     ; copy OAM palette
 .if 1
     .repeat 16, I
@@ -1985,6 +1988,7 @@ _ppu_tint_reset_internal:
 .endif
 
 @nmi_upload_palette_end:
+
     ;; if there has been a palette update, skip nametable updates this frame
     ;jmp @ppu_scroll
 
@@ -1998,7 +2002,7 @@ _ppu_tint_reset_internal:
     lda NMI_DIRTY_UPLOAD_MASK
 
     ; test if nametable updates are needed
-    and NMI_DIRTY_UPLOAD_MASK_NAMETABLE
+    and #NMI_DIRTY_UPLOAD_MASK_NAMETABLE
 
     ; if there are name table uploads, perfrom them
     bne :+
@@ -2097,9 +2101,13 @@ _ppu_tint_reset_internal:
 
     ; if there have been a lot of tiles updated, early out of the loop
     lda NMI_NAMETABLE_UPDATE_COUNT
-    cmp NMI_NAMETABLE_UPDATE_COUNT_MAX
-    bcc @nmi_upload_nametable_loop_end
+    cmp #NMI_NAMETABLE_UPDATE_COUNT_MAX
+    ;bcc @nmi_upload_nametable_loop_end
     ; bmi @nmi_upload_nametable_loop_end
+
+    ; if it's the end of the stream, end the loop
+    lda NAMETABLE_UPDATE, x
+    beq @nmi_upload_nametable_loop_end
 ;
     ; loop while X != length
     cpx NAMETABLE_UPDATE_LEN

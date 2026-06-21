@@ -41,7 +41,7 @@ void __fastcall__ game_state_continue_enter(void)
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
         // draw continue screen
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_continue );
+        //text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_continue );
 
         // save slot 0
         for( j = 0, k = 10; j < _SAVE_SLOT_COUNT; ++j, k += 5 )
@@ -50,11 +50,11 @@ void __fastcall__ game_state_continue_enter(void)
 
             if( g_current_game_data.version == 0 )
             {
-                text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_unknown );
+                //text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_unknown );
             }
             else
             {
-                text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_shadowborn );
+                //text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_shadowborn );
             }
         }
     }
