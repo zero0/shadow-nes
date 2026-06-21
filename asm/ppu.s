@@ -179,7 +179,7 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     NMI_DIRTY_UPLOAD_MASK:      .res 1 ;
     SCROLL_X:                   .res 1 ;
     SCROLL_Y:                   .res 1 ;
-    TILE_BATCH_INDEX:           .res 1 ;
+    CUR_TILE_BATCH_COUNT_OFFSET:           .res 1 ;
     META_SPRITE_LEN:            .res 1 ;
     META_SPRITE_ATTR:           .res 1 ;
     META_SPRITE_TILE:           .res 1 ;
@@ -206,7 +206,7 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .segment "BSS"
     ; Format:
     ;  0..1      : nametable address
-    ;  2         : tile count (N) ( bit7 1 = repeat, 0 = individual )
+    ;  2         : tile count (N) ( bit7 1 = repeat, 0 = individual ), N == 0 end of stream
     ; Repeat:
     ;  3         : byte to repeat tile count (N) times
     ; Individual:
@@ -240,10 +240,10 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_set_address_tile_internal
 .export _ppu_update_tile_internal
 
-.export _ppu_begin_tile_batch_internal
-.export _ppu_push_tile_batch_internal
-.export _ppu_repeat_tile_batch_internal
-.export _ppu_end_tile_batch_internal
+.export _ppu_begin_tile_batch_internal = ppu_begin_tile_batch_internal
+.export _ppu_push_tile_batch_internal = ppu_push_tile_batch_internal
+.export _ppu_repeat_tile_batch_internal = ppu_repeat_tile_batch_internal
+.export _ppu_end_tile_batch_internal = ppu_push_tile_batch_internal
 
 .export _ppu_update_byte
 .export _ppu_clear_nametable_internal = ppu_clear_nametable, ppu_clear_nametable
@@ -549,8 +549,8 @@ _ppu_update_byte:
 
     rts
 
-;
-_ppu_begin_tile_batch_internal:
+; begin tile batch updates starting at PPU_ARGS[0..1] name table address
+.proc ppu_begin_tile_batch_internal
 
     ; load Y
     lda _PPU_ARGS+1
@@ -566,7 +566,6 @@ _ppu_begin_tile_batch_internal:
     ; high bits of (Y >> 3) | $20 (nametable base)
     ora #$20
     sta NAMETABLE_UPDATE, x
-    inx
 
     ; load Y
     lda _PPU_ARGS+1
@@ -580,15 +579,18 @@ _ppu_begin_tile_batch_internal:
     ; ( Y << 5 ) | X
     ; recover X value
     ora _PPU_ARGS+0
-    sta NAMETABLE_UPDATE, x
     inx
+    sta NAMETABLE_UPDATE, x
 
     ; tile count
     lda #0
+    inx
     sta NAMETABLE_UPDATE, x
 
     ; store tile batch index to update
-    stx TILE_BATCH_INDEX
+    stx CUR_TILE_BATCH_COUNT_OFFSET
+
+    ; increment to next byte to start the next updates
     inx
 
     ; store new length
@@ -596,8 +598,11 @@ _ppu_begin_tile_batch_internal:
 
     rts
 
-;
-.proc _ppu_push_tile_batch_internal
+.endproc
+
+; TODO: change to passing by A so it can be called directly and remove the store/load of PPU_ARGS[0]
+; add the tile PPU_ARGS[0] to the current tile batch
+.proc ppu_push_tile_batch_internal
 
     ; load length
     ldx NAMETABLE_UPDATE_LEN
@@ -605,51 +610,108 @@ _ppu_begin_tile_batch_internal:
     ; store tile
     lda _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
+
+    ; increment length
     inx
 
     ; store new lenght
     stx NAMETABLE_UPDATE_LEN
 
-    ; increment batch count
-    ldx TILE_BATCH_INDEX
+    ; increment tile batch count
+    ldx CUR_TILE_BATCH_COUNT_OFFSET
     inc NAMETABLE_UPDATE, x
 
     rts
+
 .endproc
 
-;
-.proc _ppu_repeat_tile_batch_internal
+; add the tile PPU_ARGS[0] a number of times PPU_ARGS[1]
+.proc ppu_repeat_tile_batch_internal
 
-    ; load length
+    ; load current tile count
+    ldx CUR_TILE_BATCH_COUNT_OFFSET
+    lda NAMETABLE_UPDATE, x
+
+    ; if 0 skip to updating current stream element, otherwise start a new stream element and update offset
+    beq :+
+
+        ; load update length
+        ldx NAMETABLE_UPDATE_LEN
+
+        ; start new streaming element
+        lda #0
+        sta NAMETABLE_UPDATE, x
+
+        ; store offset for new batch
+        stx CUR_TILE_BATCH_COUNT_OFFSET
+
+        ; increment count
+        inx
+
+        ; store new update length
+        stx NAMETABLE_UPDATE_LEN
+
+    :
+
+    ; load repeat count
+    lda _PPU_ARGS+1
+
+    ; mask with repeat flag
+    ora #$80
+
+    ; store repeat count at offset
+    ldx CUR_TILE_BATCH_COUNT_OFFSET
+    sta NAMETABLE_UPDATE, x
+
+    ; load update length
     ldx NAMETABLE_UPDATE_LEN
 
     ; store tile
     lda _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
+
+    ; start new streaming element
+    lda #0
     inx
-
-    ; store new lenght
-    stx NAMETABLE_UPDATE_LEN
-
-    ; increment batch count by specified number
-    ldx TILE_BATCH_INDEX
-    lda _PPU_ARGS+1
-    clc
-    adc NAMETABLE_UPDATE, x
-    ora #$80
     sta NAMETABLE_UPDATE, x
 
+    ; store offset for new batch
+    stx CUR_TILE_BATCH_COUNT_OFFSET
+
+    ; increment count
+    inx
+
+    ; store new update length
+    stx NAMETABLE_UPDATE_LEN
+
     rts
+
 .endproc
 
-;
-_ppu_end_tile_batch_internal:
+; end the current tile batch
+.proc ppu_end_tile_batch_internal
 
-    ; clear tile bach index
+    ; load length
+    ldx NAMETABLE_UPDATE_LEN
+
+    ; store end of stream 0
     lda #0
-    sta TILE_BATCH_INDEX
+    sta NAMETABLE_UPDATE, x
+
+    ; increment count
+    inx
+
+    ; store new length for next stream
+    stx NAMETABLE_UPDATE_LEN
+
+    ; mark nametable dirty for upload
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora #NMI_DIRTY_UPLOAD_MASK_NAMETABLE
+    sta NMI_DIRTY_UPLOAD_MASK
 
     rts
+
+.endproc
 
 ; clears specific nametable at PPU_ARGS[0..1] to PPU_ARGS[2] with attr PPU_ARS[3]
 .proc ppu_clear_nametable
@@ -1931,6 +1993,7 @@ _ppu_tint_reset_internal:
 ;
 
 @nmi_upload_nametable:
+
     ; load dirty mask
     lda NMI_DIRTY_UPLOAD_MASK
 
@@ -1968,7 +2031,7 @@ _ppu_tint_reset_internal:
     lda NAMETABLE_UPDATE, x
 
     ; if there are zero tiles to update, exit loop
-    beq @nmi_upload_nametable_loop_compare
+    beq @nmi_upload_nametable_loop_end
 
     ; if bit7 is not set, update individual tiles
     bpl @nmi_upload_nametable_individual
