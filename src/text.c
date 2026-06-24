@@ -22,7 +22,7 @@ void __fastcall__ text_draw_string_impl(void)
 
     c_ptr = ARGS_PTR[0];
 
-    for( i = 1, j = 1, imax = c_ptr[0]; i != imax; ++i, ++j )
+    for( i = 0, j = 1, imax = c_ptr[0]; i != imax; ++i, ++j )
     {
         c = c_ptr[j];
         if( c == FONT_CHAR_SPACE )
@@ -170,7 +170,13 @@ void __fastcall__ text_draw_string_delay_impl(void)
 #define BDC_THOUSANDS_SHIFT(v)      BDC_TENS_SHIFT(v)
 #define BDC_TEN_THOUSANDS_SHIFT(v)  BDC_ONES_SHIFT(v)
 
-static uint8_t _bcd[5];
+extern uint8_t bcd[10];
+extern uint8_t itoa_input[4];
+#pragma zpsym("itoa_input")
+
+extern void __fastcall__ itoa_uint8_impl(void);
+extern void __fastcall__ itoa_uint16_impl(void);
+extern void __fastcall__ itoa_uint32_impl(void);
 
 // draw an 8bit number in base 10 [0..255]
 //  ARGS[0] = x
@@ -179,8 +185,8 @@ static uint8_t _bcd[5];
 //  ARGS[3] = 8bit number
 void __fastcall__ text_draw_uint8_impl(void)
 {
+/*
     c = ARGS[3];
-
     _bcd[0] = 0;
     _bcd[1] = 0;
 
@@ -210,17 +216,22 @@ void __fastcall__ text_draw_uint8_impl(void)
         __asm__("rol %v+0", _bcd);
         __asm__("rol %v+1", _bcd);
     }
+*/
+
+    itoa_input[0] = ARGS[3];
+
+    itoa_uint8_impl();
 
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
-    if( BDC_HUNDREDS_VALUE(_bcd) > 0 )
+    if( BDC_HUNDREDS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(bcd));
     }
-    if( BDC_TENS_VALUE(_bcd) > 0 )
+    if( BDC_TENS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_TENS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_TENS_VALUE(bcd));
     }
-    ppu_push_tile_batch(BDC_ONES_VALUE(_bcd));
+    ppu_push_tile_batch(BDC_ONES_VALUE(bcd));
     ppu_end_tile_batch();
 }
 
@@ -229,9 +240,10 @@ void __fastcall__ text_draw_uint8_impl(void)
 //  ARGS[0] = x
 //  ARGS[1] = y
 //  ARGS[2] = palette (TODO: implement)
-//  ARGS[3] = 8bit number
+//  ARGS_PTR[0] = 16bit number?
 void __fastcall__ text_draw_uint16_impl(void)
 {
+    /*
     c = ARGS[3];
 
     _bcd[0] = 0;
@@ -273,25 +285,31 @@ void __fastcall__ text_draw_uint16_impl(void)
         __asm__("rol %v+2", _bcd);
         __asm__("rol %v+3", _bcd);
     }
+    */
+
+    itoa_input[0] = 0;
+    itoa_input[1] = 0;
+
+    itoa_uint16_impl();
 
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
-    if( BDC_TEN_THOUSANDS_VALUE(_bcd) > 0 )
+    if( BDC_TEN_THOUSANDS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_TEN_THOUSANDS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_TEN_THOUSANDS_VALUE(bcd));
     }
-    if( BDC_THOUSANDS_VALUE(_bcd) > 0 )
+    if( BDC_THOUSANDS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_THOUSANDS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_THOUSANDS_VALUE(bcd));
     }
-    if( BDC_HUNDREDS_VALUE(_bcd) > 0 )
+    if( BDC_HUNDREDS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(bcd));
     }
-    if( BDC_TENS_VALUE(_bcd) > 0 )
+    if( BDC_TENS_VALUE(bcd) > 0 )
     {
-        ppu_push_tile_batch(BDC_TENS_VALUE(_bcd));
+        ppu_push_tile_batch(BDC_TENS_VALUE(bcd));
     }
-    ppu_push_tile_batch(BDC_ONES_VALUE(_bcd));
+    ppu_push_tile_batch(BDC_ONES_VALUE(bcd));
     ppu_end_tile_batch();
 }
 
