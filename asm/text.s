@@ -71,31 +71,48 @@ bcd:   .res 10
 .macro double_dabble_base bitcount, max_num_count
 
     ; clear bcd
-    ldx #0
+    lda #0
     .repeat max_num_count, I
-    stx bcd+I
+    sta bcd+I
     .endrepeat
 
-    ldy bitcount
-    :
+    ; loop for each bit count
+    ldy #(bitcount)
+@loop:
+        ; compare and add block
         .repeat max_num_count, I
 
+            ; load shift
             lda bcd+(I / 2)
+
+            ; cache A in X
+            tax
+
+            ; mask and compare
 .if (I & 1) = 0
-            and $0F
-            cmp $05
+            and #$0F
+            cmp #$05
 .else
-            and $F0
-            cmp $50
+            and #$F0
+            cmp #$50
 .endif
 
             ; if less, skip add
             bcc :+
+
+                ; transfer back X -> A
+                txa
+
+                ; clear carry
+                clc
+
+                ; add value based on shift
 .if (I & 1) = 0
-                adc $03
+                adc #$03
 .else
-                adc $30
+                adc #$30
 .endif
+                ; store updated value
                 sta bcd+(I / 2)
             :
 
@@ -103,17 +120,11 @@ bcd:   .res 10
 
         ; for 8 bit display there's no need to calculate the offset
 .if bitcount = 8
-        ; load input at 0
-        lda itoa_input+0
-
         ; clear carry
         clc
 
         ; roll value to carry
-        rol A
-
-        ; store updated input value
-        sta itoa_input+0
+        rol itoa_input+0
 .else
         ; transfer interation Y -> A
         tya
@@ -126,21 +137,15 @@ bcd:   .res 10
         ; transfer A -> X
         tax
 
-        ; load input at X
-        lda itoa_input, X
-
         ; clear carry
         clc
 
         ; roll value to carry
-        rol A
-
-        ; store updated input value
-        sta itoa_input, X
+        rol itoa_input, X
 .endif
 
         ; roll carry from ones -> tens -> etc.
-        .repeat max_num_count, I
+        .repeat (max_num_count-1), I
 
             rol bcd+I
 
@@ -148,7 +153,15 @@ bcd:   .res 10
 
         ; decrement counter
         dey
-        bne :-
+
+        ; use branch for smaller bit counts, otherwise use jmp
+.if bitcount < 32
+        bne @loop
+.else
+        beq :+
+            jmp @loop
+        :
+.endif
 
 .endmacro
 
