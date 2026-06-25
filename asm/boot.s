@@ -60,6 +60,8 @@ IRQ_WAIT:           .res 1
 
 .exportzp _ARGS
 .exportzp _ARGS_PTR
+.exportzp _ARGS_UINT16 = _ARGS_PTR
+.exportzp _ARGS_UINT32 = _ARGS_PTR
 .exportzp TEMP
 
 ;

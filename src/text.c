@@ -170,9 +170,23 @@ void __fastcall__ text_draw_string_delay_impl(void)
 #define BDC_THOUSANDS_SHIFT(v)      BDC_TENS_SHIFT(v)
 #define BDC_TEN_THOUSANDS_SHIFT(v)  BDC_ONES_SHIFT(v)
 
-extern uint8_t bcd[10];
+extern uint8_t bcd[5];
 extern uint8_t itoa_input[4];
 #pragma zpsym("itoa_input")
+
+#define ITOA_START_LEFT_JUSTIFIED(i) do {                       \
+if (1 || (bcd[i] & 0x0F) > 0) ppu_push_tile_batch((bcd[i] & 0x0F));        \
+} while( 0 )
+
+#define ITOA_PART_LEFT_JUSTIFIED(i) do {                        \
+if (1 || (bcd[i] & 0xF0) > 0) ppu_push_tile_batch((bcd[i] >> 4));          \
+if (1 || (bcd[i] & 0x0F) > 0) ppu_push_tile_batch((bcd[i] & 0x0F));        \
+} while( 0 )
+
+#define ITOA_END_LEFT_JUSTIFIED(i) do {                         \
+if (1 || (bcd[i] & 0xF0) > 0) ppu_push_tile_batch((bcd[i] >> 4));          \
+ppu_push_tile_batch((bcd[i] & 0x0F));                           \
+} while( 0 )
 
 extern void __fastcall__ itoa_uint8_impl(void);
 extern void __fastcall__ itoa_uint16_impl(void);
@@ -223,93 +237,50 @@ void __fastcall__ text_draw_uint8_impl(void)
     itoa_uint8_impl();
 
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
-    if( BDC_HUNDREDS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(bcd));
-    }
-    if( BDC_TENS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_TENS_VALUE(bcd));
-    }
-    ppu_push_tile_batch(BDC_ONES_VALUE(bcd));
+    ITOA_START_LEFT_JUSTIFIED(1);
+    ITOA_END_LEFT_JUSTIFIED(0);
     ppu_end_tile_batch();
 }
 
-// TODO: implement 16bit ARGS
 // draw a 16bit number in base 10 [0..65535]
 //  ARGS[0] = x
 //  ARGS[1] = y
 //  ARGS[2] = palette (TODO: implement)
-//  ARGS_PTR[0] = 16bit number?
+//  ARGS_UINT16[0] = 16bit number
 void __fastcall__ text_draw_uint16_impl(void)
 {
-    /*
-    c = ARGS[3];
-
-    _bcd[0] = 0;
-    _bcd[1] = 0;
-
-    // Double Dabble algorithm
-    for( i = 0; i < 16; ++i)
-    {
-        if( BDC_ONES_MASK(_bcd) >= BDC_ONES_SHIFT(5) )
-        {
-            _bcd[BDC_ONES_INDEX] += BDC_ONES_SHIFT(3);
-        }
-        if( BDC_TENS_MASK(_bcd) >= BDC_TENS_SHIFT(5) )
-        {
-            _bcd[BDC_TENS_INDEX] += BDC_TENS_SHIFT(3);
-        }
-        if( BDC_HUNDREDS_MASK(_bcd) >= BDC_HUNDREDS_SHIFT(5) )
-        {
-            _bcd[BDC_HUNDREDS_INDEX] += BDC_HUNDREDS_SHIFT(3);
-        }
-        if( BDC_THOUSANDS_MASK(_bcd) >= BDC_THOUSANDS_SHIFT(5) )
-        {
-            _bcd[BDC_THOUSANDS_INDEX] += BDC_THOUSANDS_SHIFT(3);
-        }
-        if( BDC_TEN_THOUSANDS_MASK(_bcd) >= BDC_TEN_THOUSANDS_SHIFT(5) )
-        {
-            _bcd[BDC_TEN_THOUSANDS_INDEX] += BDC_TEN_THOUSANDS_SHIFT(3);
-        }
-
-        // clear carry
-        __asm__("clc");
-
-        // roll c -> carry
-        __asm__("rol %v", c);
-
-        // roll carry to ones -> tens -> hundreds -> thousands -> ten thousand
-        __asm__("rol %v+0", _bcd);
-        __asm__("rol %v+1", _bcd);
-        __asm__("rol %v+2", _bcd);
-        __asm__("rol %v+3", _bcd);
-    }
-    */
-
-    itoa_input[0] = 0;
-    itoa_input[1] = 0;
+    itoa_input[0] = (uint8_t)(ARGS_UINT16[0] >> 8);
+    itoa_input[1] = (uint8_t)(ARGS_UINT16[0]);
 
     itoa_uint16_impl();
 
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
-    if( BDC_TEN_THOUSANDS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_TEN_THOUSANDS_VALUE(bcd));
-    }
-    if( BDC_THOUSANDS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_THOUSANDS_VALUE(bcd));
-    }
-    if( BDC_HUNDREDS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_HUNDREDS_VALUE(bcd));
-    }
-    if( BDC_TENS_VALUE(bcd) > 0 )
-    {
-        ppu_push_tile_batch(BDC_TENS_VALUE(bcd));
-    }
-    ppu_push_tile_batch(BDC_ONES_VALUE(bcd));
+    ITOA_START_LEFT_JUSTIFIED(2);
+    ITOA_PART_LEFT_JUSTIFIED(1);
+    ITOA_END_LEFT_JUSTIFIED(0);
+    ppu_end_tile_batch();
+}
+
+// draw a 32bit number in base 10 [0..4294967295]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS_UINT32 = 32bit number
+void __fastcall__ text_draw_uint32_impl(void)
+{
+    itoa_input[0] = (uint8_t)(ARGS_UINT32 >> 24);
+    itoa_input[1] = (uint8_t)(ARGS_UINT32 >> 16);
+    itoa_input[2] = (uint8_t)(ARGS_UINT32 >> 8);
+    itoa_input[3] = (uint8_t)(ARGS_UINT32);
+
+    itoa_uint32_impl();
+
+    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ITOA_PART_LEFT_JUSTIFIED(4);
+    ITOA_PART_LEFT_JUSTIFIED(3);
+    ITOA_PART_LEFT_JUSTIFIED(2);
+    ITOA_PART_LEFT_JUSTIFIED(1);
+    ITOA_END_LEFT_JUSTIFIED(0);
     ppu_end_tile_batch();
 }
 
@@ -326,18 +297,36 @@ void __fastcall__ text_draw_uint8_x2_impl(void)
     ppu_end_tile_batch();
 }
 
-// TODO: implement 16bit ARGS passing
 // draw a 16bit number in base 16 [0000..FFFF]
 //  ARGS[0] = x
 //  ARGS[1] = y
 //  ARGS[2] = palette (TODO: implement)
-//  ARGS[3] = 8bit number
+//  ARGS_UINT16[3] = 8bit number
 void __fastcall__ text_draw_uint16_x2_impl(void)
 {
     ppu_begin_tile_batch(ARGS[0], ARGS[1]);
-    ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
-    ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
-    ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
-    ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 12));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 8));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 4));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 0));
+    ppu_end_tile_batch();
+}
+
+// draw a 32bit number in base 16 [00000000..FFFFFFFF]
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = palette (TODO: implement)
+//  ARGS_UINT16[3] = 8bit number
+void __fastcall__ text_draw_uint32_x2_impl(void)
+{
+    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 28));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 24));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 20));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 16));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 12));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 8));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 4));
+    ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 0));
     ppu_end_tile_batch();
 }

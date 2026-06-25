@@ -137,23 +137,26 @@ void __fastcall__ ppu_update_tile_internal(void);
 //
 //
 
-#define ppu_begin_tile_batch( px, py )  \
-    PPU_ARGS[0] = (px);                 \
-    PPU_ARGS[1] = (py);                 \
-    ppu_begin_tile_batch_internal()
+#define ppu_begin_tile_batch( px, py ) do { \
+    PPU_ARGS[0] = (px);                     \
+    PPU_ARGS[1] = (py);                     \
+    ppu_begin_tile_batch_internal();        \
+} while( 0 )
 
 void __fastcall__ ppu_begin_tile_batch_internal(void);
 
-#define ppu_push_tile_batch( t )    \
-    PPU_ARGS[0] = (t);              \
-    ppu_push_tile_batch_internal()
+#define ppu_push_tile_batch( t ) do {   \
+    PPU_ARGS[0] = (t);                  \
+    ppu_push_tile_batch_internal();     \
+} while( 0 )
 
 void __fastcall__ ppu_push_tile_batch_internal(void);
 
-#define ppu_repeat_tile_batch( t, c )   \
-    PPU_ARGS[0] = (t);                  \
-    PPU_ARGS[1] = (c);                  \
-    ppu_repeat_tile_batch_internal()
+#define ppu_repeat_tile_batch( t, c ) do {  \
+    PPU_ARGS[0] = (t);                      \
+    PPU_ARGS[1] = (c);                      \
+    ppu_repeat_tile_batch_internal();       \
+} while( 0 )
 
 void __fastcall__ ppu_repeat_tile_batch_internal(void);
 

@@ -28,7 +28,7 @@ itoa_input:             .res 4 ;
 
 .segment "BSS"
 
-bcd:   .res 10
+bcd:   .res 5
 
 .export _bcd = bcd
 
@@ -72,7 +72,7 @@ bcd:   .res 10
 
     ; clear bcd
     lda #0
-    .repeat max_num_count, I
+    .repeat 5, I ;((max_num_count+1)/2), I
     sta bcd+I
     .endrepeat
 
@@ -118,31 +118,15 @@ bcd:   .res 10
 
         .endrepeat
 
-        ; for 8 bit display there's no need to calculate the offset
-.if bitcount = 8
         ; clear carry
         clc
 
-        ; roll value to carry
-        rol itoa_input+0
-.else
-        ; transfer interation Y -> A
-        tya
+        ; rotate the values up in reverse order
+        .repeat (bitcount/8), I
 
-        ; divide by 8
-        lsr
-        lsr
-        lsr
+            rol itoa_input+(((bitcount/8)-1)-I)
 
-        ; transfer A -> X
-        tax
-
-        ; clear carry
-        clc
-
-        ; roll value to carry
-        rol itoa_input, X
-.endif
+        .endrepeat
 
         ; roll carry from ones -> tens -> etc.
         .repeat (max_num_count-1), I
