@@ -91,8 +91,14 @@ void __fastcall__ text_draw_string_delay_impl(void)
 
     c_ptr = ARGS_PTR[0];
 
-    for( i = 0, j = 1, imax = c_ptr[0]; i != imax && i != w; ++i, ++j )
+    for( i = 0, j = 1, imax = c_ptr[0]; i != imax; ++i, ++j )
     {
+        if( i >= w )
+        {
+            ppu_push_tile_batch( EMPTY_TILE );
+            continue;
+        }
+
         c = c_ptr[j];
         if( c == FONT_CHAR_SPACE )
         {

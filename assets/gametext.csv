@@ -2,6 +2,7 @@ key,en
 tr_game_title,<Shadowborn>
 tr_new_game,New Game
 tr_continue,Continue
+tr_options,Options
 tr_version,"%.concat(""Version "", VERSION, BUILD_TYPE)%"
 tr_copyright,"%.concat(""(C) "", COPYRIGHT_YEAR)%"
 tr_confirm,Confirm
