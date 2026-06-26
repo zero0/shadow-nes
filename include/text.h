@@ -4,6 +4,7 @@
 #include "types.h"
 #include "args.h"
 
+#define text_clear( x, y, c )               args_call_3( text_clear_impl, x, y, c )
 #define text_draw_string( x, y, p, t )      args_call_4_3a_1p( text_draw_string_impl, x, y, p, t )
 
 #define text_draw_uint8( x, y, p, n )       args_call_4( text_draw_uint8_impl, x, y, p, n )
@@ -26,6 +27,8 @@ void __fastcall__ text_delay_display_full(void);
 //
 // Internal functions
 //
+
+void __fastcall__ text_clear_impl(void);
 
 void __fastcall__ text_draw_string_delay_impl(void);
 

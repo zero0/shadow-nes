@@ -11,6 +11,10 @@ tr_paused,Paused
 tr_save,Save
 tr_back,Back
 tr_next,Next
+tr_on,On
+tr_off,Off
+tr_options_music,Music
+tr_options_sfx,SFX
 tr_main_menu,Main Menu
 tr_restart_checkpoint,Restart Checkpoint
 tr_game_over,Game Over

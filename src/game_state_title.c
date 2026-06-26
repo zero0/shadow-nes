@@ -105,7 +105,7 @@ void __fastcall__ game_state_title_enter(void)
     game_state_internal = 0;
 
     anim_title_timer = request_timer( 10 );
-    anim_text_timer = request_timer( 5 );
+    anim_text_timer = request_timer( 15 );
 
     text_delay_start();
 }
@@ -122,7 +122,7 @@ void __fastcall__ game_state_title_update(void)
     if( is_timer_done( anim_text_timer ) )
     {
         text_delay_advance();
-        set_timer( anim_text_timer, 5 );
+        set_timer( anim_text_timer, 15 );
     }
 
     text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
@@ -197,6 +197,10 @@ void __fastcall__ game_state_title_update(void)
             if( GAMEPAD_PRESSED(0, GAMEPAD_U))
             {
                 game_state_internal = Continue;
+            }
+            else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            {
+                set_next_game_state( GAME_STATE_OPTIONS );
             }
             break;
     }

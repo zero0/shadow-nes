@@ -5,6 +5,8 @@
 
 game_data_t g_current_game_data;
 
+global_settings_data_t g_global_settings_data;
+
 //
 // Game Data Migrations
 //
@@ -22,22 +24,7 @@ STATIC_ASSERT(ARRAY_SIZE(game_data_migrations) == CURRENT_GAME_DATA_VERSION);
 
 static void __fastcall__ game_data_clear_current_game_data(void)
 {
-    g_current_game_data.version = 0;
-    g_current_game_data.player_level = 0;
-    g_current_game_data.player_type = 0;
-
-    g_current_game_data.current_game_flow = 0;
-    g_current_game_data.current_game_flow_last_checkpoint = 0;
-    g_current_game_data.current_difficulty = 0;
-
-    g_current_game_data.difficulties_defeated = 0;
-    g_current_game_data.bosses_defeated[0] = 0;
-
-    g_current_game_data.currency[0] = 0;
-    g_current_game_data.currency[1] = 0;
-
-    g_current_game_data.name_len = 0;
-    g_current_game_data.name[0] = 0;
+    memset(g_current_game_data, 0, sizeof(game_data_t));
 }
 
 //

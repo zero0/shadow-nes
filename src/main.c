@@ -20,6 +20,7 @@ static void __fastcall__ game_state_noop(void){}
 static const game_state_func game_state_enter_func[] = {
     game_state_noop,
     game_state_title_enter,
+    game_state_options_enter,
     game_state_continue_enter,
     game_state_playing_enter,
     game_state_cutscene_enter,
@@ -30,6 +31,7 @@ static const game_state_func game_state_enter_func[] = {
 static const game_state_func game_state_leave_func[] = {
     game_state_noop,
     game_state_title_leave,
+    game_state_options_leave,
     game_state_continue_leave,
     game_state_playing_leave,
     game_state_cutscene_leave,
@@ -40,6 +42,7 @@ static const game_state_func game_state_leave_func[] = {
 static const game_state_func game_state_update_func[] = {
     game_state_noop,
     game_state_title_update,
+    game_state_options_update,
     game_state_continue_update,
     game_state_playing_update,
     game_state_cutscene_update,

@@ -40,7 +40,25 @@ typedef struct {
     uint8_t name[15];
 } game_data_t;
 
+enum
+{
+    GLOBAL_SETTINGS_0_MUSIC = 1 << 0,
+    GLOBAL_SETTINGS_0_SFX   = 1 << 1,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 2,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 3,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 4,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 5,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 6,
+    //GLOBAL_SETTINGS_0__UNDEF = 1 << 7,
+};
+
+typedef struct {
+    flags8_t flags0;
+} global_settings_data_t;
+
 extern game_data_t g_current_game_data;
+
+extern global_settings_data_t g_global_settings_data;
 
 void game_data_load_for_new_game(void);
 

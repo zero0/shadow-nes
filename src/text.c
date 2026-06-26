@@ -9,6 +9,19 @@ extern uint8_t text_delay_position;
 #define EMPTY_TILE          0xFF
 #define TAB_COUNT           3
 
+// clear a block for text
+//  ARGS[0] = x
+//  ARGS[1] = y
+//  ARGS[2] = count
+void __fastcall__ text_clear_impl(void)
+{
+    ppu_begin_tile_batch( ARGS[0], ARGS[1] );
+
+    ppu_repeat_tile_batch( EMPTY_TILE, ARGS[2] );
+
+    ppu_end_tile_batch();
+}
+
 // draw string
 //  ARGS[0] = x
 //  ARGS[1] = y

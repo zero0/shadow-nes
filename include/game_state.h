@@ -12,17 +12,20 @@
 #include "game_state_cutscene.h"
 #include "game_state_store.h"
 #include "game_state_checkpoint.h"
+#include "game_state_options.h"
 
 enum
 {
     GAME_STATE_INIT,
     GAME_STATE_TITLE,
+    GAME_STATE_OPTIONS,
     GAME_STATE_CONTINUE,
     GAME_STATE_PLAYING,
     GAME_STATE_CUTSCENE,
     GAME_STATE_STORE,
     GAME_STATE_CHECKPOINT,
     GAME_STATE_GAME_OVER,
+
     _GAME_STATE_COUNT,
 };
 
