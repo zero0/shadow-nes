@@ -22,6 +22,10 @@
     <property name="ld65.exe" value="ld65"/>
     <property name="dotnet.exe" value="dotnet"/>
 
+    <property name="build.type.debug" value="DEBUG" />
+    <property name="build.type.release" value="RELEASE" />
+    <property name="build.type.distro" value="DISTRO" />
+
     <!-- NOTE: right now stored in ${env.CC65_HOME} so this works -->
     <property name="edlink.exe" value="edlink-n8"/>
 
@@ -42,9 +46,10 @@
     <property name="build.version.minor" value="1"/>
     <property name="build.version.patch" value="0"/>
     <property name="build.version" value="${build.version.major}.${build.version.minor}.${build.version.patch}"/>
-    <property name="build.type" value="DEBUG"/>
+    <property name="build.type" value="${build.type.debug}"/>
     <property name="build.lang" value="en"/>
     <property name="build.lang.id" value="0"/>
+    <property name="build.demo" value="1" />
 
     <property name="cpu.type" value="nes"/>
     <property name="cpu.mapper" value="mmc5"/>
@@ -52,11 +57,35 @@
     <property name="dbg.path" location="${bin.dir}/${game.filename}.dbg"/>
     <property name="nes.path" location="${bin.dir}/${game.filename}.nes"/>
 
-    <property name="ca65.flags.build-type" value="-g -D DEBUG_BUILD=1 " />
-    <property name="cc65.flags.build-type" value="-g -DDEBUG_BUILD=1 --add-source" />
+    <!-- Set CA65 flags based on ${build.type} -->
+    <condition property="ca65.flags.build-type" value="-g -D DEBUG_BUILD=1 ">
+        <equals arg1="${build.type}" arg2="${build.type.debug}" />
+    </condition>
 
-    <property name="ca65.flags" value="--target ${cpu.type} --cpu 6502 ${ca65.flags.build-type} -D BUILD_LANG=${build.lang.id}"/>
-    <property name="cc65.flags" value="--target ${cpu.type} --cpu 6502 ${cc65.flags.build-type} -DBUILD_LANG=${build.lang.id}"/>
+    <condition property="ca65.flags.build-type" value="-g -D RELEASE_BUILD=1 ">
+        <equals arg1="${build.type}" arg2="${build.type.release}" />
+    </condition>
+
+    <condition property="ca65.flags.build-type" value="-D DISTRO_BUILD=1 ">
+        <equals arg1="${build.type}" arg2="${build.type.distro}" />
+    </condition>
+
+    <!-- Set CC5 flags based on ${build.type} -->
+    <condition property="cc65.flags.build-type" value="-g -DDEBUG_BUILD=1 --add-source ">
+        <equals arg1="${build.type}" arg2="${build.type.debug}" />
+    </condition>
+
+    <condition property="cc65.flags.build-type" value="-g -O -DRELEASE_BUILD=1 --add-source ">
+        <equals arg1="${build.type}" arg2="${build.type.release}" />
+    </condition>
+
+    <condition property="cc65.flags.build-type" value="-O -Oi -DDISTRO_BUILD=1 ">
+        <equals arg1="${build.type}" arg2="${build.type.distro}" />
+    </condition>
+
+    <!--  -->
+    <property name="ca65.flags" value="--target ${cpu.type} --cpu 6502 ${ca65.flags.build-type} -D BUILD_LANG=${build.lang.id} -D DEMO_BULD=${build.demo}"/>
+    <property name="cc65.flags" value="--target ${cpu.type} --cpu 6502 ${cc65.flags.build-type} -DBUILD_LANG=${build.lang.id} -DDEMO_BUILD=${build.demo}"/>
     <property name="ld65.flags" value="--dbgfile ${dbg.path}"/>
     <property name="ld65.config" location="${config.dir}/${cpu.type}_${cpu.mapper}.cfg"/>
 

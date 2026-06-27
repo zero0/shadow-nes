@@ -49,7 +49,9 @@ enum
     //GLOBAL_SETTINGS_0__UNDEF = 1 << 4,
     //GLOBAL_SETTINGS_0__UNDEF = 1 << 5,
     //GLOBAL_SETTINGS_0__UNDEF = 1 << 6,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 7,
+#if !DISTRO_BUILD
+    GLOBAL_SETTINGS_0_DEBUG_MODE = 1 << 7,
+#endif
 };
 
 typedef struct {

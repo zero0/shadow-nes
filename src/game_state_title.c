@@ -89,6 +89,9 @@ void __fastcall__ game_state_title_enter(void)
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(13 + (Options * 3)),  PALETTE_BACKGROUND_0, tr_options );
 
         // NOTE: these strings are generated, no way to get length properly, hardcoded for now
+#if DEMO_BUILD
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_demo_width), ALIGN_SCREEN_HEIGHT_BOTTOM(4), PALETTE_BACKGROUND_1, tr_demo );
+#endif // DEMO_BUILD
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 

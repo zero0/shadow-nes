@@ -36,11 +36,11 @@ include_asset .concat("shadow-font.", TEXT_LANGUAGE, ".png.font.s")
 .feature string_escapes
 
 .if .defined(DEBUG_BUILD)
-.define BUILD_TYPE      "d"
+.define BUILD_TYPE      "D"
 .elseif .defined(RELEASE_BUILD)
-.define BUILD_TYPE      "r"
+.define BUILD_TYPE      "R"
 .elseif .defined(DISTRO_BUILD)
-.define BUILD_TYPE      "s"
+.define BUILD_TYPE      ""
 .else
 .define BUILD_TYPE      "?"
 .endif
