@@ -29,7 +29,14 @@ enum MenuState
     Continue,
     Options,
 
-    Count,
+    _Count,
+};
+
+enum
+{
+    Title_X = 10,
+    Title_Y = 13,
+    Title_Y_Spacing = 3,
 };
 
 void __fastcall__ game_state_title_enter(void)
@@ -80,13 +87,13 @@ void __fastcall__ game_state_title_enter(void)
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
         // draw title screen
-        //text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
+        text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
 
         ppu_set_nametable_attr( NAMETABLE_A_ATTR,  0, ALIGN_SCREEN_HEIGHT_TOP(5),  PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_new_game_width), ALIGN_SCREEN_HEIGHT_TOP(13 + (NewGame * 3)),  PALETTE_BACKGROUND_0, tr_new_game );
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(13 + (Continue * 3)), PALETTE_BACKGROUND_0, tr_continue );
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(13 + (Options * 3)),  PALETTE_BACKGROUND_0, tr_options );
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_new_game_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (NewGame * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_new_game );
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Continue * Title_Y_Spacing)), PALETTE_BACKGROUND_0, tr_continue );
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Options * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_options );
 
         // NOTE: these strings are generated, no way to get length properly, hardcoded for now
 #if DEMO_BUILD
@@ -95,7 +102,7 @@ void __fastcall__ game_state_title_enter(void)
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 
-        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
+        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
     }
 
     // turn on ppu
@@ -128,7 +135,7 @@ void __fastcall__ game_state_title_update(void)
         set_timer( anim_text_timer, 15 );
     }
 
-    text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
+    //text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
 
     if( is_timer_done( anim_title_timer ) )
     {
@@ -163,15 +170,21 @@ void __fastcall__ game_state_title_update(void)
         text_delay_display_full();
     }
 
+    if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
+    {
+        if(game_state_internal > 0) --game_state_internal;;
+    }
+
+    if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
+    {
+        if(game_state_internal < _Count) ++game_state_internal;;
+    }
+
     switch( game_state_internal )
     {
         case NewGame:
             ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (NewGame * 3)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
-            {
-                game_state_internal = Continue;
-            }
-            else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
                 game_data_load_for_new_game();
 
@@ -181,15 +194,7 @@ void __fastcall__ game_state_title_update(void)
 
         case Continue:
             ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (Continue * 3)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
-            {
-                game_state_internal = NewGame;
-            }
-            else if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
-            {
-                game_state_internal = Options;
-            }
-            else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
                 set_next_game_state( GAME_STATE_CONTINUE );
             }
@@ -197,11 +202,7 @@ void __fastcall__ game_state_title_update(void)
 
         case Options:
             ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (Options * 3)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_U))
-            {
-                game_state_internal = Continue;
-            }
-            else if( GAMEPAD_PRESSED(0, GAMEPAD_START) )
+            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
                 set_next_game_state( GAME_STATE_OPTIONS );
             }

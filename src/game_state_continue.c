@@ -3,20 +3,52 @@
 #include "globals.h"
 #include "text.h"
 #include "gamepad.h"
+#include "mapper.h"
 #include "ppu.h"
 #include "timer.h"
 #include "game_state.h"
 #include "game_flow.h"
 #include "game_data.h"
+#include "chr_rom.h"
+#include <gametext.h>
 
 static uint8_t arrow_sprite;
 
+enum
+{
+    SaveSlot_Label_X = 5,
+    SaveSlot_Label_Y = 10,
+    SaveSlot_Label_Y_Spacing = 5,
+
+    SaveSlot_Arrow_X = 3,
+    SaveSlot_Arrow_Y = SaveSlot_Label_Y,
+    SaveSlot_Arrow_Y_Spacing = SaveSlot_Label_Y_Spacing,
+};
+
+enum
+{
+    SaveSlot_0,
+    SaveSlot_1,
+    SaveSlot_2,
+
+    SaveSlot_Count,
+};
+
+STATIC_ASSERT(_SAVE_SLOT_COUNT == SaveSlot_Count);
+
 void __fastcall__ game_state_continue_enter(void)
 {
-    arrow_sprite = ppu_request_sprite();
-
     // turn off ppu
     ppu_disable();
+
+    // mapper update
+    mapper_reset();
+    mapper_reset_irq();
+
+    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
+
+    mapper_set_prg_bank(0);
 
     //ppu_disable_scope()
     {
@@ -41,32 +73,29 @@ void __fastcall__ game_state_continue_enter(void)
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
         // draw continue screen
-        //text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_continue );
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_0, tr_continue );
 
         // save slot 0
-        for( j = 0, k = 10; j < _SAVE_SLOT_COUNT; ++j, k += 5 )
-        {
-            game_data_peek_from_save_slot( j );
+        game_data_peek_from_save_slot( SaveSlot_0 );
 
-            if( g_current_game_data.version == 0 )
-            {
-                //text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_unknown );
-            }
-            else
-            {
-                //text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(5), ALIGN_SCREEN_HEIGHT_TOP(k), PALETTE_BACKGROUND_2, tr_char_shadowborn );
-            }
+        if( g_current_game_data.version == 0 )
+        {
+            text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(SaveSlot_Label_X), ALIGN_SCREEN_HEIGHT_TOP(SaveSlot_Label_Y + (SaveSlot_0 * SaveSlot_Label_Y_Spacing)), PALETTE_BACKGROUND_2, tr_char_unknown );
+        }
+        else
+        {
+            text_draw_string( ALIGN_SCREEN_WIDTH_LEFT(SaveSlot_Label_X), ALIGN_SCREEN_HEIGHT_TOP(SaveSlot_Label_Y + (SaveSlot_0 * SaveSlot_Label_Y_Spacing)), PALETTE_BACKGROUND_2, tr_char_shadowborn );
         }
     }
 
     // turn on ppu
     ppu_enable();
 
+
+    arrow_sprite = ppu_request_sprite();
     ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(4), TILE_TO_PIXEL(10), PALETTE_SPRITE_0, 0, 0, 0, 0x33 );
 
-    b = 1;
-    game_state_internal = 0;
-    timer_set( game_state_timer, 10 );
+    game_state_internal = SaveSlot_0;
 }
 
 void __fastcall__ game_state_continue_leave(void)
@@ -77,13 +106,14 @@ void __fastcall__ game_state_continue_leave(void)
 void __fastcall__ game_state_continue_update(void)
 {
     // go back to title screen
-    if( GAMEPAD_PRESSED( GAMEPAD_1, GAMEPAD_B ) )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_B) )
     {
         set_next_game_state_dir( GAME_STATE_TITLE, GAME_STATE_DIRECTION_BACKWARD );
+        return;
     }
 
     // load selected save slot
-    if( GAMEPAD_PRESSED( GAMEPAD_1, GAMEPAD_A ) )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
     {
         game_data_peek_from_save_slot( game_state_internal );
 
@@ -91,46 +121,34 @@ void __fastcall__ game_state_continue_update(void)
         {
             game_data_load_from_save_slot( game_state_internal );
 
-            game_flow_advance();
+            //game_flow_advance();
         }
         return;
     }
 
-    if( GAMEPAD_PRESSED( GAMEPAD_1, GAMEPAD_U ) )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
     {
-        if( game_state_internal > 0 )
-        {
-            --game_state_internal;
-            ++b;
-        }
+        if( game_state_internal > 0 ) --game_state_internal;
     }
 
-    if( GAMEPAD_PRESSED( GAMEPAD_1, GAMEPAD_D ) )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
     {
-        if( game_state_internal < _SAVE_SLOT_COUNT-1 )
-        {
-            ++game_state_internal;
-            ++b;
-        }
+        if( game_state_internal < _SAVE_SLOT_COUNT ) ++game_state_internal;
     }
 
-    if( b != 0 )
+    switch( game_state_internal )
     {
-        b = 0;
-        switch( game_state_internal )
-        {
-            case 0:
-                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(3), TILE_TO_PIXEL(10) );
-                break;
-            case 1:
-                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(3), TILE_TO_PIXEL(15) );
-                break;
-            case 2:
-                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(3), TILE_TO_PIXEL(20) );
-                break;
-            default:
-                INVALID_CODE_PATH;
-                break;
-        }
+        case SaveSlot_0:
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_0 * SaveSlot_Arrow_Y_Spacing)) );
+            break;
+        case SaveSlot_1:
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_1 * SaveSlot_Arrow_Y_Spacing)) );
+            break;
+        case SaveSlot_2:
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_2 * SaveSlot_Arrow_Y_Spacing)) );
+            break;
+        default:
+            INVALID_CODE_PATH;
+            break;
     }
 }

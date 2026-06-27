@@ -36,8 +36,7 @@ typedef struct {
 
     uint8_t currency[_CURRENCY_COUNT];
 
-    uint8_t name_len;
-    uint8_t name[15];
+    char name[16];
 } game_data_t;
 
 enum

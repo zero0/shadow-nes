@@ -96,7 +96,7 @@ void __fastcall__ game_state_options_leave(void)
 void __fastcall__ game_state_options_update(void)
 {
     // go back to title screen
-    if( GAMEPAD_PRESSED( GAMEPAD_1, GAMEPAD_B ) )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_B ) )
     {
         set_next_game_state_dir( GAME_STATE_TITLE, GAME_STATE_DIRECTION_BACKWARD );
         return;
@@ -144,7 +144,7 @@ void __fastcall__ game_state_options_update(void)
 
         case Back:
             ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Options_Cursor_X), TILE_TO_PIXEL(Options_Y + (Back * Options_Spacing)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_START))
+            if( GAMEPAD_PRESSED(0, GAMEPAD_A))
             {
                 set_next_game_state_dir( GAME_STATE_TITLE, GAME_STATE_DIRECTION_BACKWARD );
             }
