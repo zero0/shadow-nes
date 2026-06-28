@@ -41,21 +41,11 @@ do                                  \
     }                               \
 } while( 0 )
 
+//
+//
+//
+
 typedef uint8_t timer_t;
-
-#define timer_reset( t )        timer_set( t, 0 )
-#define timer_set( t, f )       (t) = (f)
-#define timer_tick( t )             \
-do                                  \
-{                                   \
-    if( (t) > 0 ) --(t);  \
-} while( 0 )
-#define timer_tick_unchecked( t )   --(t)
-#define timer_is_done( t )      ( (t) == 0 )
-
-//
-//
-//
 
 extern timer_t g_timers[8];
 #pragma zpsym("g_timers");
@@ -68,10 +58,12 @@ extern void tick_timers(void);
 
 extern timer_handle_t request_timer(uint8_t ticks);
 
-#define is_timer_done(handle)       g_timers[handle] == 0
-
 extern void release_timer(timer_handle_t handle);
 
-#define set_timer(handle, ticks)    g_timers[handle] = ticks
+#define is_timer_done(handle)       (g_timers[handle] == 0)
+
+#define set_timer(handle, ticks) do {   \
+    g_timers[handle] = ticks;           \
+} while( 0 )
 
 #endif // TIMER_H

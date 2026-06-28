@@ -6,7 +6,7 @@
 #define can_perform_dodge()                                                             \
 (                                                                                       \
     player_stamina > 0 &&                                                               \
-    timer_is_done( player_dodge_cooldown_timer ) &&                                     \
+    is_timer_done( player_dodge_cooldown_timer ) &&                                     \
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_DODGE )    \
 )
 
@@ -79,10 +79,10 @@ static void __fastcall__ perform_dodge(uint8_t dir)
 static void __fastcall__ player_state_dodge_enter()
 {
     // TODO: play dodge animation
-    timer_set( player_animation_frame_timer, 50 );
+    set_timer( player_animation_frame_timer, 50 );
 
     // set Iframes timer
-    timer_set( player_inv_frame_timer, PLAYER_DODGE_INV_TIMER );
+    set_timer( player_inv_frame_timer, PLAYER_DODGE_INV_TIMER );
 
     // clear perform flags
     flags_reset( player_can_perform_action_flags );
@@ -90,7 +90,7 @@ static void __fastcall__ player_state_dodge_enter()
 
 static void __fastcall__ player_state_dodge_update()
 {
-    if( timer_is_done( player_animation_frame_timer ) )
+    if( is_timer_done( player_animation_frame_timer ) )
     {
         player_next_state = PLAYER_STATE_IDLE;
     }
@@ -112,5 +112,5 @@ static void __fastcall__ player_state_dodge_update()
 static void __fastcall__ player_state_dodge_leave()
 {
     // reset dodge cooldown on exit, regarless of interupt
-    timer_set( player_dodge_cooldown_timer, PLAYER_DODGE_COOLDOWN_TIME );
+    set_timer( player_dodge_cooldown_timer, PLAYER_DODGE_COOLDOWN_TIME );
 }

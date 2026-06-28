@@ -53,7 +53,12 @@ extern timer_t game_state_timer;
 extern rt_timer_t game_rt_timer;
 #pragma zpsym("game_rt_timer")
 
-#define set_next_game_state_arg_dir(x,a,d)  do { next_game_state = (x); next_game_state_arg = (a); next_game_state_direction = (d); } while( 0 )
+#define set_next_game_state_arg_dir(x,a,d) do { \
+    next_game_state = (x);                      \
+    next_game_state_arg = (a);                  \
+    next_game_state_direction = (d);            \
+} while( 0 )
+
 #define set_next_game_state_dir(x,d)        set_next_game_state_arg_dir(x, 0, d)
 #define set_next_game_state_arg(x,a)        set_next_game_state_arg_dir(x, a, GAME_STATE_DIRECTION_FORWARD)
 #define set_next_game_state(x)              set_next_game_state_arg_dir(x, 0, GAME_STATE_DIRECTION_FORWARD)

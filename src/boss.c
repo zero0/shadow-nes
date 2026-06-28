@@ -269,7 +269,7 @@ static void __fastcall__ boss_heal(void)
 static void __fastcall__ boss_take_damage(void)
 {
     // if boss is in I frames, return
-    if( !timer_is_done( boss_inv_frame_timer ) )
+    if( !is_timer_done( boss_inv_frame_timer ) )
     {
         return;
     }
@@ -322,7 +322,7 @@ static void __fastcall__ boss_take_damage(void)
     }
 
     // set Iframes
-    timer_set( boss_inv_frame_timer, all_boss_cooldown_timers[boss_index][BOSS_COOLDOWN_TIMER_INV_FRAMES] );
+    set_timer( boss_inv_frame_timer, all_boss_cooldown_timers[boss_index][BOSS_COOLDOWN_TIMER_INV_FRAMES] );
 
     // enter phase 2
     if( flags_is_not_set( boss_flags, BOSS_FLAG_PHASE_TWO ) && ( boss_health < (all_boss_max_healths[boss_index] >> 1) ) )
@@ -380,8 +380,7 @@ static void __fastcall__ boss_update_stamina(void)
 {
     if( boss_stamina < all_boss_staminas[boss_index][BOSS_STAMINA_MAX] )
     {
-        timer_tick( boss_stamina_regen_timer );
-        if( timer_is_done( boss_stamina_regen_timer ) )
+        if( is_timer_done( boss_stamina_regen_timer ) )
         {
             boss_stamina += all_boss_staminas[boss_index][BOSS_STAMINA_REGEN];
 
@@ -392,7 +391,7 @@ static void __fastcall__ boss_update_stamina(void)
             }
 
             // reset regen timer
-            timer_set( boss_stamina_regen_timer, all_boss_staminas[boss_index][BOSS_STAMINA_REGEN_TIMER] );
+            set_timer( boss_stamina_regen_timer, all_boss_staminas[boss_index][BOSS_STAMINA_REGEN_TIMER] );
 
             // modify regent timer based on status
             MOD_STAMINA_REGEN_TIME(boss_stamina_regen_timer, boss_damage_status);
@@ -468,9 +467,9 @@ void __fastcall__ boss_init(uint8_t bossIndex)
     boss_state = BOSS_STATE_IDLE;
     boss_next_state = BOSS_STATE_INTRO;
 
-    timer_reset( boss_inv_frame_timer );
-    timer_reset( boss_stamina_regen_timer );
-    timer_reset( boss_state_timer );
+    set_timer( boss_inv_frame_timer, 0 );
+    set_timer( boss_stamina_regen_timer, 0 );
+    set_timer( boss_state_timer, 0 );
 
     flags_mark( boss_changed_flags, BOSS_CHANGED_ALL );
     boss_damage_queue_length = 0;
@@ -507,11 +506,6 @@ void __fastcall__ boss_update(void)
     // regen stamina
     boss_update_stamina();
 
-    // tick timers
-    timer_tick( boss_inv_frame_timer );
-    timer_tick( boss_stamina_regen_timer );
-    timer_tick( boss_state_timer );
-
     // call boss specific update
     CALL_BOSS_FUNC( boss_index, update );
 
@@ -531,7 +525,7 @@ void __fastcall__ boss_update(void)
         switch( boss_state )
         {
             case BOSS_STATE_INTRO:
-                timer_set( boss_state_timer, 30 );
+                set_timer( boss_state_timer, 30 );
                 break;
 
             default:
@@ -544,7 +538,7 @@ void __fastcall__ boss_update(void)
     {
         case BOSS_STATE_INTRO:
         {
-            if( timer_is_done( boss_state_timer ) )
+            if( is_timer_done( boss_state_timer ) )
             {
                 boss_next_state = BOSS_STATE_IDLE;
             }

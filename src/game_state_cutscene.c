@@ -147,7 +147,7 @@ void __fastcall__ game_state_cutscene_enter(void)
 
     r = HOLD_TO_SKIP_ENTIRE_CUTSCENE_TIME_FRAMES;
     game_state_internal = 0;
-    timer_set( game_state_timer, 10 );
+    set_timer( game_state_timer, 10 );
 
     // draw the first cutscene
     draw_cutscene_part();

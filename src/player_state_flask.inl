@@ -15,7 +15,7 @@ static timer_t player_flask_cooldown_timer;
 #define can_perform_flask()                                                             \
 (                                                                                       \
     player_flasks > 0 &&                                                                \
-    timer_is_done( player_flask_cooldown_timer ) &&                                     \
+    is_timer_done( player_flask_cooldown_timer ) &&                                     \
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_FLASK ) && \
     1   \
 )
@@ -32,7 +32,7 @@ static void __fastcall__ player_state_flask_enter(void)
 {
     // TODO: implement actual animation
     // play flask animation
-    timer_set( player_flask_cooldown_timer, PLAYER_FLASK_ANIMATION_TIME );
+    set_timer( player_flask_cooldown_timer, PLAYER_FLASK_ANIMATION_TIME );
 
     // reset action flags (cannot interupt)
     flags_reset( player_can_perform_action_flags );
@@ -41,7 +41,7 @@ static void __fastcall__ player_state_flask_enter(void)
 static void __fastcall__ player_state_flask_update(void)
 {
     // leave state and heal when animation is done so if interuptted, heal does not work
-    if( timer_is_done( player_flask_cooldown_timer ) )
+    if( is_timer_done( player_flask_cooldown_timer ) )
     {
         // leave state when animation is done
         player_next_state = PLAYER_STATE_IDLE;
@@ -80,15 +80,14 @@ static void __fastcall__ player_state_flask_leave(void)
     // TODO: cancel animation
 
     // reset timer regarless of interupt
-    timer_set( player_flask_cooldown_timer, PLAYER_FLASK_COOLDOWN_TIME );
+    set_timer( player_flask_cooldown_timer, PLAYER_FLASK_COOLDOWN_TIME );
 
     // probably don't have to since entering a new state will play most likely play an animtaion
-    timer_set( player_flask_cooldown_timer, 0 );
+    set_timer( player_flask_cooldown_timer, 0 );
 }
 
 #define tick_flask_timers()             \
 do                                      \
 {                                       \
-    timer_tick( player_flask_cooldown_timer );   \
 }                                       \
 while( 0 )

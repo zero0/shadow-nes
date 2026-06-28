@@ -1,28 +1,26 @@
 #include "ppu.h"
 #include "timer.h"
 
+static timer_handle_t ppu_fade_timer;
 static uint8_t ppu_fade_timer_max;
-static timer_t ppu_fade_timer;
 static uint8_t ppu_fade_dest;
 
 void __fastcall__ ppu_fade_to_internal(void)
 {
     ppu_fade_dest = PPU_ARGS[0];
     ppu_fade_timer_max = PPU_ARGS[1];
-    timer_set( ppu_fade_timer, 1 );
+    ppu_fade_timer = request_timer( 1 );
 
     ppu_update();
 
     while( !( ppu_fade_dest == PALETTE_TINT_OAM_INDEX && ppu_fade_dest == PALETTE_TINT_BACKGROUND_INDEX ) )
     {
-        timer_tick( ppu_fade_timer );
-
         // skip frame
         ppu_update();
 
-        if( timer_is_done( ppu_fade_timer ) )
+        if( is_timer_done( ppu_fade_timer ) )
         {
-            timer_set( ppu_fade_timer, ppu_fade_timer_max );
+            set_timer( ppu_fade_timer, ppu_fade_timer_max );
 
             // tint oam
             if( ppu_fade_dest < PALETTE_TINT_OAM_INDEX )
@@ -45,4 +43,6 @@ void __fastcall__ ppu_fade_to_internal(void)
             }
         }
     }
+
+    release_timer( ppu_fade_timer );
 }

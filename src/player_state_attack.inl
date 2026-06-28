@@ -47,7 +47,7 @@ static const uint8_t player_attack_1_combo_base_damage[] =
 #define can_perform_attack0()                                                           \
 (                                                                                       \
     player_stamina > 0 &&                                                               \
-    timer_is_done( player_attack_cooldown_timer ) &&                                    \
+    is_timer_done( player_attack_cooldown_timer ) &&                                    \
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_ATTACK0 )  \
 )
 
@@ -63,7 +63,7 @@ static void __fastcall__ perform_attack0(void)
     }
     else
     {
-        if( timer_is_done( player_attack_combo_timer ) )
+        if( is_timer_done( player_attack_combo_timer ) )
         {
             player_current_attack_combo = 0;
         }
@@ -100,7 +100,7 @@ static void __fastcall__ perform_attack0(void)
 #define can_perform_attack1()                                                           \
 (                                                                                       \
     player_stamina > 0 &&                                                               \
-    timer_is_done( player_attack_cooldown_timer ) &&                                    \
+    is_timer_done( player_attack_cooldown_timer ) &&                                    \
     flags_is_set( player_can_perform_action_flags, PLAYER_CAN_PERFORM_ACTION_ATTACK1 )  \
 )
 
@@ -135,10 +135,7 @@ static void __fastcall__ player_state_attack_update(void)
 #define tick_attack_timers()                            \
 do                                                      \
 {                                                       \
-    timer_tick( player_attack_cooldown_timer );         \
-    timer_tick( player_attack_combo_timer );            \
-                                                        \
-    if( timer_is_done( player_attack_combo_timer ) )    \
+    if( is_timer_done( player_attack_combo_timer ) )    \
     {                                                   \
         player_current_attack_combo = 0xFF;             \
     }                                                   \

@@ -51,10 +51,9 @@ g_timer_free_list:      .res 8;
 .proc tick_timers
 
 .repeat 8, I
-    ldx g_timers+I
+    lda g_timers+I
     beq :+
-        dex
-        stx g_timers+I
+        dec g_timers+I
         :
 .endrepeat
 
@@ -65,9 +64,6 @@ g_timer_free_list:      .res 8;
 ; request a new timer with initial ticks A
 .proc request_timer
 
-    ; push A
-    pha
-
     ; load free count
     ldx g_timer_free_count
     beq @no_free
@@ -75,29 +71,27 @@ g_timer_free_list:      .res 8;
     ; dec
     dex
 
+    stx g_timer_free_count
+
     ; load timer handle
-    lda g_timer_free_list, x
+    ldy g_timer_free_list, x
 
     ; transfer A -> X
-    tax
     jmp @store_ticks
 
 @no_free:
     ; load timer count -> X
-    ldx g_timer_count
+    ldy g_timer_count
 
 @store_ticks:
     ; increment timer
     inc g_timer_count
 
-    ; reload "ticks"
-    pla
+    ; store init ticks A
+    sta g_timers, y
 
-    ; store ticks
-    sta g_timers, x
-
-    ; transfer X (handle) -> A
-    txa
+    ; transfer Y (handle) -> A
+    tya
 
     ; return
     rts

@@ -87,7 +87,7 @@ void __fastcall__ game_state_title_enter(void)
         ppu_set_palette( PALETTE_SPRITE_2, 0x00, 0x10, 0x20 );
 
         // draw title screen
-        text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
+        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
 
         ppu_set_nametable_attr( NAMETABLE_A_ATTR,  0, ALIGN_SCREEN_HEIGHT_TOP(5),  PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
@@ -95,10 +95,11 @@ void __fastcall__ game_state_title_enter(void)
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Continue * Title_Y_Spacing)), PALETTE_BACKGROUND_0, tr_continue );
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Options * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_options );
 
-        // NOTE: these strings are generated, no way to get length properly, hardcoded for now
 #if DEMO_BUILD
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_demo_width), ALIGN_SCREEN_HEIGHT_BOTTOM(4), PALETTE_BACKGROUND_1, tr_demo );
 #endif // DEMO_BUILD
+
+        // NOTE: these strings are generated, no way to get length properly, hardcoded for now
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 

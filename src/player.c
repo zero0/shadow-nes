@@ -214,10 +214,10 @@ void __fastcall__ player_init(void)
     player_state = PLAYER_STATE_IDLE;
     player_next_state = PLAYER_STATE_IDLE;
 
-    timer_set( player_inv_frame_timer, 0 );
-    timer_set( player_dodge_cooldown_timer, 0 );
-    timer_set( player_stamina_delay_timer, 1 );
-    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
+    set_timer( player_inv_frame_timer, 0 );
+    set_timer( player_dodge_cooldown_timer, 0 );
+    set_timer( player_stamina_delay_timer, 1 );
+    set_timer( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
     flags_mark( player_changed_flags, PLAYER_CHANGED_ALL );
 
@@ -336,14 +336,9 @@ static void __fastcall__ player_render_debug(void)
 
 static void __fastcall__ player_update_stamina(void)
 {
-    if( player_stamina_delay_timer > 0 )
+    if( player_stamina < player_max_stamina_per_level[g_current_game_data.player_level] )
     {
-        timer_tick_unchecked( player_stamina_delay_timer );
-    }
-    else if( player_stamina < player_max_stamina_per_level[g_current_game_data.player_level] )
-    {
-        timer_tick( player_stamina_regen_timer );
-        if( timer_is_done( player_stamina_regen_timer ) )
+        if( is_timer_done( player_stamina_regen_timer ) )
         {
             player_stamina += player_stamina_regen_amount_per_level[g_current_game_data.player_level];
 
@@ -354,7 +349,7 @@ static void __fastcall__ player_update_stamina(void)
             }
 
             // reset regen timer
-            timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
+            set_timer( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
             // modify regent timer based on status
             MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
@@ -420,7 +415,7 @@ static void __fastcall__ player_death(void)
 static void __fastcall__ player_take_damage(void)
 {
     // if player is in I frames, return
-    if( !timer_is_done( player_inv_frame_timer ) )
+    if( !is_timer_done( player_inv_frame_timer ) )
     {
         return;
     }
@@ -477,7 +472,7 @@ static void __fastcall__ player_take_damage(void)
     }
 
     // set Iframes
-    timer_set( player_inv_frame_timer, PLAYER_INV_COOLDOWN_TIME );
+    set_timer( player_inv_frame_timer, PLAYER_INV_COOLDOWN_TIME );
 }
 
 static void __fastcall__ player_process_damage_queue(void)
@@ -504,15 +499,15 @@ static void __fastcall__ player_use_stamina(uint8_t stamina)
     if( player_stamina < stamina )
     {
         player_stamina = 0;
-        timer_set( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_OVERDRAW );
+        set_timer( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_OVERDRAW );
     }
     else
     {
         player_stamina -= stamina;
-        timer_set( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_NORMAL );
+        set_timer( player_stamina_delay_timer, PLAYER_STAMINA_DELAY_TIMER_NORMAL );
     }
 
-    timer_set( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
+    set_timer( player_stamina_regen_timer, player_stamina_regen_time_per_level[g_current_game_data.player_level] );
 
     //MOD_STAMINA_REGEN_TIME(player_stamina_regen_timer, player_damage_status);
 
@@ -751,11 +746,6 @@ void __fastcall__ player_update(void)
 
     // regen stamina
     player_update_stamina();
-
-    // tick timers
-    timer_tick( player_dodge_cooldown_timer );
-    timer_tick( player_inv_frame_timer );
-    timer_tick( player_animation_frame_timer );
 
     tick_flask_timers();
 
