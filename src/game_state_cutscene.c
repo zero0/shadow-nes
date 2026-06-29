@@ -55,7 +55,7 @@ typedef struct
 
 typedef struct
 {
-    const void* t[MAX_CUTSCENE_TEXTS];
+    const ptr_t t[MAX_CUTSCENE_TEXTS];
 } cutscene_text_t;
 
 static uint8_t all_cutscenes_attr[] = {
@@ -64,61 +64,20 @@ static uint8_t all_cutscenes_attr[] = {
 static uint8_t all_cutscenes_palettes[] = {
     MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 )
 };
-static uint8_t all_cutscenes_text[] = {
-    0,
-};
-
-static ptr_t all_text[] = {
-    (ptr_t)&tr_cutscene_intro_0,
-    (ptr_t)&tr_cutscene_intro_1,
+static const cutscene_text_t all_cutscenes_text[] = {
+    {
+        {
+            (ptr_t)&tr_cutscene_intro_0,
+            (ptr_t)&tr_cutscene_intro_1,
+            (ptr_t)&tr_cutscene_intro_2,
+            (ptr_t)&tr_cutscene_intro_3,
+        }
+    }
 };
 
 #define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
+
 #if 0
-static const cutscene_desc_t all_cutscenes[] = {
-    {
-        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
-        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
-        {
-            &tr_cutscene_intro_0,
-            &tr_cutscene_intro_1,
-            0, //tr_cutscene_intro_2,
-            0, //tr_cutscene_intro_3
-        }
-    },
-
-    {
-        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
-        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
-        {
-            0, //tr_cutscene_intro_0,
-            0, //tr_cutscene_intro_1,
-            0, //tr_cutscene_intro_2,
-            0, //tr_cutscene_intro_3
-        }
-    },
-    {
-        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
-        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
-        {
-            0, //tr_cutscene_intro_0,
-            0, //tr_cutscene_intro_1,
-            0, //tr_cutscene_intro_2,
-            0, //tr_cutscene_intro_3
-        },
-    },
-
-    {
-        MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 3 ),
-        MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 ),
-        {
-            0, //tr_cutscene_intro_0,
-            0, //tr_cutscene_intro_1,
-            0, //tr_cutscene_intro_2,
-            0, //tr_cutscene_intro_3
-         },
-    }
-};
 STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
 #endif
 
@@ -163,7 +122,7 @@ static void __fastcall__ draw_cutscene_part(void)
         {
             case CUTSCENE_TYPE_TEXT:
                 //text_draw_string_v( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes_palettes[ current_cutscene_index ], game_state_internal ), all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal ] );
-                text_draw_string( 0, ALIGN_SCREEN_HEIGHT_CENTER(4), 0, tr_cutscene_intro_0 ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
+                text_draw_string_v( 0, ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
                 break;
 
             case CUTSCENE_TYPE_DIALOG:
@@ -235,19 +194,19 @@ static void __fastcall__ advance_cutscene(void)
     }
 
     // if it's the last step, end the cutscene
-    if( game_state_internal >= GET_CUTSCENE_ATTR_COUNT( all_cutscenes_attr[ current_cutscene_index ] ) )
+    if( game_state_internal >= MAX_CUTSCENE_TEXTS )
     {
         end_cutscene();
     }
     // if there's no more text, end the cutscene
-    //else if( all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal ] == 0 )
+    else if( all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal ] == 0 )
     {
-    //    end_cutscene();
+        end_cutscene();
     }
     // otherwise, draw the new cutscene
-    //else
+    else
     {
-    //    draw_cutscene_part();
+        draw_cutscene_part();
     }
 }
 
