@@ -4,22 +4,7 @@
 #include "boss.h"
 #include "types.h"
 #include "game_data.h"
-
-#define GAME_DIFFICULTY_MOD_STORY       (uint8_t)6
-#define GAME_DIFFICULTY_MOD_EASY        (uint8_t)5
-#define GAME_DIFFICULTY_MOD_NORMAL      (uint8_t)4
-#define GAME_DIFFICULTY_MOD_HARD        (uint8_t)3
-#define GAME_DIFFICULTY_MOD_EXTREME     (uint8_t)2
-#define GAME_DIFFICULTY_MOD_BRUTAL      (uint8_t)1
-#define GAME_DIFFICULTY_MOD_BOSS_ONLY   (uint8_t)0
-
-#define GAME_FLOW_DIFFICULTY_MOD(x,d)   ( ( 0x03 & (x) ) | ( (d) << 2 ) )
-
-#define GAME_FLOW_DIFFICULTY_STORY(x)   GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_STORY)
-#define GAME_FLOW_DIFFICULTY_EASY(x)    GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_EASY)
-#define GAME_FLOW_DIFFICULTY_NORMAL(x)  GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_NORMAL)
-#define GAME_FLOW_DIFFICULTY_HARD(x)    GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_HARD)
-#define GAME_FLOW_DIFFICULTY_BRUTAL(x)  GAME_FLOW_DIFFICULTY_MOD(x, GAME_DIFFICULTY_MOD_BURTAL)
+#include "flags.h"
 
 enum
 {
@@ -30,9 +15,6 @@ enum
     GAME_FLOW_TYPE_MAIN_MENU,
     _GAME_FLOW_TYPE_COUNT,
 };
-
-#define GAME_FLOW_GET_TYPE(x)           ( 0x03 & (x) )
-#define GAME_FLOW_IS_DIFFICULTY(x,d)    ( ( 0x07 & ( (x) >> 2 ) ) <= (d) )
 
 //
 // Default Game Flow
@@ -134,14 +116,18 @@ void __fastcall__ game_flow_advance(void)
         return;
     }
 
-    switch( GAME_FLOW_GET_TYPE( game_flow_steps[ g_current_game_data.current_game_flow ] ) )
+    switch( game_flow_steps[ g_current_game_data.current_game_flow ] )
     {
         case GAME_FLOW_TYPE_CUTSCENE:
         {
             g_current_game_data.current_game_flow++;
 
-            // set the next game state with the cutscene id
-            set_next_game_state_arg( GAME_STATE_CUTSCENE, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            // skip cutscene if needed
+            if( !flags_is_set( g_global_settings_data.flags1, GLOBAL_SETTINGS_1_SKIP_CUTSCENES ) )
+            {
+                // set the next game state with the cutscene id
+                set_next_game_state_arg( GAME_STATE_CUTSCENE, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            }
 
             g_current_game_data.current_game_flow++;
         }
@@ -151,8 +137,12 @@ void __fastcall__ game_flow_advance(void)
         {
             g_current_game_data.current_game_flow++;
 
-            // set the next game state with the store level
-            set_next_game_state_arg( GAME_STATE_STORE, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            // skip shop if needed
+            if( !flags_is_set( g_global_settings_data.flags1, GLOBAL_SETTINGS_1_SKIP_SHOPS ) )
+            {
+                // set the next game state with the store level
+                set_next_game_state_arg( GAME_STATE_STORE, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            }
 
             g_current_game_data.current_game_flow++;
         }
@@ -162,8 +152,16 @@ void __fastcall__ game_flow_advance(void)
         {
             g_current_game_data.current_game_flow++;
 
-            // set the next game state to checkpoint (which saves and then advances)
-            set_next_game_state_arg( GAME_STATE_CHECKPOINT, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            // skip checkpoints if needed
+            if( !flags_is_set( g_global_settings_data.flags1, GLOBAL_SETTINGS_1_SKIP_SHOPS ) )
+            {
+                // set the next game state to checkpoint (which saves and then advances)
+                set_next_game_state_arg( GAME_STATE_CHECKPOINT, game_flow_steps[ g_current_game_data.current_game_flow ] );
+            }
+            else
+            {
+                g_current_game_data.current_game_flow++;
+            }
         }
             break;
 

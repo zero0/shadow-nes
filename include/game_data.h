@@ -41,20 +41,29 @@ typedef struct {
 
 enum
 {
-    GLOBAL_SETTINGS_0_MUSIC = 1 << 0,
-    GLOBAL_SETTINGS_0_SFX   = 1 << 1,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 2,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 3,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 4,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 5,
-    //GLOBAL_SETTINGS_0__UNDEF = 1 << 6,
+    GLOBAL_SETTINGS_0_MUSIC         = 1 << 0,
+    GLOBAL_SETTINGS_0_SFX           = 1 << 1,
+    //GLOBAL_SETTINGS_0__UNDEF      = 1 << 2,
+    //GLOBAL_SETTINGS_0__UNDEF      = 1 << 3,
+    //GLOBAL_SETTINGS_0__UNDEF      = 1 << 4,
+    //GLOBAL_SETTINGS_0__UNDEF      = 1 << 5,
+    //GLOBAL_SETTINGS_0__UNDEF      = 1 << 6,
 #if !DISTRO_BUILD
-    GLOBAL_SETTINGS_0_DEBUG_MODE = 1 << 7,
+    GLOBAL_SETTINGS_0_DEBUG_MODE    = 1 << 7,
 #endif
+};
+
+enum
+{
+    GLOBAL_SETTINGS_1_SKIP_CUTSCENES        = 1 << 0,
+    GLOBAL_SETTINGS_1_SKIP_BOSS_INTRO_OUTRO = 1 << 1,
+    GLOBAL_SETTINGS_1_SKIP_CHECKPOINTS      = 1 << 2,
+    GLOBAL_SETTINGS_1_SKIP_SHOPS            = 1 << 3,
 };
 
 typedef struct {
     flags8_t flags0;
+    flags8_t flags1;
 } global_settings_data_t;
 
 extern game_data_t g_current_game_data;

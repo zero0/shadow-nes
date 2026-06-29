@@ -6,6 +6,7 @@
 
 #define text_clear( x, y, c )               args_call_3( text_clear_impl, x, y, c )
 #define text_draw_string( x, y, p, t )      args_call_4_3a_1p( text_draw_string_impl, x, y, p, t )
+#define text_draw_string_v( x, y, p, t )    args_call_4_3a_1s( text_draw_string_impl, x, y, p, t )
 
 #define text_draw_uint8( x, y, p, n )       args_call_4( text_draw_uint8_impl, x, y, p, n )
 #define text_draw_uint8_x2( x, y, p, n )    args_call_4( text_draw_uint8_x2_impl, x, y, p, n )

@@ -232,28 +232,31 @@ uint8_t __fastcall__ ppu_request_sprite();
 
 void __fastcall__ ppu_release_sprite( uint8_t sprite );
 
-#define ppu_update_sprite_full( idx, px, py, pal, bg, fh, fv, spr )                 \
+#define ppu_update_sprite_full( idx, px, py, pal, bg, fh, fv, spr ) do {            \
     PPU_ARGS[0] = (idx);                                                            \
     PPU_ARGS[1] = (py) - 1;                                                         \
     PPU_ARGS[2] = (spr);                                                            \
-    PPU_ARGS[3] = ( (fv) << 7 ) | ( (fh) << 6 ) | ( (bg) << 5 ) | ( 0x03 & (pal) ); \
+    PPU_ARGS[3] = ( ((fv) & 0x01) << 7 ) | ( ((fh) & 0x01) << 6 ) | ( ((bg) & 0x01) << 5 ) | ((pal) & 0x03); \
     PPU_ARGS[4] = (px);                                                             \
-    ppu_update_sprite()
+    ppu_update_sprite();                                                            \
+} while( 0 )
 
 void __fastcall__ ppu_update_sprite();
 
-#define ppu_update_sprite_pos( idx, px, py )    \
-    PPU_ARGS[0] = (idx);                        \
-    PPU_ARGS[1] = (py) - 1;                     \
-    PPU_ARGS[2] = (px);                         \
-    ppu_update_sprite_pos_impl()
+#define ppu_update_sprite_pos( idx, px, py ) do {   \
+    PPU_ARGS[0] = (idx);                            \
+    PPU_ARGS[1] = (py) - 1;                         \
+    PPU_ARGS[2] = (px);                             \
+    ppu_update_sprite_pos_impl();                   \
+} while( 0 )
 
 void __fastcall__ ppu_update_sprite_pos_impl();
 
-#define ppu_update_sprite_sprite( idx, spr )    \
-    PPU_ARGS[0] = (idx);                        \
-    PPU_ARGS[1] = (spr);                        \
-    ppu_update_sprite_sprite_impl()
+#define ppu_update_sprite_sprite( idx, spr ) do {   \
+    PPU_ARGS[0] = (idx);                            \
+    PPU_ARGS[1] = (spr);                            \
+    ppu_update_sprite_sprite_impl();                \
+} while( 0 )
 
 void __fastcall__ ppu_update_sprite_sprite_impl();
 
@@ -358,17 +361,20 @@ void __fastcall__ ppu_tint_palellete_background_internal(void);
 void __fastcall__ ppu_tint_palelletes_internal(void);
 void __fastcall__ ppu_tint_reset_internal(void);
 
-#define ppu_tint_palellete_oam(t)          \
-    PPU_ARGS[0] = (t);                     \
-    ppu_tint_palellete_oam_internal()
+#define ppu_tint_palellete_oam(t) do {      \
+    PPU_ARGS[0] = (t);                      \
+    ppu_tint_palellete_oam_internal();      \
+} while( 0 )
 
-#define ppu_tint_palellete_background(t)        \
+#define ppu_tint_palellete_background(t) do {   \
     PPU_ARGS[0] = (t);                          \
-    ppu_tint_palellete_background_internal()
+    ppu_tint_palellete_background_internal();   \
+} while( 0 )
 
-#define ppu_tint_palelletes(t)      \
+#define ppu_tint_palelletes(t) do { \
     PPU_ARGS[0] = (t);              \
-    ppu_tint_palelletes_internal()
+    ppu_tint_palelletes_internal(); \
+} while( 0 )
 
 #define ppu_tint_reset()        \
     ppu_tint_reset_internal()

@@ -136,8 +136,6 @@ void __fastcall__ game_state_title_update(void)
         set_timer( anim_text_timer, 15 );
     }
 
-    //text_draw_string_delay( ALIGN_SCREEN_WIDTH_CENTER(tr_game_title_width), ALIGN_SCREEN_HEIGHT_TOP(5), PALETTE_BACKGROUND_2, tr_game_title );
-
     if( is_timer_done( anim_title_timer ) )
     {
         set_timer( anim_title_timer, 10 );
@@ -166,11 +164,6 @@ void __fastcall__ game_state_title_update(void)
         apu_play_sfx(0);
     }
 
-    if(GAMEPAD_PRESSED(0, GAMEPAD_R))
-    {
-        text_delay_display_full();
-    }
-
     if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
     {
         if(game_state_internal > 0) --game_state_internal;;
@@ -184,17 +177,19 @@ void __fastcall__ game_state_title_update(void)
     switch( game_state_internal )
     {
         case NewGame:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (NewGame * 3)) );
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (NewGame * Title_Y_Spacing)) );
             if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
+                // load a new game
                 game_data_load_for_new_game();
 
+                // advance game flow
                 game_flow_advance();
             }
             break;
 
         case Continue:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (Continue * 3)) );
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Continue * Title_Y_Spacing)) );
             if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
                 set_next_game_state( GAME_STATE_CONTINUE );
@@ -202,7 +197,7 @@ void __fastcall__ game_state_title_update(void)
             break;
 
         case Options:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(10), TILE_TO_PIXEL(13 + (Options * 3)) );
+            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Options * Title_Y_Spacing)) );
             if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
             {
                 set_next_game_state( GAME_STATE_OPTIONS );
