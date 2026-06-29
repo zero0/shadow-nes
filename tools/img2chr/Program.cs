@@ -2103,8 +2103,8 @@ namespace img2chr
         private static void GenerateBackgroundHeaderString(StringBuilder sb, string exportName, int nametable, int offsetX, int offsetY, int width, int height, bool compressed, int paletteOffset, int paletteCount)
         {
             sb.AppendLine($"; Background {exportName}");
-            sb.AppendLine($".export {exportName}_bg = _{exportName}_bg");
-            sb.AppendLine($"_{exportName}_bg:");
+            //sb.AppendLine($".export {exportName}_bg = _{exportName}_bg");
+            //sb.AppendLine($"_{exportName}_bg:");
             sb.AppendLine($".byte #${nametable:X2} ; {nameof(nametable)}");
             sb.AppendLine($".byte #${PixelsToTiles(offsetX):X2} ; {nameof(offsetX)} in tiles");
             sb.AppendLine($".byte #${PixelsToTiles(offsetY):X2} ; {nameof(offsetY)} in tiles");
@@ -2151,10 +2151,10 @@ namespace img2chr
             {
                 int rleBytes = 0;
 
-                auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
-                auto.sb.AppendLine($"_{exportName}_tiles:");
+                //auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
+                //auto.sb.AppendLine($"_{exportName}_tiles:");
 
-                auto.sb.AppendLine("; tile index");
+                auto.sb.AppendLine($"; {exportName} tile index");
 
                 foreach (int idx in bytes)
                 {
@@ -2235,10 +2235,10 @@ namespace img2chr
             {
                 int rleBytes = 0;
 
-                auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
-                auto.sb.AppendLine($"_{exportName}_tiles:");
+                //auto.sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
+                //auto.sb.AppendLine($"_{exportName}_tiles:");
 
-                auto.sb.AppendLine("; tile count, tile index");
+                auto.sb.AppendLine($"; {exportName} tile count, tile index");
 
                 foreach ((int count, int idx) in compressedBytes)
                 {
@@ -2281,8 +2281,9 @@ namespace img2chr
 
         private static void GenerateTileCHRString(StringBuilder sb, string exportName, IEnumerable<TileEntry> tileEntries)
         {
-            sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
-            sb.AppendLine($"_{exportName}_tiles:");
+            //sb.AppendLine($".export {exportName}_tiles = _{exportName}_tiles");
+            //sb.AppendLine($"_{exportName}_tiles:");
+            sb.AppendLine($"; {exportName}");
             sb.AppendLine();
 
             StringBuilder byte0 = RequestStringBuilder();
@@ -2311,8 +2312,8 @@ namespace img2chr
 
                 string tileEntryName = string.IsNullOrEmpty(tileEntry.tileName) ? $"{exportName}_tile_{tileEntry.x}x{tileEntry.y}" : tileEntry.tileName;
                 sb.AppendLine($"; Tile {idx} {tileEntry.x}x{tileEntry.y} ({tileEntry.tileName ?? string.Empty})");
-                sb.AppendLine($".export {tileEntryName} = _{tileEntryName}");
-                sb.AppendLine($"_{tileEntryName}:");
+                //sb.AppendLine($".export {tileEntryName} = _{tileEntryName}");
+                //sb.AppendLine($"_{tileEntryName}:");
                 sb.AppendLine(byte0.ToString());
                 sb.AppendLine(byte1.ToString());
 
@@ -3096,8 +3097,8 @@ namespace img2chr
             sb.AppendLine();
 
             string exportName = filename.Replace(' ', '_').Replace('-', '_');
-            sb.AppendLine($".export _{exportName}");
-            sb.AppendLine($"_{exportName}:");
+            //sb.AppendLine($".export _{exportName}");
+            //sb.AppendLine($"_{exportName}:");
             sb.AppendLine();
 
             // convert tiles to bytes
@@ -3180,9 +3181,9 @@ namespace img2chr
                             minTileIndex = minTileIndex < uniqueTileEntry.index ? minTileIndex : uniqueTileEntry.index;
                         }
 
-                        sb.AppendLine($"; Meta-Sprite Tile Count: {metaSprite.tileCount}   Meta-Sprite Min Tile Index: {minTileIndex}");
-                        sb.AppendLine($"_{exportName}_sprite_{i}:");
-                        sb.AppendLine($".export _{exportName}_sprite_{i}");
+                        sb.AppendLine($"; Meta-Sprite {exportName} Tile Count: {metaSprite.tileCount}   Meta-Sprite Min Tile Index: {minTileIndex}");
+                        //sb.AppendLine($"_{exportName}_sprite_{i}:");
+                        //sb.AppendLine($".export _{exportName}_sprite_{i}");
 
                         TileEntry minTile = allTiles[minTileIndex];
                         sb.AppendLine($".addr {exportName}_{minTile.x}x{minTile.y}");
@@ -5172,8 +5173,8 @@ namespace img2chr
                 sb.AppendLine();
                 foreach (var chrRom in chrRomLayouts)
                 {
-                    string key = $"{chrRom.chrRomKey.ToUpperInvariant()} =";
-                    string keyChr = $"{chrRom.chrRomKey.ToUpperInvariant()}_CHR_ROM =";
+                    string key = $"{chrSegRom}_{chrRom.chrRomKey.ToUpperInvariant()} =";
+                    string keyChr = $"{chrSegRom}_{chrRom.chrRomKey.ToUpperInvariant()}_CHR_ROM =";
                     Indent(sb).AppendLine($"{key,-64} 0x{chrRom.offset:X2},");
                     Indent(sb).AppendLine($"{keyChr,-64} {chrSegRom},");
                 }

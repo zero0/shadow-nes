@@ -50,8 +50,8 @@ void __fastcall__ game_state_options_enter(void)
     mapper_reset();
     mapper_reset_irq();
 
-    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
-    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
+    mapper_set_chr_bank_0(CHR_ROM_00_SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(CHR_ROM_02_HUD_PNG_SPRITE_CHR_ROM);
 
     mapper_set_prg_bank(0);
 
@@ -83,7 +83,7 @@ void __fastcall__ game_state_options_enter(void)
 
     arrow_sprite = ppu_request_sprite();
 
-    ppu_update_sprite_full( arrow_sprite, 0, 0, PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
+    ppu_update_sprite_full( arrow_sprite, 0, 0, PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_0) );
 
     game_state_internal = Option_Music;
 }

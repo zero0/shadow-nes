@@ -45,8 +45,8 @@ void __fastcall__ game_state_continue_enter(void)
     mapper_reset();
     mapper_reset_irq();
 
-    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
-    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
+    mapper_set_chr_bank_0(CHR_ROM_00_SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(CHR_ROM_02_HUD_PNG_SPRITE_CHR_ROM);
 
     mapper_set_prg_bank(0);
 

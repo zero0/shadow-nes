@@ -57,10 +57,9 @@ tr_boss_8_name,Quintessence of Light
 tr_boss_9_location,Vestige of Shadow
 tr_boss_9_name,Icon of the ${tr_char_shademother}
 tr_cutscene_intro_0,Those born of shadow are\nforever doomed to serve\nthe light.
-tr_cutscene_intro_1,This corrupted light must\nbe snuffed out. Those born of\nshadow have devine right to\nfufill this task.
-tr_cutscene_intro_2,When the light is stained; dim;\ncorrupted. Those born to shadow\nare bound to act.
-tr_cutscene_intro_3,fa
-tr_cutscene_intro_4,ee
+tr_cutscene_intro_1,This corrupted light must\nbe snuffed out. Those born\nof shadow have devine right\nto fufill this task.
+tr_cutscene_intro_2,When the light is stained.\nDim. Corrupted. Those born\nto shadow are bound to act.
+tr_cutscene_intro_3,ee
 tr_cutscene_boss_0_intro_0,"At long last I have returned,\no' ${tr_char_lightlord}. Though your\nlight dim in the far reaches,\nI follow..."
 tr_cutscene_boss_0_intro_1,"I've spent whatbea millenia\nto be at present, Shadowed One!\nYou will not keep me from my\njourney's end!"
 tr_cutscene_boss_0_outro_0,To die... o' ${tr_char_lightlord}...\nAt your feet...

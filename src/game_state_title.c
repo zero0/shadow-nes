@@ -50,8 +50,8 @@ void __fastcall__ game_state_title_enter(void)
     mapper_reset();
     mapper_reset_irq();
 
-    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
-    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
+    mapper_set_chr_bank_0(CHR_ROM_00_SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(CHR_ROM_02_HUD_PNG_SPRITE_CHR_ROM);
 
     mapper_set_prg_bank(0);
 
@@ -103,7 +103,7 @@ void __fastcall__ game_state_title_enter(void)
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(8), ALIGN_SCREEN_HEIGHT_BOTTOM(2), PALETTE_BACKGROUND_1, tr_copyright );
 
-        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
+        ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y), PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_0) );
     }
 
     // turn on ppu
@@ -145,15 +145,15 @@ void __fastcall__ game_state_title_update(void)
         {
             case 0:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
-                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_0) );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_0) );
                 break;
             case 1:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x37, 0x15, 0x26 );
-                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_2) );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_2) );
                 break;
             case 2:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x26, 0x37, 0x15 );
-                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_POINTER_4) );
+                ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_4) );
                 b = -1;
                 break;
         }

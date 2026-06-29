@@ -48,20 +48,13 @@ enum
 
 typedef struct
 {
-    uint8_t attr;
-    uint8_t palettes;
-    ptr_t t[MAX_CUTSCENE_TEXTS];
-} cutscene_desc_t;
-
-typedef struct
-{
     const ptr_t t[MAX_CUTSCENE_TEXTS];
 } cutscene_text_t;
 
-static uint8_t all_cutscenes_attr[] = {
+static const uint8_t all_cutscenes_attr[] = {
     MAKE_CUTSCENE_ATTR( CUTSCENE_TYPE_TEXT, CUTSCENE_V_ALIGN_MIDDLE, 2 ),
 };
-static uint8_t all_cutscenes_palettes[] = {
+static const uint8_t all_cutscenes_palettes[] = {
     MAKE_CUTSCENE_PALETTE( PALETTE_BACKGROUND_0 )
 };
 static const cutscene_text_t all_cutscenes_text[] = {
@@ -73,6 +66,13 @@ static const cutscene_text_t all_cutscenes_text[] = {
             (ptr_t)&tr_cutscene_intro_3,
         }
     }
+};
+static const uint8_t all_cutscenes_top_img[] = {
+    0,
+};
+
+static const uint8_t all_cutscenes_bottom_img[] = {
+    0,
 };
 
 #define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
@@ -117,12 +117,28 @@ static void __fastcall__ draw_cutscene_part(void)
         //ppu_set_palette( PALETTE_SPRITE_1, 0x0A, 0x1A, 0x2A );
         //ppu_set_palette( PALETTE_SPRITE_2, 0x0A, 0x1A, 0x2A );
 
-        // draw
+        ppu_begin_tile_batch(0, ALIGN_SCREEN_HEIGHT_CENTER_TOP(8));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_LEFT));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_end_tile_batch();
+
+        ppu_begin_tile_batch(0, ALIGN_SCREEN_HEIGHT_CENTER_BOTTOM(8));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_LEFT));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_end_tile_batch();
+
+        // draw text
         switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes_attr[ current_cutscene_index ] ) )
         {
             case CUTSCENE_TYPE_TEXT:
                 //text_draw_string_v( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes_palettes[ current_cutscene_index ], game_state_internal ), all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal ] );
-                text_draw_string_v( 0, ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
+                text_draw_string_v( 1, ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
                 break;
 
             case CUTSCENE_TYPE_DIALOG:
@@ -145,8 +161,8 @@ void __fastcall__ game_state_cutscene_enter(void)
     mapper_reset();
     mapper_reset_irq();
 
-    mapper_set_chr_bank_0(SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
-    mapper_set_chr_bank_1(HUD_PNG_SPRITE_CHR_ROM);
+    mapper_set_chr_bank_0(CHR_ROM_00_SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(CHR_ROM_02_HUD_PNG_SPRITE_CHR_ROM);
 
     mapper_set_prg_bank(0);
 
@@ -159,7 +175,7 @@ void __fastcall__ game_state_cutscene_enter(void)
 
     //ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_DIALOG_ARROR) );
 
-    ppu_update_sprite_full( arrow_sprite, 0, 0, PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_DIALOG_ARROR) );
+    ppu_update_sprite_full( arrow_sprite, 0, 0, PALETTE_SPRITE_0, 0, 0, 0, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_DIALOG_ARROR) );
 
     // draw the first cutscene
     draw_cutscene_part();
