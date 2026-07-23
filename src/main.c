@@ -6,7 +6,7 @@
 #include "apu.h"
 #include "timer.h"
 #include "gamepad.h"
-
+#include "game_data.h"
 #include "game_state.h"
 
 //
@@ -68,6 +68,9 @@ void main(void)
     rt_timer_reset( game_rt_timer );
 
     init_timers();
+
+    // reset game settings to starting values
+    game_settings_reset();
 
     // set palettes to black initially
     ppu_tint_palelletes( PPU_PALETTE_TINT_BLACK );

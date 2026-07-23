@@ -92,12 +92,14 @@ void __fastcall__ game_state_title_enter(void)
         ppu_set_nametable_attr( NAMETABLE_A_ATTR,  0, ALIGN_SCREEN_HEIGHT_TOP(5),  PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2, PALETTE_BACKGROUND_2,  TILE_TO_ATTR(SCREEN_WIDTH) );
 
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_new_game_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (NewGame * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_new_game );
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Continue * Title_Y_Spacing)), PALETTE_BACKGROUND_0, tr_continue );
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Options * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_options );
 
 #if DEMO_BUILD
-        text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_demo_width), ALIGN_SCREEN_HEIGHT_BOTTOM(4), PALETTE_BACKGROUND_1, tr_demo );
+        if( !game_settings_is_demo_mode_enabled() )
 #endif // DEMO_BUILD
+        {
+            text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_continue_width), ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Continue * Title_Y_Spacing)), PALETTE_BACKGROUND_0, tr_continue );
+            text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_options_width),  ALIGN_SCREEN_HEIGHT_TOP(Title_Y + (Options * Title_Y_Spacing)),  PALETTE_BACKGROUND_0, tr_options );
+        }
 
         // NOTE: these strings are generated, no way to get length properly, hardcoded for now
         text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(14), ALIGN_SCREEN_HEIGHT_BOTTOM(3), PALETTE_BACKGROUND_1, tr_version );
@@ -112,13 +114,24 @@ void __fastcall__ game_state_title_enter(void)
     // reset game flow
     game_flow_reset();
 
+    t = 0;
     b = 0;
-    game_state_internal = 0;
+    game_state_internal = NewGame;
 
     anim_title_timer = request_timer( 10 );
     anim_text_timer = request_timer( 15 );
 
     text_delay_start();
+
+
+#if DEMO_BUILD
+        if( game_settings_is_demo_mode_enabled() )
+        {
+            ppu_update();
+
+            text_draw_string( ALIGN_SCREEN_WIDTH_CENTER(tr_demo_width), ALIGN_SCREEN_HEIGHT_BOTTOM(4), PALETTE_BACKGROUND_1, tr_demo );
+        }
+#endif // DEMO_BUILD
 }
 
 void __fastcall__ game_state_title_leave(void)
@@ -139,9 +152,9 @@ void __fastcall__ game_state_title_update(void)
     if( is_timer_done( anim_title_timer ) )
     {
         set_timer( anim_title_timer, 10 );
-        ++b;
+        ++t;
 
-        switch( b )
+        switch( t )
         {
             case 0:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x15, 0x26, 0x37 );
@@ -154,7 +167,7 @@ void __fastcall__ game_state_title_update(void)
             case 2:
                 ppu_set_palette( PALETTE_BACKGROUND_2, 0x26, 0x37, 0x15 );
                 ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(CHR_ROM_02_HUD_PNG_SPRITE, SPRITE_POINTER_4) );
-                b = -1;
+                t = -1;
                 break;
         }
     }
@@ -166,42 +179,68 @@ void __fastcall__ game_state_title_update(void)
 
     if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
     {
-        if(game_state_internal > 0) --game_state_internal;;
+        if(game_state_internal > 0) --game_state_internal;
+        b = 1;
+    }
+    else if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
+    {
+        if(game_state_internal < _Count) ++game_state_internal;
+        b = 1;
     }
 
-    if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
+#if DEMO_BUILD
+    if( game_settings_is_demo_mode_enabled() )
     {
-        if(game_state_internal < _Count) ++game_state_internal;;
+        game_state_internal = NewGame;
+    }
+#endif
+
+    if( b )
+    {
+        b = 0;
+        switch( game_state_internal )
+        {
+            case NewGame:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (NewGame * Title_Y_Spacing)) );
+                break;
+
+            case Continue:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Continue * Title_Y_Spacing)) );
+                break;
+
+            case Options:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Options * Title_Y_Spacing)) );
+                break;
+        }
     }
 
-    switch( game_state_internal )
+    if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
     {
-        case NewGame:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (NewGame * Title_Y_Spacing)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
-            {
-                // load a new game
-                game_data_load_for_new_game();
+        switch( game_state_internal )
+        {
+            case NewGame:
+                {
+                    // load a new game
+                    game_data_load_for_new_game();
 
-                // advance game flow
-                game_flow_advance();
-            }
-            break;
+                    // advance game flow
+                    game_flow_advance();
+                }
+                break;
 
-        case Continue:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Continue * Title_Y_Spacing)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
-            {
-                set_next_game_state( GAME_STATE_CONTINUE );
-            }
-            break;
+            case Continue:
+                if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
+                {
+                    set_next_game_state( GAME_STATE_CONTINUE );
+                }
+                break;
 
-        case Options:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(Title_X), TILE_TO_PIXEL(Title_Y + (Options * Title_Y_Spacing)) );
-            if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
-            {
-                set_next_game_state( GAME_STATE_OPTIONS );
-            }
-            break;
+            case Options:
+                if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
+                {
+                    set_next_game_state( GAME_STATE_OPTIONS );
+                }
+                break;
+        }
     }
 }

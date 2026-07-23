@@ -15,6 +15,7 @@ typedef void (*game_data_migration_func)(void);
 
 static void __fastcall__ game_data_migration_0_to_1(void)
 {
+    // no-op
 }
 
 static const game_data_migration_func game_data_migrations[] = {
@@ -81,4 +82,14 @@ void __fastcall__ game_data_save_to_save_slot(uint8_t saveSlot)
     ASSERT(saveSlot < _SAVE_SLOT_COUNT);
 
     // TODO: save game data to save ram
+}
+
+//
+//
+//
+
+void __fastcall__ game_settings_reset(void)
+{
+    g_global_settings_data.flags0 = _GLOBAL_SETTINGS_0_DEFAULT;
+    g_global_settings_data.flags1 = _GLOBAL_SETTINGS_1_DEFAULT;
 }
