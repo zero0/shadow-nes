@@ -171,6 +171,21 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 .define APU_DMC_SAMPLE_LENGTH_MASK  %11111111
 
 ;
+; Config
+;
+
+.enum
+
+.endenum
+
+.define APU_CONFIG_MUSIC_CHANNEL_COUNT     1
+.define APU_CONFIG_SFX_CHANNEL_COUNT       4
+.define APU_CONFIG_CHANNEL_COUNT           APU_CONFIG_SFX_CHANNEL_COUNT + APU_MUSIC_CHANNEL_COUNT
+
+.define APU_OUTPUT_BUFFER_LENGTH    14
+.define APU_OUTPUT_TIMER_LEGNTH     4
+
+;
 ;
 ;
 
@@ -189,23 +204,20 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     APU_MUSIC_TABLE_PTR:        .res 2 ;
     APU_SFX_TABLE_PTR:          .res 2 ;
 
+    ; Currently playing music ptr per channel
+    APU_MUSIC_CHANNEL_PTR_H:    .res APU_CONFIG_MUSIC_CHANNEL_COUNT ;
+    APU_MUSIC_CHANNEL_PTR_L:    .res APU_CONFIG_MUSIC_CHANNEL_COUNT ;
+
+    ; Currently playing sfx ptr per channel
+    APU_SFX_CHANNEL_PTR_H:      .res APU_CONFIG_SFX_CHANNEL_COUNT ;
+    APU_SFX_CHANNEL_PTR_L:      .res APU_CONFIG_SFX_CHANNEL_COUNT ;
+
     _APU_TEMP:                  .res 2 ;
     _APU_ARGS:                  .res 4 ;
 
 ;
 ;
 ;
-
-.enum
-
-.endenum
-
-.define APU_MUSIC_CHANNEL_COUNT     1
-.define APU_SFX_CHANNEL_COUNT       4
-.define APU_CHANNEL_COUNT           APU_SFX_CHANNEL_COUNT + APU_MUSIC_CHANNEL_COUNT
-
-.define APU_OUTPUT_BUFFER_LENGTH    14
-.define APU_OUTPUT_TIMER_LEGNTH     4
 
 .segment "BSS"
 
@@ -319,8 +331,11 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lsr
     tay
 
-    ; TODO: store sfx pointer
-
+    ; store sfx pointer
+    lda _APU_ARGS+0,Y
+    sta APU_SFX_TABLE_PTR+0
+    lda _APU_ARGS+1,Y
+    sta APU_SFX_TABLE_PTR+1
 
     rts
 
@@ -487,7 +502,13 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Update APU mixer
 .proc apu_update_mixer
 
+    ; decode music
+    ; store in apu buffer
 
+    ; decode sfx
+    ; per channel
+    ;   decode sfx
+    ;   store in apu buffer is higher than previous valud
 
     rts
 
@@ -496,16 +517,35 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Play music at index A
 .proc apu_play_music
 
-    ; convert index to offset
+    ; convert index to offset Y
     asl
+    tay
+
+
 
     rts
 
 .endproc
 
-; Play SFX at index A
+; Play SFX at index A to channel X
 .proc apu_play_sfx
 
+    ; convert index to offset Y
+    asl
+    tay
+
+    ; clear channel
+    jsr _apu_clear_sfx_channel
+
+    ; load table ptr from Y and store in channel at X
+    lda (APU_SFX_TABLE_PTR+0), Y
+    sta APU_SFX_CHANNEL_PTR_L, X
+
+    lda (APU_SFX_TABLE_PTR+1), Y
+    sta APU_SFX_CHANNEL_PTR_H, X
+
+
+.if 0
     ; NOTE: temp sound to see that it's working
     lda_apu_pulse_volume 0, 1, 1, 15
     ;sta APU_PULSE1_VOLUME
@@ -523,12 +563,28 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
     lda #5
     sta APU_OUTPUT_TIMERS+0
+.endif
 
     rts
 
 .endproc
 
 .define APU_SFX_STREAM_USE_PULSE1   #%10000000
+
+;
+; Internal
+;
+
+; Clear the SFX channel at X
+.proc _apu_clear_sfx_channel
+
+    lda #0
+    sta APU_SFX_CHANNEL_PTR_H, X
+    sta APU_SFX_CHANNEL_PTR_L, X
+
+    rts
+
+.endproc
 
 .proc _apu_proc_sfx_channel
 
