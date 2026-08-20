@@ -5,6 +5,33 @@
 .importzp TEMP
 .importzp sp
 
+;
+; Config
+;
+
+.define APU_CONFIG_MUSIC_CHANNEL_COUNT      1
+.define APU_CONFIG_SFX_CHANNEL_COUNT        4
+
+.define APU_CONFIG_USE_MMC5                 1
+
+.if APU_CONFIG_MUSIC_CHANNEL_COUNT < 1
+.error "No Music Channels. Need at least 1."
+.endif
+.if APU_CONFIG_MUSIC_CHANNEL_COUNT > 2
+.warning "More than 2 Music Channels. Is this okay?"
+.endif
+
+.if APU_CONFIG_SFX_CHANNEL_COUNT < 1
+.error "No SFX Channels. Need at least 1."
+.endif
+.if APU_CONFIG_SFX_CHANNEL_COUNT > 4
+.warning "More than 4 SFX Channels. Is this okay?"
+.endif
+
+;
+;
+;
+
 APU_BASE_REG            =$4000
 
 APU_PULSE1              =$4000
@@ -15,6 +42,7 @@ APU_DMC                 =$4010
 APU_STATUS              =$4015
 APU_FRAME_COUNTER       =$4017
 
+.if APU_CONFIG_USE_MMC5
 APU_MMC5_PULSE1         =$5000
 APU_MMC5_PULSE2         =$5004
 
@@ -31,6 +59,7 @@ APU_MMC5_PULSE2_HI      =APU_MMC5_PULSE2 + 3
 APU_MMC5_PCM_MODE       =$5010
 APU_MMC5_SND_CHN        =$5015
 APU_MMC5_EXRAM_MODE     =$5104
+.endif
 
 APU_PULSE1_VOLUME       =APU_PULSE1 + 0
 APU_PULSE1_SWEEP        =APU_PULSE1 + 1
@@ -78,9 +107,10 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 
 .define APU_PULSE_VOLUME_CONSTANT       %00010000
 .define APU_PULSE_VOLUME_ENVOLOPE       %00000000
+.define APU_PULSE_VOLUME_MASK           $0F
 
 .macro lda_apu_pulse_volume    duty, inf, const, vol
-    lda #(((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & $0F))
+    lda #(((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & #(APU_PULSE_VOLUME_MASK)))
 .endmacro
 
 ; $4001/5
@@ -170,23 +200,45 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 ; $4013
 .define APU_DMC_SAMPLE_LENGTH_MASK  %11111111
 
+
+.define APU_PULSE_REGISTER_COUNT        4
+.define APU_TRIANGLE_REGISTER_COUNT     3
+.define APU_NOISE_REGISTER_COUNT        3
+
+.define APU_DMC_REGISTER_COUNT          4
+
+.if APU_CONFIG_USE_MMC5
+.define APU_NUM_PULSE_CHANNELS          4
+.else
+.define APU_NUM_PULSE_CHANNELS          2
+.endif
+
+.define APU_NUM_TRIANGLE_CHANNELS       1
+.define APU_NUM_NOISE_CHANNELS          1
+
+.if APU_CONFIG_USE_MMC5
+.define APU_NUM_DMC_CHANNELS            1
+.else
+.define APU_NUM_DMC_CHANNELS            2
+.endif
+
+.define APU_OUTPUT_BUFFER_LENGTH     (APU_PULSE_REGISTER_COUNT * APU_NUM_PULSE_CHANNELS + APU_TRIANGLE_REGISTER_COUNT * APU_NUM_TRIANGLE_CHANNELS + APU_NOISE_REGISTER_COUNT * APU_NUM_NOISE_CHANNELS + APU_DMC_REGISTER_COUNT * APU_NUM_DMC_CHANNELS)
+
+.define APU_OUTPUT_BUFFER_OFFSET_PULSE1         (0)
+.define APU_OUTPUT_BUFFER_OFFSET_PULSE2         (APU_PULSE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_TRIANGLE       (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_NOISE          (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_DMC            (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET__END           (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT + APU_OUTPUT_BUFFER_OFFSET_DMC)
+.if APU_CONFIG_USE_MMC5
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE1    (APU_OUTPUT_BUFFER_OFFSET__END) + (0)
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE2    (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_DMC       (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5__END      (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_DMC_REGISTER_COUNT)
+.endif
+
 ;
-; Config
-;
-
-.enum
-
-.endenum
-
-.define APU_CONFIG_MUSIC_CHANNEL_COUNT     1
-.define APU_CONFIG_SFX_CHANNEL_COUNT       4
-.define APU_CONFIG_CHANNEL_COUNT           APU_CONFIG_SFX_CHANNEL_COUNT + APU_MUSIC_CHANNEL_COUNT
-
-.define APU_OUTPUT_BUFFER_LENGTH    14
-.define APU_OUTPUT_TIMER_LEGNTH     4
-
-;
-;
+; Zero Page
 ;
 
 .segment "ZEROPAGE"
@@ -204,6 +256,29 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     APU_MUSIC_TABLE_PTR:        .res 2 ;
     APU_SFX_TABLE_PTR:          .res 2 ;
 
+    APU_NEXT_SFX_CHANNEL:       .res 1 ;
+
+    _APU_TEMP:                  .res 4 ;
+    _APU_ARGS:                  .res 4 ;
+
+_APU_TEMP_PTR = _APU_TEMP
+_APU_TEMP_VAR0 = _APU_TEMP+2
+_APU_TEMP_VAR1 = _APU_TEMP+3
+
+;
+; BSS
+;
+
+.segment "BSS"
+
+    APU_OUTPUT_BUFFER:          .res APU_OUTPUT_BUFFER_LENGTH ;
+    APU_SFX_OUTPUT_BUFFER:      .res APU_CONFIG_SFX_CHANNEL_COUNT * APU_OUTPUT_BUFFER_LENGTH ;
+
+    APU_SFX_TIMERS:             .res APU_CONFIG_SFX_CHANNEL_COUNT ;
+    APU_SFX_OFFSET:             .res APU_CONFIG_SFX_CHANNEL_COUNT ;
+
+    APU_CONFIG:                 .res 1
+
     ; Currently playing music ptr per channel
     APU_MUSIC_CHANNEL_PTR_H:    .res APU_CONFIG_MUSIC_CHANNEL_COUNT ;
     APU_MUSIC_CHANNEL_PTR_L:    .res APU_CONFIG_MUSIC_CHANNEL_COUNT ;
@@ -211,19 +286,6 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     ; Currently playing sfx ptr per channel
     APU_SFX_CHANNEL_PTR_H:      .res APU_CONFIG_SFX_CHANNEL_COUNT ;
     APU_SFX_CHANNEL_PTR_L:      .res APU_CONFIG_SFX_CHANNEL_COUNT ;
-
-    _APU_TEMP:                  .res 2 ;
-    _APU_ARGS:                  .res 4 ;
-
-;
-;
-;
-
-.segment "BSS"
-
-    APU_OUTPUT_BUFFER:          .res APU_OUTPUT_BUFFER_LENGTH ;
-    APU_OUTPUT_TIMERS:          .res APU_OUTPUT_TIMER_LEGNTH ;
-    APU_CONFIG:                 .res 1
 
 .define APU_CONFIG_PLAYBACK_MASK    #%00000001
 
@@ -499,49 +561,119 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 .endproc
 
+;
+; C API
+;
+
 ; Update APU mixer
 .proc apu_update_mixer
 
-    ; decode music
-    ; store in apu buffer
+    ; process music channels
+.repeat APU_CONFIG_MUSIC_CHANNEL_COUNT, I
+    ldx #(I)
+    jsr _apu_process_music_channel
+.endrepeat
 
-    ; decode sfx
-    ; per channel
-    ;   decode sfx
-    ;   store in apu buffer is higher than previous valud
+    ; process sfx channels
+.repeat APU_CONFIG_SFX_CHANNEL_COUNT, I
+    ldx #(I)
+    jsr _apu_process_sfx_channel
+.endrepeat
 
     rts
 
 .endproc
 
-; Play music at index A
+; Play music at index A (at channel X (0 for now))
 .proc apu_play_music
 
     ; convert index to offset Y
     asl
     tay
 
+    ; music channel
+    ldx #0
 
+    ; clear music
+    jsr _apu_clear_music_channel
+
+    ; load music ptr at Y into music channel X
+    lda (APU_MUSIC_TABLE_PTR), Y
+    sta APU_MUSIC_CHANNEL_PTR_H, X
+
+    iny
+
+    lda (APU_MUSIC_TABLE_PTR), Y
+    sta APU_MUSIC_CHANNEL_PTR_L, X
 
     rts
 
 .endproc
 
-; Play SFX at index A to channel X
+;
 .proc apu_play_sfx
+
+; if there are more than 1 sfx channels, calculate which channel to use next
+.if APU_CONFIG_SFX_CHANNEL_COUNT > 1
+    ; transfer A -> Y
+    tay
+
+    ; load channel
+    lda APU_NEXT_SFX_CHANNEL
+
+    ; increment next channel
+    inc APU_NEXT_SFX_CHANNEL
+
+; for pow2 number of channels, mask out the channels
+.if (APU_CONFIG_SFX_CHANNEL_COUNT & (APU_CONFIG_SFX_CHANNEL_COUNT - 1)) = 0
+    ; mask channel count
+    and #(APU_CONFIG_SFX_CHANNEL_COUNT - 1)
+; otherwise,
+.else
+    ; compare to the number of channels
+    cmp #(APU_CONFIG_SFX_CHANNEL_COUNT)
+
+    ; if the value is less than the number of channels, skip
+    bcs :+
+        ; reset when the value is greater than the number of channels
+        lda #0
+        sta APU_NEXT_SFX_CHANNEL
+        :
+.endif
+
+    ; transfer channel A -> X
+    tax
+
+    ; transfer Y -> A restoring A sfx index
+    tya
+
+; otherwise, use channel 0
+.else
+    ldx #0
+.endif
+
+    ; jmp to play sfx with channle (it will return)
+    jmp apu_play_sfx_channel
+
+.endproc
+
+; Play SFX at index A to channel X
+.proc apu_play_sfx_channel
 
     ; convert index to offset Y
     asl
     tay
 
-    ; clear channel
+    ; clear channel at X
     jsr _apu_clear_sfx_channel
 
     ; load table ptr from Y and store in channel at X
-    lda (APU_SFX_TABLE_PTR+0), Y
+    lda (APU_SFX_TABLE_PTR), Y
     sta APU_SFX_CHANNEL_PTR_L, X
 
-    lda (APU_SFX_TABLE_PTR+1), Y
+    iny
+
+    lda (APU_SFX_TABLE_PTR), Y
     sta APU_SFX_CHANNEL_PTR_H, X
 
 
@@ -569,11 +701,21 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 .endproc
 
-.define APU_SFX_STREAM_USE_PULSE1   #%10000000
 
 ;
 ; Internal
 ;
+
+; Clear the music channel at X
+.proc _apu_clear_music_channel
+
+    lda #0
+    sta APU_MUSIC_CHANNEL_PTR_H, X
+    sta APU_MUSIC_CHANNEL_PTR_L, X
+
+    rts
+
+.endproc
 
 ; Clear the SFX channel at X
 .proc _apu_clear_sfx_channel
@@ -581,36 +723,125 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lda #0
     sta APU_SFX_CHANNEL_PTR_H, X
     sta APU_SFX_CHANNEL_PTR_L, X
+    sta APU_SFX_TIMERS, X
+    sta APU_SFX_OFFSET, X
 
     rts
 
 .endproc
 
-.proc _apu_proc_sfx_channel
+; Process the music channel in X
+.proc _apu_process_music_channel
 
-    ldy #0
+    rts
 
-    ;lda (ptr), y
+.endproc
+
+; Process the sfx channel in X
+.proc _apu_process_sfx_channel
+
+    ; load channel timer
+    lda APU_SFX_TIMERS, X
+
+    ; if the timer is done, check for more data
+    beq @timer_done
+
+    ; decrement timer
+    dec APU_SFX_TIMERS, X
+
+    ; if there is still time left, just update the buffer
+    bne @update_buffer
+
+@timer_done:
+    ; load high ptr value
+    lda APU_SFX_CHANNEL_PTR_H, X
+
+    ; if there is a ptr, continue
+    bne :+
+        ; otherwise, return when high ptr is 0
+        rts
+        :
+
+    ; store ptr in zeropage tmp
+    sta _APU_TEMP_PTR+0
+    lda APU_SFX_CHANNEL_PTR_L, X
+    sta _APU_TEMP_PTR+1
+
+    ; load offset for channel into Y
+    ldy APU_SFX_OFFSET, X
+
+@read_byte:
+    ; read byte from ptr stream
+    lda (_APU_TEMP_PTR), Y
+
+    ; increment Y to next byte
     iny
 
-    sta _APU_TEMP
+    ; if zero is read, it's an end of stream
+    beq @eos
 
-    and APU_SFX_STREAM_USE_PULSE1
-    bne @read_pulse1
+    ; if 7bit set, it's a register write
+    bmi @write_register
 
-@read_pulse1:
+    ; otherwise, it's a frame skip, store in timer for channel X
+    sta APU_SFX_TIMERS, X
 
-@read_pulse2:
+    ; end of data, go to updating the buffer
+    jmp @update_buffer
 
-@read_triangle:
+@write_register:
 
-@read_noise:
+    ; store channel into temp
+    stx _APU_TEMP_VAR0
 
-@read_mmc5_pulse1:
+    ; mask out the high bit of value to get register offset
+    and #$7F
 
-@read_mmc5_pulse2:
+    ; transfer A register offset -> X
+    tax
+
+    ; read byte from ptr stream
+    lda (_APU_TEMP_PTR), Y
+
+    ; increment Y to next byte
+    iny
+
+    ; write byte to sfx buffer at register offset X
+    sta APU_SFX_OUTPUT_BUFFER, X
+
+    ; restore channel
+    ldx _APU_TEMP_VAR0
+
+    ; read the next byte
+    jmp @read_byte
+
+@eos
+    ; end of stream, mark ptr as invalid (A is already 0)
+    sta APU_SFX_CHANNEL_PTR_H, X
+    sta APU_SFX_CHANNEL_PTR_L, X
+
+@update_buffer:
+
+    ; store offset Y for channel
+    sty APU_SFX_OFFSET, X
+
+    ; load existing output buffer pulse 1 volume
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1
+    and #(APU_PULSE_VOLUME_MASK)
+    sta _APU_TEMP_VAR0
+
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1
+
+
+
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_DMC, X
+
 
 @end:
+
 
     rts
 
@@ -640,8 +871,8 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; 0001 0000 - use noise
 ; 0000 1000 - use mmc5 pulse 1
 ; 0000 0100 - use mmc5 pulse 2
-; 0000 0010 - skip N frames (next byte)
-; 0000 0001 - skip frame
+; 0000 0010 - use dmc (next byte is index to play)
+; 0000 0001 - skip N frames (next byte)
 ; 0000 0000 - end of stream
 
 ; pulse 4 bytes
