@@ -78,11 +78,7 @@ void main(void)
     for(;;)
     {
         // poll game pad
-        gamepad_poll( GAMEPAD_1 );
-
-#if USE_GAMEPAD_2
-        gamepad_poll( GAMEPAD_2 );
-#endif
+        gamepad_poll();
 
         // update realtime timer
         rt_timer_tick( game_rt_timer );

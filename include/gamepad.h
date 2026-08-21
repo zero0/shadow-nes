@@ -8,17 +8,15 @@ enum
 {
     GAMEPAD_1,
     GAMEPAD_2,
-    GAMEPAD_3,
-    GAMEPAD_4,
 };
 
-void __fastcall__ gamepad_poll( uint8_t pad );
+void __fastcall__ gamepad_poll(void);
 
-uint8_t __fastcall__ gamepad_state( uint8_t pad );
+uint8_t __fastcall__ gamepad_state(uint8_t pad);
 
-uint8_t __fastcall__ gamepad_prev_state( uint8_t pad );
+uint8_t __fastcall__ gamepad_prev_state(uint8_t pad);
 
-void __fastcall__ gamepad_clear_states( uint8_t pad );
+void __fastcall__ gamepad_clear_states(uint8_t pad);
 
 uint8_t __fastcall__ gamepad_layer(void);
 
