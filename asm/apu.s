@@ -32,57 +32,55 @@
 ;
 ;
 
-APU_BASE_REG            =$4000
-
-APU_PULSE1              =$4000
-APU_PULSE2              =$4004
-APU_TRIANGLE            =$4008
-APU_NOISE               =$400C
-APU_DMC                 =$4010
-APU_STATUS              =$4015
-APU_FRAME_COUNTER       =$4017
+APU_REG_PULSE1              =$4000
+APU_REG_PULSE2              =$4004
+APU_REG_TRIANGLE            =$4008
+APU_REG_NOISE               =$400C
+APU_REG_DMC                 =$4010
+APU_REG_STATUS              =$4015
+APU_REG_FRAME_COUNTER       =$4017
 
 .if APU_CONFIG_USE_MMC5
-APU_MMC5_PULSE1         =$5000
-APU_MMC5_PULSE2         =$5004
+APU_REG_MMC5_PULSE1         =$5000
+APU_REG_MMC5_PULSE2         =$5004
 
-APU_MMC5_PULSE1_VOLUME  =APU_MMC5_PULSE1 + 0
-APU_MMC5_PULSE1_SWEEP   =APU_MMC5_PULSE1 + 1
-APU_MMC5_PULSE1_LO      =APU_MMC5_PULSE1 + 2
-APU_MMC5_PULSE1_HI      =APU_MMC5_PULSE1 + 3
+APU_REG_MMC5_PULSE1_VOLUME  =APU_REG_MMC5_PULSE1 + 0
+APU_REG_MMC5_PULSE1_SWEEP   =APU_REG_MMC5_PULSE1 + 1
+APU_REG_MMC5_PULSE1_LO      =APU_REG_MMC5_PULSE1 + 2
+APU_REG_MMC5_PULSE1_HI      =APU_REG_MMC5_PULSE1 + 3
 
-APU_MMC5_PULSE2_VOLUME  =APU_MMC5_PULSE2 + 0
-APU_MMC5_PULSE2_SWEEP   =APU_MMC5_PULSE2 + 1
-APU_MMC5_PULSE2_LO      =APU_MMC5_PULSE2 + 2
-APU_MMC5_PULSE2_HI      =APU_MMC5_PULSE2 + 3
+APU_REG_MMC5_PULSE2_VOLUME  =APU_REG_MMC5_PULSE2 + 0
+APU_REG_MMC5_PULSE2_SWEEP   =APU_REG_MMC5_PULSE2 + 1
+APU_REG_MMC5_PULSE2_LO      =APU_REG_MMC5_PULSE2 + 2
+APU_REG_MMC5_PULSE2_HI      =APU_REG_MMC5_PULSE2 + 3
 
-APU_MMC5_PCM_MODE       =$5010
-APU_MMC5_SND_CHN        =$5015
-APU_MMC5_EXRAM_MODE     =$5104
+APU_REG_MMC5_PCM_MODE       =$5010
+APU_REG_MMC5_SND_CHN        =$5015
+APU_REG_MMC5_EXRAM_MODE     =$5104
 .endif
 
-APU_PULSE1_VOLUME       =APU_PULSE1 + 0
-APU_PULSE1_SWEEP        =APU_PULSE1 + 1
-APU_PULSE1_TIMER_LO     =APU_PULSE1 + 2
-APU_PULSE1_TIMER_HI     =APU_PULSE1 + 3
+APU_REG_PULSE1_VOLUME       =APU_REG_PULSE1 + 0
+APU_REG_PULSE1_SWEEP        =APU_REG_PULSE1 + 1
+APU_REG_PULSE1_TIMER_LO     =APU_REG_PULSE1 + 2
+APU_REG_PULSE1_TIMER_HI     =APU_REG_PULSE1 + 3
 
-APU_PULSE2_VOLUME       =APU_PULSE2 + 0
-APU_PULSE2_SWEEP        =APU_PULSE2 + 1
-APU_PULSE2_TIMER_LO     =APU_PULSE2 + 2
-APU_PULSE2_TIMER_HI     =APU_PULSE2 + 3
+APU_REG_PULSE2_VOLUME       =APU_REG_PULSE2 + 0
+APU_REG_PULSE2_SWEEP        =APU_REG_PULSE2 + 1
+APU_REG_PULSE2_TIMER_LO     =APU_REG_PULSE2 + 2
+APU_REG_PULSE2_TIMER_HI     =APU_REG_PULSE2 + 3
 
-APU_TRIANGLE_LINEAR     =APU_TRIANGLE + 0
-APU_TRIANGLE_TIMER_LO   =APU_TRIANGLE + 2
-APU_TRIANGLE_TIMER_HI   =APU_TRIANGLE + 3
+APU_REG_TRIANGLE_LINEAR     =APU_REG_TRIANGLE + 0
+APU_REG_TRIANGLE_TIMER_LO   =APU_REG_TRIANGLE + 2
+APU_REG_TRIANGLE_TIMER_HI   =APU_REG_TRIANGLE + 3
 
-APU_NOISE_VOLUME        =APU_NOISE + 0
-APU_NOISE_NOISE         =APU_NOISE + 2
-APU_NOISE_LENGTH        =APU_NOISE + 3
+APU_REG_NOISE_VOLUME        =APU_REG_NOISE + 0
+APU_REG_NOISE_NOISE         =APU_REG_NOISE + 2
+APU_REG_NOISE_LENGTH        =APU_REG_NOISE + 3
 
-APU_DMC_TIMER           =APU_DMC + 0
-APU_DMC_LOAD_COUNTER    =APU_DMC + 1
-APU_DMC_SAMPLE_ADDR     =APU_DMC + 2
-APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
+APU_REG_DMC_TIMER           =APU_REG_DMC + 0
+APU_REG_DMC_LOAD_COUNTER    =APU_REG_DMC + 1
+APU_REG_DMC_SAMPLE_ADDR     =APU_REG_DMC + 2
+APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
 
 .define APU_STATUS_ENABLE_DMC       %00010000
 .define APU_STATUS_ENABLE_NOISE     %00001000
@@ -113,6 +111,10 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     lda #(((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & #(APU_PULSE_VOLUME_MASK)))
 .endmacro
 
+.macro num_apu_pulse_volume    duty, inf, const, vol
+    .byte $80, (((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & (APU_PULSE_VOLUME_MASK)))
+.endmacro
+
 ; $4001/5
 .define APU_PULSE_SWEEP_ENABLED         %10000000
 .define APU_PULSE_SWEEP_NEGATE          %00001000
@@ -122,6 +124,10 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 
 .macro lda_apu_pulse_sweep  enable, negate, period, shift
     lda #( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
+.endmacro
+
+.macro num_apu_pulse_sweep  enable, negate, period, shift
+    .byte $81, ( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
 .endmacro
 
 ; $4002/6
@@ -135,6 +141,11 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 .macro ldax_apu_pulse_timer     period, length
     lda #( .lobyte(period) )
     ldx #( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
+.endmacro
+
+.macro num_apu_pulse_timer     period, length
+    .byte $82, ( .lobyte(period) )
+    .byte $83, ( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
 .endmacro
 
 
@@ -160,7 +171,7 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 
 .macro ldax_apu_triangle_pulse_timer    period, length
     lda #( .lobyte(period) )
-    ldx #( .hibyte(period) & APU_TRIANGLE_PERIOD_HIGH_MASK ) | ((length << APU_TRIANGLE_LENGTH_LOAD_SHIFT) & APU_TRIANGLE_LENGTH_LOAD_MASK ) )
+    ldx #( .hibyte(period) & APU_TRIANGLE_PERIOD_HIGH_MASK ) | ((length << APU_TRIANGLE_LENGTH_LOAD_SHIFT) & APU_TRIANGLE_LENGTH_LOAD_MASK )
 .endmacro
 
 ; Noise
@@ -222,19 +233,19 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
 .define APU_NUM_DMC_CHANNELS            2
 .endif
 
-.define APU_OUTPUT_BUFFER_LENGTH     (APU_PULSE_REGISTER_COUNT * APU_NUM_PULSE_CHANNELS + APU_TRIANGLE_REGISTER_COUNT * APU_NUM_TRIANGLE_CHANNELS + APU_NOISE_REGISTER_COUNT * APU_NUM_NOISE_CHANNELS + APU_DMC_REGISTER_COUNT * APU_NUM_DMC_CHANNELS)
+.define APU_OUTPUT_BUFFER_LENGTH        APU_PULSE_REGISTER_COUNT * APU_NUM_PULSE_CHANNELS + APU_TRIANGLE_REGISTER_COUNT * APU_NUM_TRIANGLE_CHANNELS + APU_NOISE_REGISTER_COUNT * APU_NUM_NOISE_CHANNELS + APU_DMC_REGISTER_COUNT * APU_NUM_DMC_CHANNELS
 
-.define APU_OUTPUT_BUFFER_OFFSET_PULSE1         (0)
-.define APU_OUTPUT_BUFFER_OFFSET_PULSE2         (APU_PULSE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET_TRIANGLE       (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET_NOISE          (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET_DMC            (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET__END           (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT + APU_OUTPUT_BUFFER_OFFSET_DMC)
+.define APU_OUTPUT_BUFFER_OFFSET_PULSE1         0
+.define APU_OUTPUT_BUFFER_OFFSET_PULSE2         APU_PULSE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET_TRIANGLE       APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET_NOISE          APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET_DMC            APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET__END           APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_TRIANGLE_REGISTER_COUNT + APU_NOISE_REGISTER_COUNT + APU_OUTPUT_BUFFER_OFFSET_DMC
 .if APU_CONFIG_USE_MMC5
-.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE1    (APU_OUTPUT_BUFFER_OFFSET__END) + (0)
-.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE2    (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET_MMC5_DMC       (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT)
-.define APU_OUTPUT_BUFFER_OFFSET_MMC5__END      (APU_OUTPUT_BUFFER_OFFSET__END) + (APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_DMC_REGISTER_COUNT)
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE1    APU_OUTPUT_BUFFER_OFFSET__END + 0
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_PULSE2    APU_OUTPUT_BUFFER_OFFSET__END + APU_PULSE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5_DMC       APU_OUTPUT_BUFFER_OFFSET__END + APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT
+.define APU_OUTPUT_BUFFER_OFFSET_MMC5__END      APU_OUTPUT_BUFFER_OFFSET__END + APU_PULSE_REGISTER_COUNT + APU_PULSE_REGISTER_COUNT + APU_DMC_REGISTER_COUNT
 .endif
 
 ;
@@ -249,17 +260,14 @@ APU_DMC_SAMPLE_LENGTH   =APU_DMC + 3
     APU_MUSIC_IDX_CUR:          .res 1 ;
     APU_MUSIC_IDX_NXT:          .res 1 ;
 
-    APU_SFX_SPEED:              .res 1 ;
-    APU_SFX_IDX_0:              .res 1 ;
-    APU_SFX_IDX_1:              .res 1 ;
-
     APU_MUSIC_TABLE_PTR:        .res 2 ;
     APU_SFX_TABLE_PTR:          .res 2 ;
+    APU_SFX_OFFSET:             .res APU_CONFIG_SFX_CHANNEL_COUNT ;
 
     APU_NEXT_SFX_CHANNEL:       .res 1 ;
 
     _APU_TEMP:                  .res 4 ;
-    _APU_ARGS:                  .res 4 ;
+    _APU_ARGS:                  .res 2 ;
 
 _APU_TEMP_PTR = _APU_TEMP
 _APU_TEMP_VAR0 = _APU_TEMP+2
@@ -272,12 +280,13 @@ _APU_TEMP_VAR1 = _APU_TEMP+3
 .segment "BSS"
 
     APU_OUTPUT_BUFFER:          .res APU_OUTPUT_BUFFER_LENGTH ;
-    APU_SFX_OUTPUT_BUFFER:      .res APU_CONFIG_SFX_CHANNEL_COUNT * APU_OUTPUT_BUFFER_LENGTH ;
+    APU_SFX_OUTPUT_BUFFER:      .res (APU_CONFIG_SFX_CHANNEL_COUNT * APU_OUTPUT_BUFFER_LENGTH) ;
 
     APU_SFX_TIMERS:             .res APU_CONFIG_SFX_CHANNEL_COUNT ;
-    APU_SFX_OFFSET:             .res APU_CONFIG_SFX_CHANNEL_COUNT ;
 
     APU_CONFIG:                 .res 1
+
+    APU_PREV_PULSE_TIMER_HI:    .res APU_NUM_PULSE_CHANNELS
 
     ; Currently playing music ptr per channel
     APU_MUSIC_CHANNEL_PTR_H:    .res APU_CONFIG_MUSIC_CHANNEL_COUNT ;
@@ -292,33 +301,17 @@ _APU_TEMP_VAR1 = _APU_TEMP+3
 .define APU_CONFIG_PLAYBACK_NTSC    #%00000000
 .define APU_CONFIG_PLAYBACK_PAL     #%00000001
 
-APU_OUT_PULSE1_VOLUME       =APU_OUTPUT_BUFFER + 0
-APU_OUT_PULSE1_SWEEP        =APU_OUTPUT_BUFFER + 1
-APU_OUT_PULSE1_TIMER_LO     =APU_OUTPUT_BUFFER + 2
-APU_OUT_PULSE1_TIMER_HI     =APU_OUTPUT_BUFFER + 3
+;
+;
+;
 
-APU_OUT_PULSE2_VOLUME       =APU_OUTPUT_BUFFER + 4
-APU_OUT_PULSE2_SWEEP        =APU_OUTPUT_BUFFER + 5
-APU_OUT_PULSE2_TIMER_LO     =APU_OUTPUT_BUFFER + 6
-APU_OUT_PULSE2_TIMER_HI     =APU_OUTPUT_BUFFER + 7
+.segment "RODATA"
 
-APU_OUT_TRIANGLE_LINEAR     =APU_OUTPUT_BUFFER + 8
-APU_OUT_TRIANGLE_TIMER_LO   =APU_OUTPUT_BUFFER + 9
-APU_OUT_TRIANGLE_TIMER_HI   =APU_OUTPUT_BUFFER + 10
-
-APU_OUT_NOISE_VOLUME        =APU_OUTPUT_BUFFER + 11
-APU_OUT_NOISE_NOISE         =APU_OUTPUT_BUFFER + 12
-APU_OUT_NOISE_LENGTH        =APU_OUTPUT_BUFFER + 13
-
-APU_OUT_PULSE1              =APU_OUT_PULSE1_VOLUME
-APU_OUT_PULSE2              =APU_OUT_PULSE2_VOLUME
-APU_OUT_TRIANGLE            =APU_OUT_TRIANGLE_LINEAR
-APU_OUT_NOISE               =APU_OUT_NOISE_VOLUME
-
-APU_OUTPUT_TIMER_PULSE1     =APU_OUTPUT_TIMERS + 0
-APU_OUTPUT_TIMER_PULSE2     =APU_OUTPUT_TIMERS + 1
-APU_OUTPUT_TIMER_TRIANGLE   =APU_OUTPUT_TIMERS + 2
-APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
+; Per-channel offsets into SFX Output Buffer
+_APU_SFX_OUTPUT_BUFFER_OFFSETS:
+.repeat APU_CONFIG_SFX_CHANNEL_COUNT, I
+    .byte (APU_OUTPUT_BUFFER_LENGTH * I)
+.endrepeat
 
 ;
 ;
@@ -345,17 +338,22 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; enable all channels (-DMC)
     lda #(APU_STATUS_ENABLE_PULSE1 | APU_STATUS_ENABLE_PULSE2 | APU_STATUS_ENABLE_TRIANGLE | APU_STATUS_ENABLE_NOISE )
     sta APU_STATUS_BUFF
-    sta APU_STATUS
+    sta APU_REG_STATUS
 
     ; set step sequence
     lda #(APU_FRAME_COUNTER_4_STEP_SEQ)
-    sta APU_FRAME_COUNTER
+    sta APU_REG_FRAME_COUNTER
 
     ; clear output timers
     lda #0
-    .repeat APU_OUTPUT_TIMER_LEGNTH, I
-    sta APU_OUTPUT_TIMERS+I
-    .endrepeat
+.repeat APU_CONFIG_SFX_CHANNEL_COUNT, I
+    sta APU_SFX_TIMERS+I
+.endrepeat
+
+    ; clear previous pulse timers
+.repeat APU_NUM_PULSE_CHANNELS, I
+    sta APU_PREV_PULSE_TIMER_HI+I
+.endrepeat
 
     rts
 
@@ -409,7 +407,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lda APU_STATUS_BUFF
     and #$F0
     sta APU_STATUS_BUFF
-    sta APU_STATUS
+    sta APU_REG_STATUS
 
     rts
 
@@ -421,7 +419,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lda APU_STATUS_BUFF
     and #$0F
     sta APU_STATUS_BUFF
-    sta APU_STATUS
+    sta APU_REG_STATUS
 
 .endproc
 
@@ -431,7 +429,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lda APU_STATUS_BUFF
     ora #(APU_STATUS_ENABLE_PULSE1 | APU_STATUS_ENABLE_PULSE2 | APU_STATUS_ENABLE_TRIANGLE | APU_STATUS_ENABLE_NOISE)
     sta APU_STATUS_BUFF
-    sta APU_STATUS
+    sta APU_REG_STATUS
 
     rts
 
@@ -443,7 +441,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     lda APU_STATUS_BUFF
     ora #(APU_STATUS_ENABLE_DMC)
     sta APU_STATUS_BUFF
-    sta APU_STATUS
+    sta APU_REG_STATUS
 
     rts
 
@@ -452,6 +450,59 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Update APU during NMI which just copies buffered data into APU registers
 .proc apu_update_from_nmi
 
+    ; write pulse 1 to APU
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 0
+    sta APU_REG_PULSE1_VOLUME
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 1
+    sta APU_REG_PULSE1_SWEEP
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 2
+    sta APU_REG_PULSE1_TIMER_LO
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 3
+    cmp APU_PREV_PULSE_TIMER_HI + 0
+    beq :+
+        sta APU_PREV_PULSE_TIMER_HI + 0
+        sta APU_REG_PULSE1_TIMER_HI
+        :
+
+    ; write pulse 2 to APU
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 0
+    sta APU_REG_PULSE2_VOLUME
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 1
+    sta APU_REG_PULSE2_SWEEP
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 2
+    sta APU_REG_PULSE2_TIMER_LO
+
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 3
+    cmp APU_PREV_PULSE_TIMER_HI + 1
+    beq :+
+        sta APU_PREV_PULSE_TIMER_HI + 1
+        sta APU_REG_PULSE2_TIMER_HI
+        :
+
+    ; write pulse triangle to APU
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 0
+    sta APU_REG_TRIANGLE_LINEAR
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 1
+    sta APU_REG_TRIANGLE_TIMER_LO
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 2
+    sta APU_REG_TRIANGLE_TIMER_HI
+
+    ; write noise to APU
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 0
+    sta APU_REG_NOISE_VOLUME
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 1
+    sta APU_REG_NOISE_NOISE
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 2
+    sta APU_REG_NOISE_LENGTH
+
+    rts
+
+.if 0
 @update_pulse1:
 
     ; load pulse1 timer
@@ -463,7 +514,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; copy buffer to registers
     .repeat 4, I
     lda APU_OUT_PULSE1+I
-    sta APU_PULSE1+I
+    sta APU_REG_PULSE1+I
     .endrepeat
 
     ; decrement timer
@@ -489,7 +540,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; copy buffer to registers
     .repeat 4, I
     lda APU_OUT_PULSE2+I
-    sta APU_PULSE2+I
+    sta APU_REG_PULSE2+I
     .endrepeat
 
     ; decrement timer
@@ -515,7 +566,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; copy buffer to registers
     .repeat 3, I
     lda APU_OUT_TRIANGLE+I
-    sta APU_TRIANGLE+I
+    sta APU_REG_TRIANGLE+I
     .endrepeat
 
     ; decrement timer
@@ -541,7 +592,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; copy buffer to registers
     .repeat 3, I
     lda APU_OUT_NOISE+I
-    sta APU_NOISE+I
+    sta APU_REG_NOISE+I
     .endrepeat
 
     ; decrement timer
@@ -558,6 +609,7 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 
 @update_end:
     rts
+.endif
 
 .endproc
 
@@ -587,15 +639,17 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Play music at index A (at channel X (0 for now))
 .proc apu_play_music
 
+    ; clear music
+    jsr _apu_clear_music_channel
+
     ; convert index to offset Y
     asl
     tay
 
+.if APU_CONFIG_MUSIC_CHANNEL_COUNT <= 1
     ; music channel
     ldx #0
-
-    ; clear music
-    jsr _apu_clear_music_channel
+.endif
 
     ; load music ptr at Y into music channel X
     lda (APU_MUSIC_TABLE_PTR), Y
@@ -660,12 +714,12 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Play SFX at index A to channel X
 .proc apu_play_sfx_channel
 
+    ; clear channel at X
+    jsr _apu_clear_sfx_channel
+
     ; convert index to offset Y
     asl
     tay
-
-    ; clear channel at X
-    jsr _apu_clear_sfx_channel
 
     ; load table ptr from Y and store in channel at X
     lda (APU_SFX_TABLE_PTR), Y
@@ -680,16 +734,16 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 .if 0
     ; NOTE: temp sound to see that it's working
     lda_apu_pulse_volume 0, 1, 1, 15
-    ;sta APU_PULSE1_VOLUME
+    ;sta APU_REG_PULSE1_VOLUME
     sta APU_OUT_PULSE1_VOLUME
 
     lda_apu_pulse_sweep 1, 0, 2, 3
-    ;sta APU_PULSE1_SWEEP
+    ;sta APU_REG_PULSE1_SWEEP
     sta APU_OUT_PULSE1_SWEEP
 
     ldax_apu_pulse_timer 20000, 5
-    ;sta APU_PULSE1_TIMER_LO
-    ;stx APU_PULSE1_TIMER_HI
+    ;sta APU_REG_PULSE1_TIMER_LO
+    ;stx APU_REG_PULSE1_TIMER_HI
     sta APU_OUT_PULSE1_TIMER_LO
     stx APU_OUT_PULSE1_TIMER_HI
 
@@ -709,9 +763,16 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Clear the music channel at X
 .proc _apu_clear_music_channel
 
+    ; store A -> Y
+    tay
+
+    ; clear music ptr
     lda #0
     sta APU_MUSIC_CHANNEL_PTR_H, X
     sta APU_MUSIC_CHANNEL_PTR_L, X
+
+    ; restore from Y -> A
+    tya
 
     rts
 
@@ -720,12 +781,35 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; Clear the SFX channel at X
 .proc _apu_clear_sfx_channel
 
+    ; store A -> Y
+    tay
+
     lda #0
     sta APU_SFX_CHANNEL_PTR_H, X
     sta APU_SFX_CHANNEL_PTR_L, X
     sta APU_SFX_TIMERS, X
     sta APU_SFX_OFFSET, X
 
+    ; restore from Y -> A
+    tya
+
+.if 0
+    txa
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
+    tax
+
+    ; mute triangle
+    lda #0
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 0, X
+
+    ; mute pulse 1, 2, and noise
+    lda #$30
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 0, X
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 0, X
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 0, X
+
+    ; TODO: mmc5 and dmc
+.endif
     rts
 
 .endproc
@@ -763,9 +847,9 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
         :
 
     ; store ptr in zeropage tmp
-    sta _APU_TEMP_PTR+0
-    lda APU_SFX_CHANNEL_PTR_L, X
     sta _APU_TEMP_PTR+1
+    lda APU_SFX_CHANNEL_PTR_L, X
+    sta _APU_TEMP_PTR+0
 
     ; load offset for channel into Y
     ldy APU_SFX_OFFSET, X
@@ -773,9 +857,6 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 @read_byte:
     ; read byte from ptr stream
     lda (_APU_TEMP_PTR), Y
-
-    ; increment Y to next byte
-    iny
 
     ; if zero is read, it's an end of stream
     beq @eos
@@ -790,12 +871,18 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     jmp @update_buffer
 
 @write_register:
+    ; increment Y here to preserve flags
+    iny
 
     ; store channel into temp
     stx _APU_TEMP_VAR0
 
     ; mask out the high bit of value to get register offset
     and #$7F
+
+    ; add channel offset to register offset
+    clc
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
 
     ; transfer A register offset -> X
     tax
@@ -809,39 +896,117 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
     ; write byte to sfx buffer at register offset X
     sta APU_SFX_OUTPUT_BUFFER, X
 
-    ; restore channel
+    ; restore channel -> X
     ldx _APU_TEMP_VAR0
 
     ; read the next byte
     jmp @read_byte
 
-@eos
+@eos:
+
     ; end of stream, mark ptr as invalid (A is already 0)
     sta APU_SFX_CHANNEL_PTR_H, X
     sta APU_SFX_CHANNEL_PTR_L, X
+    sta APU_SFX_TIMERS, X
+
+    rts
 
 @update_buffer:
 
-    ; store offset Y for channel
+    ; increment Y here to presere flags
+    iny
+
+    ; store Y offset for channel
     sty APU_SFX_OFFSET, X
 
+    ; transfer channel to A
+    txa
+
+    ; add channel offset to channel to get buffer offset
+    clc
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
+
+    ; transfer buffer offset to X
+    tax
+
+    ;
     ; load existing output buffer pulse 1 volume
     lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1
     and #(APU_PULSE_VOLUME_MASK)
     sta _APU_TEMP_VAR0
 
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1
+    ; load buffered pulse 1
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1, X
+    and #(APU_PULSE_VOLUME_MASK)
 
+    ; compare against existing value
+    cmp _APU_TEMP_VAR0
 
+    ; if volume is less or equal, skip
+    bcs :+
+        ; otherwise, if volume greater than the existing value, copy pulse 1
+        .repeat APU_PULSE_REGISTER_COUNT, I
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + I, X
+        sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + I
+        .endrepeat
+        :
 
+    ;
+    ; load existing output buffer pulse 2 volume
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2
+    and #(APU_PULSE_VOLUME_MASK)
+    sta _APU_TEMP_VAR0
+
+    ; load buffered pulse 2
     lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2, X
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE, X
+    and #(APU_PULSE_VOLUME_MASK)
+
+    ; compare against existing value
+    cmp _APU_TEMP_VAR0
+
+    ; if volume is less or equal, skip
+    bcs :+
+        ; otherwise, if volume greater than the existing value, copy pulse 2
+        .repeat APU_PULSE_REGISTER_COUNT, I
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + I, X
+        sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + I
+        .endrepeat
+        :
+
+    ;
+    ; overwrite triangle if sfx buffer is active
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE
+    beq :+
+        .repeat APU_TRIANGLE_REGISTER_COUNT, I
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + I, X
+        sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + I
+        .endrepeat
+        :
+
+    ;
+    ; load existing output buffer noise volume
+    lda APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE
+    and #(APU_NOISE_VOLUME_OR_ENVOLOPE_MASK)
+    sta _APU_TEMP_VAR0
+
+    ; load buffered pulse 2
     lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE, X
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_DMC, X
+    and #(APU_NOISE_VOLUME_OR_ENVOLOPE_MASK)
 
+    ; compare against existing value
+    cmp _APU_TEMP_VAR0
 
+    ; if volume is less or equal, skip
+    bcs :+
+        ; otherwise, if volume greater than the existing value, copy noise
+        .repeat APU_NOISE_REGISTER_COUNT, I
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + I, X
+        sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + I
+        .endrepeat
+        :
+
+    ; TODO: mmc5 and dmc
 @end:
-
 
     rts
 
@@ -883,3 +1048,46 @@ APU_OUTPUT_TIMER_NOISE      =APU_OUTPUT_TIMERS + 3
 ; triangle 3 bytes
 
 ; noise 3 bytes
+
+;
+; Test data
+;
+
+.segment "RODATA"
+
+.export _tmp_music_table, _tmp_sfx_table
+.export apu_init_music, apu_init_sfx
+.exportzp _APU_ARGS
+
+_tmp_music_table:
+    .addr _tmp_music_song_0
+    .addr _tmp_music_song_1
+    .addr _tmp_music_song_2
+    .addr _tmp_music_song_3
+
+_tmp_sfx_table:
+    .addr _tmp_sfx_hit_0
+    .addr _tmp_sfx_hit_1
+    .addr _tmp_sfx_hit_2
+
+_tmp_music_song_0:
+    .byte 0
+_tmp_music_song_1:
+    .byte 0
+_tmp_music_song_2:
+    .byte 0
+_tmp_music_song_3:
+    .byte 0
+
+_tmp_sfx_hit_0:
+num_apu_pulse_volume APU_PULSE_DUTY_CYCLE_12_5, APU_PULSE_PLAY_ONE_SHOT, APU_PULSE_VOLUME_CONSTANT, 15
+num_apu_pulse_sweep APU_PULSE_SWEEP_ENABLED, 0, 2, 3
+num_apu_pulse_timer 20000, 10
+    .byte 10
+    .byte 0
+
+_tmp_sfx_hit_1:
+    .byte 0
+
+_tmp_sfx_hit_2:
+    .byte 0
