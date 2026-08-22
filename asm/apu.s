@@ -867,10 +867,17 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     ; otherwise, it's a frame skip, store in timer for channel X
     sta APU_SFX_TIMERS, X
 
+    ; increment Y here to presere flags
+    iny
+
+    ; store Y offset for channel
+    sty APU_SFX_OFFSET, X
+
     ; end of data, go to updating the buffer
     jmp @update_buffer
 
 @write_register:
+
     ; increment Y here to preserve flags
     iny
 
@@ -906,18 +913,11 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 
     ; end of stream, mark ptr as invalid (A is already 0)
     sta APU_SFX_CHANNEL_PTR_H, X
-    sta APU_SFX_CHANNEL_PTR_L, X
-    sta APU_SFX_TIMERS, X
-
-    rts
-
-@update_buffer:
-
-    ; increment Y here to presere flags
-    iny
 
     ; store Y offset for channel
     sty APU_SFX_OFFSET, X
+
+@update_buffer:
 
     ; transfer channel to A
     txa
