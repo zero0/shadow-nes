@@ -96,6 +96,7 @@ void __fastcall__ game_state_continue_enter(void)
     ppu_update_sprite_full( arrow_sprite, TILE_TO_PIXEL(4), TILE_TO_PIXEL(10), PALETTE_SPRITE_0, 0, 0, 0, 0x33 );
 
     game_state_internal = SaveSlot_0;
+    b = 0;
 }
 
 void __fastcall__ game_state_continue_leave(void)
@@ -129,26 +130,32 @@ void __fastcall__ game_state_continue_update(void)
     if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
     {
         if( game_state_internal > 0 ) --game_state_internal;
+        b = 1;
     }
 
     if( GAMEPAD_PRESSED(0, GAMEPAD_D) )
     {
         if( game_state_internal < _SAVE_SLOT_COUNT ) ++game_state_internal;
+        b = 1;
     }
 
-    switch( game_state_internal )
+    if( b )
     {
-        case SaveSlot_0:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_0 * SaveSlot_Arrow_Y_Spacing)) );
-            break;
-        case SaveSlot_1:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_1 * SaveSlot_Arrow_Y_Spacing)) );
-            break;
-        case SaveSlot_2:
-            ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_2 * SaveSlot_Arrow_Y_Spacing)) );
-            break;
-        default:
-            INVALID_CODE_PATH;
-            break;
+        b = 0;
+        switch( game_state_internal )
+        {
+            case SaveSlot_0:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_0 * SaveSlot_Arrow_Y_Spacing)) );
+                break;
+            case SaveSlot_1:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_1 * SaveSlot_Arrow_Y_Spacing)) );
+                break;
+            case SaveSlot_2:
+                ppu_update_sprite_pos( arrow_sprite, TILE_TO_PIXEL(SaveSlot_Arrow_X), TILE_TO_PIXEL(SaveSlot_Arrow_Y + (SaveSlot_2 * SaveSlot_Arrow_Y_Spacing)) );
+                break;
+            default:
+                INVALID_CODE_PATH;
+                break;
+        }
     }
 }
