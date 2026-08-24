@@ -171,8 +171,8 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
     NMI_NAMETABLE_UPDATE_COUNT: .res 1 ;
     PPU_CTRL_BUFFER:            .res 1 ;
     PPU_MASK_BUFFER:            .res 1 ;
-    NAMETABLE_UPDATE_LEN:       .res 1 ;
-    NAMETABLE_UPDATE_POS:       .res 1 ;
+    NAMETABLE_UPDATE_POS_HEAD:  .res 1 ;
+    NAMETABLE_UPDATE_POS_TAIL:  .res 1 ;
     OAM_UPDATE_LEN:             .res 1 ;
     OAM_SPRITE_LEN:             .res 1 ;
     OAM_SPRITE_FREE_LIST_LEN:   .res 1 ;
@@ -329,7 +329,8 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 
 .endproc
 
-ppu_enable_default:
+.proc ppu_enable_default
+
     lda SCROLL_X
     sta PPU_SCROLL
 
@@ -343,7 +344,18 @@ ppu_enable_default:
     lda #(PPU_MASK_BACKGROUND_SHOW | PPU_MASK_SPRITE_SHOW | PPU_MASK_BACKGROUND_LEFTMOST_8x8_SHOW | PPU_MASK_SPRITE_LEFTMOST_8x8_SHOW)
     sta PPU_MASK
     sta PPU_MASK_BUFFER
+
     rts
+
+.endproc
+
+.proc ppu_set_mask
+
+    sta PPU_MASK_BUFFER
+
+    rts
+
+.endproc
 
 ; ppu_update: waits until next NMI, turns rendering on (if not already), uploads OAM, palette, and nametable update to PPU
 .proc ppu_update
@@ -485,10 +497,11 @@ _ppu_update_tile_internal:
     lsr
 
     ; load length in X
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; high bits of (Y >> 3) | $20 (nametable base)
     ora #$20
+
     sta NAMETABLE_UPDATE, x
     inx
 
@@ -518,7 +531,7 @@ _ppu_update_tile_internal:
     inx
 
     ; store new length
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     rts
 
@@ -527,7 +540,7 @@ _ppu_update_tile_internal:
 _ppu_update_byte:
 
     ; load length
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; store high byte
     lda _PPU_ARGS+0
@@ -545,7 +558,7 @@ _ppu_update_byte:
     inx
 
     ; store new length
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     rts
 
@@ -561,14 +574,16 @@ _ppu_update_byte:
     lsr
 
     ; load length in X
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; high bits of (Y >> 3) | $20 (nametable base)
     ora #$20
     sta NAMETABLE_UPDATE, x
+    inx
 
     ; load Y
     lda _PPU_ARGS+1
+
     ; shift Y << 5
     asl
     asl
@@ -579,12 +594,11 @@ _ppu_update_byte:
     ; ( Y << 5 ) | X
     ; recover X value
     ora _PPU_ARGS+0
-    inx
     sta NAMETABLE_UPDATE, x
+    inx
 
     ; tile count
     lda #0
-    inx
     sta NAMETABLE_UPDATE, x
 
     ; store tile batch index to update
@@ -594,7 +608,7 @@ _ppu_update_byte:
     inx
 
     ; store new length
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     rts
 
@@ -605,7 +619,7 @@ _ppu_update_byte:
 .proc ppu_push_tile_batch_internal
 
     ; load length
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; store tile
     lda _PPU_ARGS+0
@@ -615,7 +629,7 @@ _ppu_update_byte:
     inx
 
     ; store new lenght
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     ; increment tile batch count
     ldx CUR_TILE_BATCH_COUNT_OFFSET
@@ -636,7 +650,7 @@ _ppu_update_byte:
     beq :+
 
         ; load update length
-        ldx NAMETABLE_UPDATE_LEN
+        ldx NAMETABLE_UPDATE_POS_TAIL
 
         ; start new streaming element
         lda #0
@@ -649,7 +663,7 @@ _ppu_update_byte:
         inx
 
         ; store new update length
-        stx NAMETABLE_UPDATE_LEN
+        stx NAMETABLE_UPDATE_POS_TAIL
 
     :
 
@@ -664,15 +678,16 @@ _ppu_update_byte:
     sta NAMETABLE_UPDATE, x
 
     ; load update length
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; store tile
     lda _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
 
+    inx
+
     ; start new streaming element
     lda #0
-    inx
     sta NAMETABLE_UPDATE, x
 
     ; store offset for new batch
@@ -682,7 +697,7 @@ _ppu_update_byte:
     inx
 
     ; store new update length
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     rts
 
@@ -692,7 +707,7 @@ _ppu_update_byte:
 .proc ppu_end_tile_batch_internal
 
     ; load length
-    ;ldx NAMETABLE_UPDATE_LEN
+    ;ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; store end of stream 0
     ;lda #0
@@ -702,11 +717,11 @@ _ppu_update_byte:
     ;inx
 
     ; store new length for next stream
-    ;stx NAMETABLE_UPDATE_LEN
+    ;stx NAMETABLE_UPDATE_POS_TAIL
 
     ; mark nametable dirty for upload
     lda NMI_DIRTY_UPLOAD_MASK
-    ora #NMI_DIRTY_UPLOAD_MASK_NAMETABLE
+    ora #(NMI_DIRTY_UPLOAD_MASK_NAMETABLE)
     sta NMI_DIRTY_UPLOAD_MASK
 
     rts
@@ -888,7 +903,7 @@ _ppu_fill_nametable_attr:
 .proc _ppu_set_nametable_attr_internal
 
     ; load length
-    ldx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_TAIL
 
     ; store high byte
     lda _PPU_ARGS+0
@@ -912,7 +927,7 @@ _ppu_fill_nametable_attr:
     inx
 
     ; store new length
-    stx NAMETABLE_UPDATE_LEN
+    stx NAMETABLE_UPDATE_POS_TAIL
 
     rts
 .endproc
@@ -1587,8 +1602,10 @@ ppu_clear_chr_ram:
 .proc _ppu_upload_nametable
 
     ; nametable update
-    ldx NAMETABLE_UPDATE_POS
-    cpx NAMETABLE_UPDATE_LEN
+    ldx NAMETABLE_UPDATE_POS_HEAD
+
+    ; compare head to tail, if equal go to end, otherwise upload
+    cpx NAMETABLE_UPDATE_POS_TAIL
     beq @end
 
     ;; count nametable updates
@@ -1604,77 +1621,80 @@ ppu_clear_chr_ram:
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
 
-    ; low byte address
     inx
+
+    ; low byte address
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
 
-    ; tile count (bit7 0 = individualt, 1 = repeat)
     inx
+
+    ; tile count (bit7 0 = individual, 1 = repeat)
     lda NAMETABLE_UPDATE, x
     bpl @update_nametable_individual
 
 @update_nametable_repeat:
 
+    ; increment here to retail flags
+    inx
+
     ; mask out bit7 and move to Y
     and #$7F
+
+    ; transfer counter A -> Y
     tay
 
     ; tile to repeat
-    inx
     lda NAMETABLE_UPDATE, x
-
-    ; write tile to PPU_DATA Y times
-    :
-        ; add repeat count to nametable count
-        ;inc NMI_NAMETABLE_UPDATE_COUNT
-
-        sta PPU_DATA
-        dey
-        bne :-
 
     ; increment to next byte to read
     inx
+
+    ; write tile to PPU_DATA Y times
+    :
+        sta PPU_DATA
+
+        ; decrement counter
+        dey
+        bne :-
 
     ; jump to end
     jmp @update_nametable_loop_compare
 
 @update_nametable_individual:
 
-    ; load tile count
+    ; increment here to retain flags
     inx
 
+    ; load tile count A -> Y
     tay
+
     ; check tile count != 0
     :
-        ; add tile count to nametable count
-        ;inc NMI_NAMETABLE_UPDATE_COUNT
-
-        ; tile
+        ; add tile
         lda NAMETABLE_UPDATE, x
         sta PPU_DATA
+
         inx
 
         ; decrement count
         dey
         bne :-
 
+    ; fallthrough to compare
+
 @update_nametable_loop_compare:
 
-    ;; if there have been >64 tiles updated, early out of the loop
-    ;lda NMI_NAMETABLE_UPDATE_COUNT
-    ;cmp #64
-    ;bcc @update_nametable_loop_end
-    ; bmi @update_nametable_loop_end
-
-    ; loop while X != length
-    cpx NAMETABLE_UPDATE_LEN
+    ; loop while X head != tail
+    cpx NAMETABLE_UPDATE_POS_TAIL
     bne @update_nametable_loop
+
+    ; fallthrough on loop end
 
 @update_nametable_loop_end:
 
-    ; reset nametable update length
-    stx NAMETABLE_UPDATE_POS
+    ; update nametable update head to tail
+    stx NAMETABLE_UPDATE_POS_HEAD
 
 @end:
 
@@ -2002,7 +2022,7 @@ ppu_clear_chr_ram:
     lda NMI_DIRTY_UPLOAD_MASK
 
     ; test if nametable updates are needed
-    and #NMI_DIRTY_UPLOAD_MASK_NAMETABLE
+    and #(NMI_DIRTY_UPLOAD_MASK_NAMETABLE)
 
     ; if there are name table uploads, perfrom them
     bne :+
@@ -2017,7 +2037,13 @@ ppu_clear_chr_ram:
     sta NMI_NAMETABLE_UPDATE_COUNT
 
     ; load position in X
-    ldx NAMETABLE_UPDATE_POS
+    ldx NAMETABLE_UPDATE_POS_HEAD
+
+    ; compare head to tail
+    cpx NAMETABLE_UPDATE_POS_TAIL
+
+    ; when head == tail, skip upload
+    beq @nmi_upload_end
 
 @nmi_upload_nametable_loop_start:
 
@@ -2025,13 +2051,15 @@ ppu_clear_chr_ram:
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
 
-    ; low byte address
     inx
+
+    ; low byte address
     lda NAMETABLE_UPDATE, x
     sta PPU_ADDR
 
-    ; tile count (bit7 0 = individual, 1 = repeat)
     inx
+
+    ; tile count (bit7 0 = individual, 1 = repeat)
     lda NAMETABLE_UPDATE, x
 
     ; if there are zero tiles to update, exit loop
@@ -2044,8 +2072,13 @@ ppu_clear_chr_ram:
 
 @nmi_upload_nametable_repeat:
 
-    ; mask out bit7 of tile count and move to Y
+    ; increment here to retain flags
+    inx
+
+    ; mask out bit7 of tile count
     and #$7F
+
+    ; transfer count A -> Y
     tay
 
     ; add repeat count to nametable update count
@@ -2054,8 +2087,10 @@ ppu_clear_chr_ram:
     sta NMI_NAMETABLE_UPDATE_COUNT
 
     ; tile to repeat Y times
-    inx
     lda NAMETABLE_UPDATE, x
+
+    ; increment to next byte to compare
+    inx
 
     ; write tile to PPU_DATA Y times
     :
@@ -2065,13 +2100,13 @@ ppu_clear_chr_ram:
         dey
         bne :-
 
-    ; increment to next byte to compare
-    inx
-
     ; jump to compare
     jmp @nmi_upload_nametable_loop_compare
 
 @nmi_upload_nametable_individual:
+
+    ; increment here to retain flags
+    inx
 
     ; tile count -> Y
     tay
@@ -2084,33 +2119,33 @@ ppu_clear_chr_ram:
     ; write individual tiles
     :
         ; load tile to write
-        inx
         lda NAMETABLE_UPDATE, x
         sta PPU_DATA
+
+        inx
 
         ; decrement count
         dey
         bne :-
 
-    ; increment to next byte to compare
-    inx
-
     ; fallthrough to compare
 
 @nmi_upload_nametable_loop_compare:
 
+.if 0
     ; if there have been a lot of tiles updated, early out of the loop
     lda NMI_NAMETABLE_UPDATE_COUNT
-    cmp #NMI_NAMETABLE_UPDATE_COUNT_MAX
+    cmp #(NMI_NAMETABLE_UPDATE_COUNT_MAX)
     ;bcc @nmi_upload_nametable_loop_end
     ; bmi @nmi_upload_nametable_loop_end
+.endif
 
     ; if it's the end of the stream, end the loop
-    lda NAMETABLE_UPDATE, x
-    beq @nmi_upload_nametable_loop_end
+    ;lda NAMETABLE_UPDATE, x
+    ;beq @nmi_upload_nametable_loop_end
 ;
-    ; loop while X != length
-    cpx NAMETABLE_UPDATE_LEN
+    ; loop while X head != tail
+    cpx NAMETABLE_UPDATE_POS_TAIL
     bne @nmi_upload_nametable_loop_start
 
     ; fallthrough on loop end
@@ -2118,7 +2153,7 @@ ppu_clear_chr_ram:
 @nmi_upload_nametable_loop_end:
 
     ; reset nametable update length
-    stx NAMETABLE_UPDATE_POS
+    stx NAMETABLE_UPDATE_POS_HEAD
 
 @nmi_upload_end:
 
