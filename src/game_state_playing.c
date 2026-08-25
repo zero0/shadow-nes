@@ -51,25 +51,25 @@ void __fastcall__ game_state_playing_enter()
 
     // top
     ppu_begin_tile_batch(0,0);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 2);
+    ppu_push_repeat_tile_batch(0, SCREEN_WIDTH * 2);
     ppu_end_tile_batch();
 
 #if 0
     ppu_begin_tile_batch(0,2);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
+    ppu_push_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
 
     // bottom
     ppu_begin_tile_batch(0,SCREEN_HEIGH-7);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 2);
+    ppu_push_repeat_tile_batch(0, SCREEN_WIDTH * 2);
     ppu_end_tile_batch();
 
     ppu_begin_tile_batch(0,SCREEN_HEIGH-6);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
+    ppu_push_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
 
     ppu_begin_tile_batch(0,SCREEN_HEIGH-3);
-    ppu_repeat_tile_batch(0, SCREEN_WIDTH * 3);
+    ppu_push_repeat_tile_batch(0, SCREEN_WIDTH * 3);
     ppu_end_tile_batch();
 #endif
 

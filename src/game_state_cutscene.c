@@ -91,6 +91,8 @@ static uint8_t current_cutscene_index;
 
 static uint8_t arrow_sprite;
 
+static timer_handle_t anim_text_timer;
+
 static void __fastcall__ draw_cutscene_part(void)
 {
     // TODO: maybe fade out/in while clearing
@@ -117,28 +119,38 @@ static void __fastcall__ draw_cutscene_part(void)
         //ppu_set_palette( PALETTE_SPRITE_1, 0x0A, 0x1A, 0x2A );
         //ppu_set_palette( PALETTE_SPRITE_2, 0x0A, 0x1A, 0x2A );
 
-        ppu_begin_tile_batch(0, ALIGN_SCREEN_HEIGHT_CENTER_TOP(8));
+        // top
+        ppu_begin_tile_batch(ALIGN_SCREEN_WIDTH_LEFT(0), ALIGN_SCREEN_HEIGHT_CENTER_TOP(8));
         ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_LEFT));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
         ppu_end_tile_batch();
 
-        ppu_begin_tile_batch(0, ALIGN_SCREEN_HEIGHT_CENTER_BOTTOM(8));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_LEFT));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
-        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER));
+        ppu_repeat_tile_batch(ALIGN_SCREEN_WIDTH_LEFT(1), ALIGN_SCREEN_HEIGHT_CENTER_TOP(8), CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER), SCREEN_WIDTH - 3);
+
+        ppu_begin_tile_batch(ALIGN_SCREEN_WIDTH_RIGHT(1), ALIGN_SCREEN_HEIGHT_CENTER_TOP(8));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_RIGHT));
         ppu_end_tile_batch();
+
+        // bottom
+        ppu_begin_tile_batch(ALIGN_SCREEN_WIDTH_LEFT(0), ALIGN_SCREEN_HEIGHT_CENTER_BOTTOM(8));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_BOTTOM_LEFT));
+        ppu_end_tile_batch();
+
+        ppu_repeat_tile_batch(ALIGN_SCREEN_WIDTH_LEFT(1), ALIGN_SCREEN_HEIGHT_CENTER_BOTTOM(8), CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_BOTTOM_CENTER), SCREEN_WIDTH - 3);
+
+        ppu_begin_tile_batch(ALIGN_SCREEN_WIDTH_RIGHT(1), ALIGN_SCREEN_HEIGHT_CENTER_BOTTOM(8));
+        ppu_push_tile_batch(CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_BOTTOM_RIGHT));
+        ppu_end_tile_batch();
+
+        // flush nametable since ppu is off
+        ppu_upload_nametable();
 
         // draw text
         switch( GET_CUTSCENE_ATTR_TYPE( all_cutscenes_attr[ current_cutscene_index ] ) )
         {
             case CUTSCENE_TYPE_TEXT:
                 //text_draw_string_v( 0, 0, GET_CUTSCENE_PALLETE( all_cutscenes_palettes[ current_cutscene_index ], game_state_internal ), all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal ] );
-                text_draw_string_v( 1, ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
+                //text_draw_string_v( ALIGN_SCREEN_WIDTH_LEFT(1), ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
+                text_delay_start( ALIGN_SCREEN_WIDTH_LEFT(1), ALIGN_SCREEN_HEIGHT_CENTER(4), 0, all_cutscenes_text[ current_cutscene_index ].t[ game_state_internal] ); //all_text[0]); // all_text[all_cutscenes_text[current_cutscene_index] + game_state_internal] ); //all_cutscenes_text[0].t[0]);
                 break;
 
             case CUTSCENE_TYPE_DIALOG:
@@ -150,6 +162,7 @@ static void __fastcall__ draw_cutscene_part(void)
                 INVALID_CODE_PATH;
                 break;
         }
+
     }
 
     ppu_enable();
@@ -172,6 +185,7 @@ void __fastcall__ game_state_cutscene_enter(void)
     game_state_timer = request_timer( HOLD_TO_SKIP_ENTIRE_CUTSCENE_TIME_FRAMES );
 
     arrow_sprite = ppu_request_sprite();
+    anim_text_timer = request_timer( 4 );
 
     //ppu_update_sprite_sprite( arrow_sprite, CHR_SPRITE(HUD_PNG_SPRITE, SPRITE_DIALOG_ARROR) );
 
@@ -184,6 +198,7 @@ void __fastcall__ game_state_cutscene_enter(void)
 void __fastcall__ game_state_cutscene_leave(void)
 {
     release_timer( game_state_timer );
+    release_timer( anim_text_timer );
     ppu_release_sprite( arrow_sprite );
 }
 
@@ -228,6 +243,12 @@ static void __fastcall__ advance_cutscene(void)
 
 void __fastcall__ game_state_cutscene_update(void)
 {
+    if( is_timer_done( anim_text_timer ) )
+    {
+        set_timer( anim_text_timer, 4 );
+        text_delay_advance(2);
+    }
+
     // if START is heald for a number of frames, end the cutscene early
     if( GAMEPAD_HELD(0, GAMEPAD_START) )
     {

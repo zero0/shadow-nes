@@ -2,20 +2,20 @@
 ; Text
 ;
 
-.export _text_delay_start = text_delay_start
-.export _text_delay_advance = text_delay_advance
-.export _text_delay_display_full = text_delay_display_full
-
-;
-;
-;
-
 .segment "ZEROPAGE"
 
 text_delay_position:    .res 1 ;
+text_delay_start_x:     .res 1 ;
+text_delay_start_y:     .res 1 ;
+text_delay_x:           .res 1 ;
+text_delay_y:           .res 1 ;
+text_delay_c_ptr:       .res 2 ;
 itoa_input:             .res 4 ;
 
 .export _text_delay_position = text_delay_position
+.export _text_delay_start_x = text_delay_start_x, _text_delay_start_y = text_delay_start_y
+.export _text_delay_x = text_delay_x, _text_delay_y = text_delay_y
+.export _text_delay_c_ptr = text_delay_c_ptr
 .export _itoa_input = itoa_input
 
 .export _itoa_uint8_impl = itoa_uint8_impl
@@ -37,36 +37,6 @@ bcd:   .res 5
 ;
 
 .segment "CODE"
-
-.proc text_delay_start
-
-    lda #1
-    sta text_delay_position
-
-    rts
-
-.endproc
-
-.proc text_delay_advance
-
-    lda text_delay_position
-    cmp #$FF
-    beq :+
-        inc text_delay_position
-    :
-
-    rts
-
-.endproc
-
-.proc text_delay_display_full
-
-    lda #$FF
-    sta text_delay_position
-
-    rts
-
-.endproc
 
 .macro double_dabble_base bitcount, max_num_count
 

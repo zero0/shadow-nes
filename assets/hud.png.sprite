@@ -1,3 +1,6 @@
+# keep all sprites
+sprite.remove-duplicates=false
+
 # selection pointer
 sprite.region.pointer_0=[0, 0]
 sprite.region.pointer_1=[0, 1]

@@ -67,6 +67,12 @@ extern ptr_t NAMETABLE_C_ATTR;
 extern ptr_t NAMETABLE_D;
 extern ptr_t NAMETABLE_D_ATTR;
 
+// base $20, $24, $28, $2C
+#define TILE_TO_NAMETABLE_ADDRESS(arg, i, base, x, y) do {  \
+    (arg)[i + 0] = (uint8_t)(base) | (uint8_t)((y) >> 3);   \
+    (arg)[i + 1] = (uint8_t)((y) << 5) | (x);               \
+} while( 0 )
+
 #define TILE_TO_ADDRESS_ARGS(arg, base, x, y)       \
     (arg)[0] = (uint8_t)(base) | (uint8_t)( (y) );  \
     (arg)[1] = (uint8_t)( (x) << 4 )
@@ -139,9 +145,17 @@ void __fastcall__ ppu_update_tile_internal(void);
 //
 //
 
+#define ppu_repeat_tile_batch(px, py, t, c) do {\
+    TILE_TO_NAMETABLE_ADDRESS(PPU_ARGS, 0, (uint8_t)0x20, (px), (py));   \
+    PPU_ARGS[2] = (c);                          \
+    PPU_ARGS[3] = (t);                          \
+    ppu_repeat_tile_batch_internal();           \
+} while( 0 )
+
+void __fastcall__ ppu_repeat_tile_batch_internal(void);
+
 #define ppu_begin_tile_batch( px, py ) do { \
-    PPU_ARGS[0] = (px);                     \
-    PPU_ARGS[1] = (py);                     \
+    TILE_TO_NAMETABLE_ADDRESS(PPU_ARGS, 0, (uint8_t)0x20, (px), (py));   \
     ppu_begin_tile_batch_internal();        \
 } while( 0 )
 
@@ -154,13 +168,13 @@ void __fastcall__ ppu_begin_tile_batch_internal(void);
 
 void __fastcall__ ppu_push_tile_batch_internal(void);
 
-#define ppu_repeat_tile_batch( t, c ) do {  \
+#define ppu_push_repeat_tile_batch( t, c ) do {  \
     PPU_ARGS[0] = (t);                      \
     PPU_ARGS[1] = (c);                      \
-    ppu_repeat_tile_batch_internal();       \
+    ppu_push_repeat_tile_batch_internal();       \
 } while( 0 )
 
-void __fastcall__ ppu_repeat_tile_batch_internal(void);
+void __fastcall__ ppu_push_repeat_tile_batch_internal(void);
 
 #define ppu_end_tile_batch()        \
     ppu_end_tile_batch_internal()
@@ -282,6 +296,7 @@ void __fastcall__ ppu_upload_meta_sprite_chr_ram_internal(void);
 
 void __fastcall__ ppu_add_meta_sprite_internal(void);
 
+void __fastcall__ ppu_upload_nametable(void);
 //
 //
 //

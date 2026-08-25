@@ -17,11 +17,12 @@
 #define text_draw_uint32( x, y, p, n )      args_call_4_3a_1i( text_draw_uint32_impl, x, y, p, n )
 #define text_draw_uint32_x2( x, y, p, n )   args_call_4_3a_1i( text_draw_uint32_x2_impl, x, y, p, n )
 
-#define text_draw_string_delay(x, y, p, t)  args_call_4_3a_1p( text_draw_string_delay_impl, x, y, p, t )
+#define text_delay_start(x, y, p, s)        args_call_4_3a_1s( text_delay_start_impl, x, y, p, s)
+#define text_delay_advance(a)               args_call_1( text_delay_advance_impl, a)
 
-void __fastcall__ text_delay_start(void);
+void __fastcall__ text_delay_start_impl(void);
 
-void __fastcall__ text_delay_advance(void);
+void __fastcall__ text_delay_advance_impl(void);
 
 void __fastcall__ text_delay_display_full(void);
 
@@ -30,8 +31,6 @@ void __fastcall__ text_delay_display_full(void);
 //
 
 void __fastcall__ text_clear_impl(void);
-
-void __fastcall__ text_draw_string_delay_impl(void);
 
 void __fastcall__ text_draw_string_impl(void);
 

@@ -2529,6 +2529,21 @@ namespace img2chr
                     allUniqueTiles.Add(uniqueTiles[tileHash]);
                 }
             }
+            else
+            {
+                for (int i = 0; i < tiles.tiles.Count; i++)
+                {
+                    var tile = tiles.tiles[i];
+                    var unique = new UniqueTileEntry
+                    {
+                        index = i,
+                        attr = tile.attr,
+                    };
+                    uniqueTileIndices.Add(i);
+                    allUniqueTiles.Add(unique);
+                    uniqueTiles[tile.tileIndices.GetHashCode()] = unique;
+                }
+            }
 
             List<MetaSpriteEntry> allMetaSprites = new List<MetaSpriteEntry>();
 
@@ -2599,14 +2614,16 @@ namespace img2chr
                             tileEntry.tileName = regionName;
 
                             tileEntriesToConvert[i] = tileEntry;
-
                             break;
                         }
                     }
                 }
 
+                // remove un-named tiles
+                tileEntriesToConvert.RemoveAll(x => string.IsNullOrEmpty(x.tileName));
+
                 // sort tiles by position
-                tileEntriesToConvert.Sort( (a, b) =>
+                tileEntriesToConvert.Sort((a, b) =>
                 {
                     int cmp = a.x.CompareTo(b.x);
                     cmp = cmp == 0 ? a.y.CompareTo(b.y) : cmp;
@@ -2632,9 +2649,13 @@ namespace img2chr
                 sb.AppendLine("enum");
                 sb.AppendLine("{");
 
-                foreach (var tile in tileEntriesToConvert)
+                for (int i = 0; i < tileEntriesToConvert.Count; i++)
                 {
-                    Indent(sb).Append($"{$"SPRITE_{tile.tileName.ToUpperInvariant()},",-32}").Append($" // [{tile.x}, {tile.y}, {tile.w}, {tile.h}]").AppendLine();
+                    TileEntry tile = tileEntriesToConvert[i];
+                    if(!string.IsNullOrEmpty(tile.tileName))
+                    {
+                        Indent(sb).Append($"{$"SPRITE_{tile.tileName.ToUpperInvariant()},",-32}").Append($" // [{tile.x}, {tile.y}, {tile.w}, {tile.h}]").AppendLine();
+                    }
                 }
                 sb.AppendLine("};");
 

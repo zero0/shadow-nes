@@ -121,9 +121,6 @@ void __fastcall__ game_state_title_enter(void)
     anim_title_timer = request_timer( 10 );
     anim_text_timer = request_timer( 15 );
 
-    text_delay_start();
-
-
 #if DEMO_BUILD
         if( game_settings_is_demo_mode_enabled() )
         {
@@ -145,7 +142,6 @@ void __fastcall__ game_state_title_update(void)
 {
     if( is_timer_done( anim_text_timer ) )
     {
-        text_delay_advance();
         set_timer( anim_text_timer, 15 );
     }
 
@@ -229,14 +225,12 @@ void __fastcall__ game_state_title_update(void)
                 break;
 
             case Continue:
-                if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
                 {
                     set_next_game_state( GAME_STATE_CONTINUE );
                 }
                 break;
 
             case Options:
-                if( GAMEPAD_PRESSED(0, GAMEPAD_A) )
                 {
                     set_next_game_state( GAME_STATE_OPTIONS );
                 }

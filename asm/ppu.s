@@ -240,9 +240,11 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_set_address_tile_internal
 .export _ppu_update_tile_internal
 
+.export _ppu_repeat_tile_batch_internal = ppu_repeat_tile_batch_internal
+
 .export _ppu_begin_tile_batch_internal = ppu_begin_tile_batch_internal
 .export _ppu_push_tile_batch_internal = ppu_push_tile_batch_internal
-.export _ppu_repeat_tile_batch_internal = ppu_repeat_tile_batch_internal
+.export _ppu_push_repeat_tile_batch_internal = ppu_push_repeat_tile_batch_internal
 .export _ppu_end_tile_batch_internal = ppu_end_tile_batch_internal
 
 .export _ppu_update_byte
@@ -266,6 +268,7 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 
 .export _ppu_add_meta_sprite_internal
 .export _ppu_upload_meta_sprite_chr_ram_internal
+.export _ppu_upload_nametable = ppu_upload_nametable
 
 .export _ppu_clear_chr_ram_internal
 .export _ppu_upload_chr_ram_internal
@@ -422,7 +425,7 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
     ;jsr _ppu_upload_palette
 
     ; upload nametable updates
-    ;jsr _ppu_upload_nametable
+    ;jsr ppu_upload_nametable
 
     lda #3
     sta NMI_READY
@@ -562,39 +565,72 @@ _ppu_update_byte:
 
     rts
 
-; begin tile batch updates starting at PPU_ARGS[0..1] name table address
-.proc ppu_begin_tile_batch_internal
 
-    ; load Y
+; add repeat tile batch starting at  PPU_ARGS[0..1] nametable address, PPU_ARGS[2] count, PPU_ARGS[3] tile
+.proc ppu_repeat_tile_batch_internal
+
+    ; load length
+    ldx NAMETABLE_UPDATE_POS_TAIL
+
+    ; store address high
+    lda _PPU_ARGS+0
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store address low
     lda _PPU_ARGS+1
+    sta NAMETABLE_UPDATE, x
 
-    ; shift Y >> 3
-    lsr
-    lsr
-    lsr
+    ; increment length
+    inx
+
+    ; store count
+    lda _PPU_ARGS+2
+
+    ; mask length with repeat bit
+    ora #$80
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store tile
+    lda _PPU_ARGS+3
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store new lenght
+    stx NAMETABLE_UPDATE_POS_TAIL
+
+    ; mark nametable dirty for upload
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora #(NMI_DIRTY_UPLOAD_MASK_NAMETABLE)
+    sta NMI_DIRTY_UPLOAD_MASK
+
+    rts
+
+.endproc
+
+; begin tile batch updates starting at PPU_ARGS[0..1] nametable address
+.proc ppu_begin_tile_batch_internal
 
     ; load length in X
     ldx NAMETABLE_UPDATE_POS_TAIL
 
-    ; high bits of (Y >> 3) | $20 (nametable base)
-    ora #$20
+    ; nametable high
+    lda _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
+
     inx
 
-    ; load Y
+    ; nametable low
     lda _PPU_ARGS+1
-
-    ; shift Y << 5
-    asl
-    asl
-    asl
-    asl
-    asl
-
-    ; ( Y << 5 ) | X
-    ; recover X value
-    ora _PPU_ARGS+0
     sta NAMETABLE_UPDATE, x
+
     inx
 
     ; tile count
@@ -640,7 +676,7 @@ _ppu_update_byte:
 .endproc
 
 ; add the tile PPU_ARGS[0] a number of times PPU_ARGS[1]
-.proc ppu_repeat_tile_batch_internal
+.proc ppu_push_repeat_tile_batch_internal
 
     ; load current tile count
     ldx CUR_TILE_BATCH_COUNT_OFFSET
@@ -718,6 +754,23 @@ _ppu_update_byte:
 
     ; store new length for next stream
     ;stx NAMETABLE_UPDATE_POS_TAIL
+
+    ; load batch count
+    ldx CUR_TILE_BATCH_COUNT_OFFSET
+    lda NAMETABLE_UPDATE, x
+
+    ; if there are no batches, remove entry in table
+    bne :+
+        ; load tail
+        lda NAMETABLE_UPDATE_POS_TAIL
+
+        ; subtract 3 (ptr hi, ptr lo, count) from offset
+        sec
+        sbc #3
+
+        ; store new offset
+        sta NAMETABLE_UPDATE_POS_TAIL
+        :
 
     ; mark nametable dirty for upload
     lda NMI_DIRTY_UPLOAD_MASK
@@ -1598,8 +1651,8 @@ ppu_clear_chr_ram:
 
 .endproc
 
-; _ppu_upload_nametable: uploads nametable updates while PPU is off
-.proc _ppu_upload_nametable
+; uploads nametable updates while PPU is off
+.proc ppu_upload_nametable
 
     ; nametable update
     ldx NAMETABLE_UPDATE_POS_HEAD
@@ -1608,9 +1661,9 @@ ppu_clear_chr_ram:
     cpx NAMETABLE_UPDATE_POS_TAIL
     beq @end
 
-    ;; count nametable updates
-    ;lda #0
-    ;sta NMI_NAMETABLE_UPDATE_COUNT
+    ; disable rendering
+    lda #0
+    sta PPU_MASK
 
     ; reset latch
     bit PPU_STATUS
@@ -1635,11 +1688,14 @@ ppu_clear_chr_ram:
 
 @update_nametable_repeat:
 
-    ; increment here to retail flags
+    ; increment here to retain flags
     inx
 
     ; mask out bit7 and move to Y
     and #$7F
+
+    ; if there are no tiles to repeat, skip the loop
+    beq @update_nametable_loop_compare
 
     ; transfer counter A -> Y
     tay
@@ -1665,6 +1721,12 @@ ppu_clear_chr_ram:
 
     ; increment here to retain flags
     inx
+
+    ; compare tile count to zero
+    cmp #0
+
+    ; if there are no tiles to process, skip the loop
+    beq @update_nametable_loop_compare
 
     ; load tile count A -> Y
     tay
@@ -1695,6 +1757,10 @@ ppu_clear_chr_ram:
 
     ; update nametable update head to tail
     stx NAMETABLE_UPDATE_POS_HEAD
+
+    ; restore ppu mask
+    lda PPU_MASK_BUFFER
+    sta PPU_MASK
 
 @end:
 
@@ -2032,9 +2098,11 @@ ppu_clear_chr_ram:
 
     :
 
+.if 0
     ; count nametable updates
     lda #0
     sta NMI_NAMETABLE_UPDATE_COUNT
+.endif
 
     ; load position in X
     ldx NAMETABLE_UPDATE_POS_HEAD
@@ -2078,13 +2146,18 @@ ppu_clear_chr_ram:
     ; mask out bit7 of tile count
     and #$7F
 
+    ; if there are zero tiles to repeat, skip loop
+    beq @nmi_upload_nametable_loop_compare
+
     ; transfer count A -> Y
     tay
 
+.if 0
     ; add repeat count to nametable update count
     clc
     adc NMI_NAMETABLE_UPDATE_COUNT
     sta NMI_NAMETABLE_UPDATE_COUNT
+.endif
 
     ; tile to repeat Y times
     lda NAMETABLE_UPDATE, x
@@ -2108,13 +2181,21 @@ ppu_clear_chr_ram:
     ; increment here to retain flags
     inx
 
+    ; compare tile count to 0
+    cmp #0
+
+    ; if there are zero tiles to process, skip loop
+    beq @nmi_upload_nametable_loop_compare
+
     ; tile count -> Y
     tay
 
+.if 0
     ; add tile count to nametable count
     clc
     adc NMI_NAMETABLE_UPDATE_COUNT
     sta NMI_NAMETABLE_UPDATE_COUNT
+.endif
 
     ; write individual tiles
     :

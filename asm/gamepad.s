@@ -6,7 +6,13 @@
 CTRL_PORT1          =$4016
 CTRL_PORT2          =$4017
 
-.define NUM_GAMEPADS    2
+.if .defined(DISTRO_BUILD)
+.define USE_GAMEPAD_MASKING 0
+.else
+.define USE_GAMEPAD_MASKING 1
+.endif
+
+.define NUM_GAMEPADS        2
 
 .if NUM_GAMEPADS < 1
 .error "Too few game pads defined. At least 1 is required."
@@ -84,6 +90,8 @@ CTRL_PORT2          =$4017
 
 .if NUM_GAMEPADS > 1
 
+.if USE_GAMEPAD_MASKING
+
     ; fix gamepad index to [0,3] and move to x
 .if (NUM_GAMEPADS & (NUM_GAMEPADS - 1)) = 0
 
@@ -100,6 +108,8 @@ CTRL_PORT2          =$4017
         sta #(NUM_GAMEPADS - 1)
         :
 .endif
+
+.endif ; USE_GAMEPAD_MASKING
 
     ; transfer index A -> offset X
     tax
@@ -123,6 +133,8 @@ CTRL_PORT2          =$4017
 
 .if NUM_GAMEPADS > 1
 
+.if USE_GAMEPAD_MASKING
+
     ; fix gamepad index to num supported game pads
 .if (NUM_GAMEPADS & (NUM_GAMEPADS - 1)) = 0
 
@@ -139,6 +151,8 @@ CTRL_PORT2          =$4017
         sta #(NUM_GAMEPADS - 1)
         :
 .endif
+
+.endif ; USE_GAMEPAD_MASKING
 
     ; transfer index A -> offset X
     tax
@@ -162,6 +176,8 @@ CTRL_PORT2          =$4017
 
 .if NUM_GAMEPADS > 1
 
+.if USE_GAMEPAD_MASKING
+
     ; fix gamepad index to num supported game pads
 .if (NUM_GAMEPADS & (NUM_GAMEPADS - 1)) = 0
 
@@ -178,6 +194,8 @@ CTRL_PORT2          =$4017
         sta #(NUM_GAMEPADS - 1)
         :
 .endif
+
+.endif ; USE_GAMEPAD_MASKING
 
     ; transfer index A -> offset X
     tax
