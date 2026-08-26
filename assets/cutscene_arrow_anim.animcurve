@@ -1,0 +1,32 @@
+
+# animation playback rate (60 / rate)
+# should be 60, 30, 20, 15, 12, 10, etc.
+anim.rate=60
+
+# animation curve segment
+anim.0.type=inout-quad
+anim.0.curve.steps=8
+anim.0.curve.min=0
+anim.0.curve.max=16
+
+# animation event `events.[frame-number]=[value]`
+anim.0.events.2=1
+anim.0.events.6=1
+
+# animation keyframes segment
+anim.1.type=keyframe
+anim.1.keyframes.0=2
+anim.1.keyframes.1=4
+anim.1.keyframes.2=5
+
+# fill in frame from previous value [3, 4, 5, 6] = 5
+anim.1.keyframes.7=10
+anim.1.keyframes.10=12
+
+# additional option to sepecifiy frame count if it can't be determed easily
+# fills in from last value
+anim.1.keyframes.frames=13
+
+# animation event frame number is relative to the part
+anim.1.events.2=1
+anim.1.events.6=1
