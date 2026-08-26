@@ -2377,6 +2377,207 @@ namespace img2chr
         }
         #endregion
 
+        #region Animation Curve File
+
+        static float Pow2(float x) => x * x;
+        static float Pow3(float x) => x * x * x;
+        static float Pow4(float x) => x * x * x * x;
+
+        static float Linear(float t) => t;
+
+        static float Smoothstep(float t) => Pow2(t) * (3 - 2 * t);
+
+        static float Smootherstep(float t) => Pow3(t) * (t * (6 * t - 15) + 10);
+
+        static float EaseInSine(float t) => 1 - (float)Math.Cos(t * Math.PI * 0.5f);
+
+        static float EaseOutSine(float t) => (float)Math.Sin(t * Math.PI * 0.5f);
+
+        static float EaseInOutSine(float t) => -((float)Math.Cos(t * Math.PI) - 1) * 0.5f;
+
+        static float EaseInQuad(float t) => Pow2(t);
+
+        static float EaseOutQuad(float t) => 1 - Pow2(1 - t);
+
+        static float EaseInOutQuad(float t) => t < 0.5f ? 2 * Pow2(t) : 1 - Pow2(-2 * t + 2) * 0.5f;
+
+        static float EaseInCubic(float t) => Pow3(t);
+
+        static float EaseOutCubic(float t) => 1 - Pow3(1 - t);
+
+        static float EaseInOutCubic(float t) => t < 0.5f ? 4 * Pow3(t) : 1 - Pow3(-2 * t + 2) * 0.5f;
+
+        static float EaseInQuart(float t) => Pow4(t);
+
+        static float EaseOutQuart(float t) => 1 - Pow4(1 - t);
+
+        static float EaseInOutQuart(float t) => t < 0.5f ? 8 * Pow4(t) : 1 - Pow4(-2 * t + 2) * 0.5f;
+
+        static readonly Dictionary<string, Func<float, float>> kEasingFunctions = new()
+        {
+            {"linear", Linear},
+            {"smoothstep", Smoothstep},
+            {"smootherstep", Smootherstep},
+
+            {"in-sine", EaseInSine},
+            {"out-sine", EaseOutSine},
+            {"inout-sine", EaseInOutSine},
+
+            {"in-quad", EaseInQuad},
+            {"out-quad", EaseOutQuad},
+            {"inout-quad", EaseInOutQuad},
+
+            {"in-cubic", EaseInCubic},
+            {"out-cubic", EaseOutCubic},
+            {"inout-cubic", EaseInOutCubic},
+
+            {"in-quart", EaseInQuart},
+            {"out-quart", EaseOutQuart},
+            {"inout-quart", EaseInOutQuart},
+
+            {"custom", null},
+            {"keyframe", null},
+        };
+
+        private static void ConvertAnimationCurveFile(string animationCurveFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
+        {
+            TryGetFileParamters(animationCurveFilename, string.Empty, out var animationCurveParameters);
+
+            if (!GetBoolParameter(animationCurveParameters, "enable-import", true))
+            {
+                return;
+            }
+
+            int rate = GetIntParameter(animationCurveParameters, "anim.rate", 60);
+            Assert(rate > 0 && rate <= 60, $"Invalid animation rate {rate}: Animation rate needs to be between (0 .. 60]");
+
+            List<int> curveValues = new();
+            Dictionary<int, int> eventFramesToValues = new();
+
+            for (int part = 0; part < 8; ++part)
+            {
+                var animSegmentParameters = GetSubParameters(animationCurveParameters, $"anim.{part}.");
+                if (animSegmentParameters.Count > 0)
+                {
+                    int baseFrameIndex = curveValues.Count;
+
+                    string easingFunc = GetStringParameter(animSegmentParameters, "type", "linear");
+
+                    if (!kEasingFunctions.TryGetValue(easingFunc.ToLowerInvariant(), out var easingFunction))
+                    {
+                        LogWarning($"Unknown easing function '{easingFunc}'. Reverting to 'linear'.");
+                        easingFunction = Linear;
+                    }
+
+                    bool isUsingKeyframes = easingFunction == null;
+
+                    // no easing function, keyframe values are used
+                    if (isUsingKeyframes)
+                    {
+                        int numKeyframes = GetIntParameter(animSegmentParameters, "keyframes.frames", -1);
+                        var keyframeParameters = GetSubParameters(animSegmentParameters, "keyframes.");
+                        Dictionary<int, int> definedKeyframes = new();
+                        int maxKeyframe = -1;
+                        if (keyframeParameters.Count > 0)
+                        {
+                            foreach (var kv in keyframeParameters)
+                            {
+                                if (int.TryParse(kv.Value, out int keyframe))
+                                {
+                                    maxKeyframe = Math.Max(keyframe, maxKeyframe);
+                                    definedKeyframes[keyframe] = GetIntParameter(keyframeParameters, kv.Key);
+                                }
+                            }
+                        }
+
+                        Assert(definedKeyframes.Count > 0, "No keyframes defined");
+                        if (definedKeyframes.Count > 0)
+                        {
+                            int lastKeyframeValue = 0;
+                            int actualMaxKeyframe = Math.Max(maxKeyframe, numKeyframes);
+                            for (int i = 0; i < actualMaxKeyframe; ++i)
+                            {
+                                if (definedKeyframes.TryGetValue(i, out int value))
+                                {
+                                    lastKeyframeValue = value;
+                                }
+
+                                curveValues.Add(lastKeyframeValue);
+                            }
+                        }
+                    }
+                    // eval using easing function
+                    else
+                    {
+                        int stepCount = GetIntParameter(animSegmentParameters, "curve.steps", 16);
+                        int minValue = GetIntParameter(animSegmentParameters, "curve.min", 0);
+                        int maxValue = GetIntParameter(animSegmentParameters, "curve.max", 255);
+
+                        // evaluate easing function over number of segments from [0..1]
+                        for (int i = 0; i < stepCount; ++i)
+                        {
+                            float t = (float)i / (stepCount - 1);
+
+                            t = easingFunction(t);
+
+                            int v = minValue + (int)((maxValue - minValue) * t);
+                            curveValues.Add(v);
+                        }
+                    }
+
+                    // events
+                    var eventParameters = GetSubParameters(animSegmentParameters, "events.");
+                    if (eventParameters.Count > 0)
+                    {
+                        foreach (var kv in eventParameters)
+                        {
+                            if (int.TryParse(kv.Key, out int relKeyframe))
+                            {
+                                eventFramesToValues[baseFrameIndex + relKeyframe] = GetIntParameter(eventParameters, kv.Key);
+                            }
+                        }
+                    }
+                }
+            }
+
+            string exportName = NormalizeExportName(Path.GetFileName(animationCurveFilename));
+
+            // write background info to file
+            using (AutoStringBuilder auto = AutoStringBuilder.Auto())
+            {
+                var sb = auto.sb;
+
+                GenerateAsmFileHeader(sb, animationCurveFilename, kRODATASegment);
+
+                sb.AppendLine($"; Animation: @{rate} frames:{curveValues.Count}");
+
+                sb.AppendLine($".export _{exportName} = {exportName}");
+                sb.AppendLine($".export _{exportName}_frames = {exportName}_frames");
+                sb.AppendLine($".export _{exportName}_events = {exportName}_events");
+                sb.AppendLine();
+                sb.AppendLine($"{exportName}:");
+                sb.AppendLine($"; number of frames, animation rate (60 / {rate})");
+                Indent(sb).AppendLine($".byte ${curveValues.Count:X2}, ${60 / rate:X2}");
+                sb.AppendLine();
+                sb.AppendLine($"; frame values ({curveValues.Count})");
+                sb.AppendLine($"{exportName}_frames:");
+                foreach (var v in curveValues)
+                {
+                    Indent(sb).AppendLine($".byte ${v:X2}");
+                }
+                sb.AppendLine();
+                sb.AppendLine("; event values (0 = no event, non-0 = event value)");
+                for (int i = 0; i < curveValues.Count; ++i)
+                {
+                    eventFramesToValues.TryGetValue(i, out int eventValue);
+                    Indent(sb).AppendLine($".byte ${eventValue:X2}");
+                }
+
+                WriteGeneratedAsmFile(sb, animationCurveFilename, in cmdOptions);
+            }
+        }
+        #endregion
+
         #region Background File
         private static void ConvertBackgroundImageFile(string backgroundFilename, Dictionary<string, ChrRomOutput> outputChrData, in ConvertOptions cmdOptions)
         {
@@ -2652,7 +2853,7 @@ namespace img2chr
                 for (int i = 0; i < tileEntriesToConvert.Count; i++)
                 {
                     TileEntry tile = tileEntriesToConvert[i];
-                    if(!string.IsNullOrEmpty(tile.tileName))
+                    if (!string.IsNullOrEmpty(tile.tileName))
                     {
                         Indent(sb).Append($"{$"SPRITE_{tile.tileName.ToUpperInvariant()},",-32}").Append($" // [{tile.x}, {tile.y}, {tile.w}, {tile.h}]").AppendLine();
                     }
@@ -5304,6 +5505,7 @@ namespace img2chr
                 {".font", new () {convertFunc = ConvertFontFile, order = 0}},
                 {".background", new () {convertFunc = ConvertBackgroundImageFile, order = 0}},
                 {".palette", new () { convertFunc = ConvertPaletteFile, order = 0}},
+                {".animcurve", new () { convertFunc = ConvertAnimationCurveFile, order = 0}},
 
                 //{ ".aseprite", new(){ convertFunc = ConverteAsepriteFile, order = 0 } },
             };
