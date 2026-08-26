@@ -67,6 +67,8 @@ extern ptr_t NAMETABLE_C_ATTR;
 extern ptr_t NAMETABLE_D;
 extern ptr_t NAMETABLE_D_ATTR;
 
+#define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
+
 // base $20, $24, $28, $2C
 #define TILE_TO_NAMETABLE_ADDRESS(arg, i, base, x, y) do {  \
     (arg)[i + 0] = (uint8_t)(base) | (uint8_t)((y) >> 3);   \

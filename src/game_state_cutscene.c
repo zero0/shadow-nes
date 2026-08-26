@@ -75,8 +75,6 @@ static const uint8_t all_cutscenes_bottom_img[] = {
     0,
 };
 
-#define CHR_SPRITE(chr, sprite)     ((chr) + (sprite))
-
 #if 0
 STATIC_ASSERT(ARRAY_SIZE(all_cutscenes) == _CUTSCENE_COUNT);
 #endif
@@ -97,6 +95,15 @@ static void __fastcall__ draw_cutscene_part(void)
 {
     // TODO: maybe fade out/in while clearing
     ppu_disable();
+
+    // mapper update
+    mapper_reset();
+    mapper_reset_irq();
+
+    mapper_set_chr_bank_0(CHR_ROM_00_SHADOW_FONT_EN_PNG_FONT_CHR_ROM);
+    mapper_set_chr_bank_1(CHR_ROM_02_HUD_PNG_SPRITE_CHR_ROM);
+
+    mapper_set_prg_bank(0);
 
     {
         ppu_set_scroll( 0, 0 );
