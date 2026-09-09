@@ -652,13 +652,13 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 .endif
 
     ; load music ptr at Y into music channel X
-    lda (APU_MUSIC_TABLE_PTR), Y
-    sta APU_MUSIC_CHANNEL_PTR_H, X
+    lda (APU_MUSIC_TABLE_PTR), y
+    sta APU_MUSIC_CHANNEL_PTR_H, x
 
     iny
 
-    lda (APU_MUSIC_TABLE_PTR), Y
-    sta APU_MUSIC_CHANNEL_PTR_L, X
+    lda (APU_MUSIC_TABLE_PTR), y
+    sta APU_MUSIC_CHANNEL_PTR_L, x
 
     rts
 
@@ -722,13 +722,13 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     tay
 
     ; load table ptr from Y and store in channel at X
-    lda (APU_SFX_TABLE_PTR), Y
-    sta APU_SFX_CHANNEL_PTR_L, X
+    lda (APU_SFX_TABLE_PTR), y
+    sta APU_SFX_CHANNEL_PTR_L, x
 
     iny
 
-    lda (APU_SFX_TABLE_PTR), Y
-    sta APU_SFX_CHANNEL_PTR_H, X
+    lda (APU_SFX_TABLE_PTR), y
+    sta APU_SFX_CHANNEL_PTR_H, x
 
 
 .if 0
@@ -768,8 +768,8 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 
     ; clear music ptr
     lda #0
-    sta APU_MUSIC_CHANNEL_PTR_H, X
-    sta APU_MUSIC_CHANNEL_PTR_L, X
+    sta APU_MUSIC_CHANNEL_PTR_H, x
+    sta APU_MUSIC_CHANNEL_PTR_L, x
 
     ; restore from Y -> A
     tya
@@ -785,28 +785,28 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     tay
 
     lda #0
-    sta APU_SFX_CHANNEL_PTR_H, X
-    sta APU_SFX_CHANNEL_PTR_L, X
-    sta APU_SFX_TIMERS, X
-    sta APU_SFX_OFFSET, X
+    sta APU_SFX_CHANNEL_PTR_H, x
+    sta APU_SFX_CHANNEL_PTR_L, x
+    sta APU_SFX_TIMERS, x
+    sta APU_SFX_OFFSET, x
 
     ; restore from Y -> A
     tya
 
 .if 0
     txa
-    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, x
     tax
 
     ; mute triangle
     lda #0
-    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 0, X
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + 0, x
 
     ; mute pulse 1, 2, and noise
     lda #$30
-    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 0, X
-    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 0, X
-    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 0, X
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + 0, x
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + 0, x
+    sta APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + 0, x
 
     ; TODO: mmc5 and dmc
 .endif
@@ -825,20 +825,20 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 .proc _apu_process_sfx_channel
 
     ; load channel timer
-    lda APU_SFX_TIMERS, X
+    lda APU_SFX_TIMERS, x
 
     ; if the timer is done, check for more data
     beq @timer_done
 
     ; decrement timer
-    dec APU_SFX_TIMERS, X
+    dec APU_SFX_TIMERS, x
 
     ; if there is still time left, just update the buffer
     bne @update_buffer
 
 @timer_done:
     ; load high ptr value
-    lda APU_SFX_CHANNEL_PTR_H, X
+    lda APU_SFX_CHANNEL_PTR_H, x
 
     ; if there is a ptr, continue
     bne :+
@@ -848,15 +848,15 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 
     ; store ptr in zeropage tmp
     sta _APU_TEMP_PTR+1
-    lda APU_SFX_CHANNEL_PTR_L, X
+    lda APU_SFX_CHANNEL_PTR_L, x
     sta _APU_TEMP_PTR+0
 
     ; load offset for channel into Y
-    ldy APU_SFX_OFFSET, X
+    ldy APU_SFX_OFFSET, x
 
 @read_byte:
     ; read byte from ptr stream
-    lda (_APU_TEMP_PTR), Y
+    lda (_APU_TEMP_PTR), y
 
     ; if zero is read, it's an end of stream
     beq @eos
@@ -865,13 +865,13 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     bmi @write_register
 
     ; otherwise, it's a frame skip, store in timer for channel X
-    sta APU_SFX_TIMERS, X
+    sta APU_SFX_TIMERS, x
 
     ; increment Y here to presere flags
     iny
 
     ; store Y offset for channel
-    sty APU_SFX_OFFSET, X
+    sty APU_SFX_OFFSET, x
 
     ; end of data, go to updating the buffer
     jmp @update_buffer
@@ -889,19 +889,19 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 
     ; add channel offset to register offset
     clc
-    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, x
 
     ; transfer A register offset -> X
     tax
 
     ; read byte from ptr stream
-    lda (_APU_TEMP_PTR), Y
+    lda (_APU_TEMP_PTR), y
 
     ; increment Y to next byte
     iny
 
     ; write byte to sfx buffer at register offset X
-    sta APU_SFX_OUTPUT_BUFFER, X
+    sta APU_SFX_OUTPUT_BUFFER, x
 
     ; restore channel -> X
     ldx _APU_TEMP_VAR0
@@ -912,10 +912,10 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 @eos:
 
     ; end of stream, mark ptr as invalid (A is already 0)
-    sta APU_SFX_CHANNEL_PTR_H, X
+    sta APU_SFX_CHANNEL_PTR_H, x
 
     ; store Y offset for channel
-    sty APU_SFX_OFFSET, X
+    sty APU_SFX_OFFSET, x
 
 @update_buffer:
 
@@ -924,7 +924,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
 
     ; add channel offset to channel to get buffer offset
     clc
-    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, X
+    adc _APU_SFX_OUTPUT_BUFFER_OFFSETS, x
 
     ; transfer buffer offset to X
     tax
@@ -936,7 +936,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     sta _APU_TEMP_VAR0
 
     ; load buffered pulse 1
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1, x
     and #(APU_PULSE_VOLUME_MASK)
 
     ; compare against existing value
@@ -946,7 +946,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     bcs :+
         ; otherwise, if volume greater than the existing value, copy pulse 1
         .repeat APU_PULSE_REGISTER_COUNT, I
-        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + I, X
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + I, x
         sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE1 + I
         .endrepeat
         :
@@ -958,7 +958,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     sta _APU_TEMP_VAR0
 
     ; load buffered pulse 2
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2, x
     and #(APU_PULSE_VOLUME_MASK)
 
     ; compare against existing value
@@ -968,7 +968,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     bcs :+
         ; otherwise, if volume greater than the existing value, copy pulse 2
         .repeat APU_PULSE_REGISTER_COUNT, I
-        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + I, X
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + I, x
         sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_PULSE2 + I
         .endrepeat
         :
@@ -978,7 +978,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE
     beq :+
         .repeat APU_TRIANGLE_REGISTER_COUNT, I
-        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + I, X
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + I, x
         sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_TRIANGLE + I
         .endrepeat
         :
@@ -990,7 +990,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     sta _APU_TEMP_VAR0
 
     ; load buffered pulse 2
-    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE, X
+    lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE, x
     and #(APU_NOISE_VOLUME_OR_ENVOLOPE_MASK)
 
     ; compare against existing value
@@ -1000,7 +1000,7 @@ _APU_SFX_OUTPUT_BUFFER_OFFSETS:
     bcs :+
         ; otherwise, if volume greater than the existing value, copy noise
         .repeat APU_NOISE_REGISTER_COUNT, I
-        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + I, X
+        lda APU_SFX_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + I, x
         sta APU_OUTPUT_BUFFER + APU_OUTPUT_BUFFER_OFFSET_NOISE + I
         .endrepeat
         :
