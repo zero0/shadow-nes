@@ -9,6 +9,11 @@
 #define NAMETABLE_2             (uint8_t)2
 #define NAMETABLE_3             (uint8_t)3
 
+#define NAMETABLE_0_BASE        0x20
+#define NAMETABLE_1_BASE        0x24
+#define NAMETABLE_2_BASE        0x28
+#define NAMETABLE_3_BASE        0x2C
+
 #define NAMETABLE_0_ADDR        (ptr_t)0x2000
 #define NAMETABLE_1_ADDR        (ptr_t)0x2400
 #define NAMETABLE_2_ADDR        (ptr_t)0x2800
@@ -103,6 +108,11 @@ extern uint8_t PALETTE_TINT_BACKGROUND_INDEX;
 extern uint8_t PALETTE_TINT_OAM_INDEX;
 #pragma zpsym("PALETTE_TINT_OAM_INDEX");
 
+extern uint8_t SCROLL_X;
+#pragma zpsym("SCROLL_X");
+extern uint8_t SCROLL_Y;
+#pragma zpsym("SCROLL_Y");
+
 uint8_t __fastcall__ ppu_frame_index(void);
 
 void __fastcall__ ppu_update(void);
@@ -116,12 +126,9 @@ void __fastcall__ ppu_on(void);
 void __fastcall__ ppu_skip(void);
 
 #define ppu_set_scroll( x, y )  do {    \
-    PPU_ARGS[0] = (x);                  \
-    PPU_ARGS[1] = (y);                  \
-    ppu_set_scroll_internal();          \
+    SCROLL_X = (x);                     \
+    SCROLL_Y = (y);                     \
 } while( 0 )
-
-void __fastcall__ ppu_set_scroll_internal(void);
 
 #define ppu_set_address_tile( tx, ty )  \
     PPU_ARGS[0] = (tx);                 \
@@ -147,21 +154,41 @@ void __fastcall__ ppu_update_tile_internal(void);
 //
 //
 
-#define ppu_repeat_tile_batch(px, py, t, c) do {\
-    TILE_TO_NAMETABLE_ADDRESS(PPU_ARGS, 0, (uint8_t)0x20, (px), (py));   \
-    PPU_ARGS[2] = (c);                          \
-    PPU_ARGS[3] = (t);                          \
-    ppu_repeat_tile_batch_internal();           \
+#define ppu_repeat_tile_batch(base, px, py, t, c) do {  \
+    PPU_ARGS[0] = (base);                               \
+    PPU_ARGS[1] = (px);                                 \
+    PPU_ARGS[2] = (py);                                 \
+    PPU_ARGS[3] = (c);                                  \
+    PPU_ARGS[4] = (t);                                  \
+    ppu_repeat_tile_batch_internal();                   \
 } while( 0 )
 
 void __fastcall__ ppu_repeat_tile_batch_internal(void);
 
-#define ppu_begin_tile_batch( px, py ) do { \
-    TILE_TO_NAMETABLE_ADDRESS(PPU_ARGS, 0, (uint8_t)0x20, (px), (py));   \
-    ppu_begin_tile_batch_internal();        \
+#define ppu_repeat_tile_batch_address(addr, t, c) do {  \
+    ADDRESS_TO_ARGS(PPU_ARGS, 0, addr);                 \
+    PPU_ARGS[2] = (c);                                  \
+    PPU_ARGS[3] = (t);                                  \
+    ppu_repeat_tile_batch_address_internal();           \
+} while( 0 )
+
+void __fastcall__ ppu_repeat_tile_batch_address_internal(void);
+
+#define ppu_begin_tile_batch( base, px, py ) do {   \
+    PPU_ARGS[0] = (base);                               \
+    PPU_ARGS[1] = (px);                                 \
+    PPU_ARGS[2] = (py);                                 \
+    ppu_begin_tile_batch_internal();                    \
 } while( 0 )
 
 void __fastcall__ ppu_begin_tile_batch_internal(void);
+
+#define ppu_begin_tile_batch_address( addr ) do {   \
+    ADDRESS_TO_ARGS(PPU_ARGS, 0, addr);             \
+    ppu_begin_tile_batch_address_internal();        \
+} while( 0 )
+
+void __fastcall__ ppu_begin_tile_batch_address_internal(void);
 
 #define ppu_push_tile_batch( t ) do {   \
     PPU_ARGS[0] = (t);                  \
@@ -171,8 +198,8 @@ void __fastcall__ ppu_begin_tile_batch_internal(void);
 void __fastcall__ ppu_push_tile_batch_internal(void);
 
 #define ppu_push_repeat_tile_batch( t, c ) do {  \
-    PPU_ARGS[0] = (t);                      \
-    PPU_ARGS[1] = (c);                      \
+    PPU_ARGS[0] = (t);                           \
+    PPU_ARGS[1] = (c);                           \
     ppu_push_repeat_tile_batch_internal();       \
 } while( 0 )
 

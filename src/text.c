@@ -30,7 +30,7 @@ extern uint8_t* text_delay_c_ptr;
 //  ARGS[2] = count
 void __fastcall__ text_clear_impl(void)
 {
-    ppu_begin_tile_batch( ARGS[0], ARGS[1] );
+    ppu_begin_tile_batch( NAMETABLE_0_BASE, ARGS[0], ARGS[1] );
 
     ppu_push_repeat_tile_batch( EMPTY_TILE, ARGS[2] );
 
@@ -46,7 +46,7 @@ void __fastcall__ text_draw_string_impl(void)
 {
     x = ARGS[0];
     y = ARGS[1];
-    ppu_begin_tile_batch( x, y );
+    ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
 
     c_ptr = ARGS_PTR[0];
 
@@ -66,7 +66,7 @@ void __fastcall__ text_draw_string_impl(void)
             x = ARGS[0];
             ++y;
 
-            ppu_begin_tile_batch( x, y );
+            ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
             continue;
         }
         if( c == FONT_CHAR_CARAGE_RETURN )
@@ -76,7 +76,7 @@ void __fastcall__ text_draw_string_impl(void)
             x = ARGS[0];
             ++y;
 
-            ppu_begin_tile_batch( x, y );
+            ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
             continue;
         }
         if( c == FONT_CHAR_TAB )
@@ -141,7 +141,7 @@ void __fastcall__ text_delay_advance_impl(void)
     ++j;
     w = 0;
 
-    ppu_begin_tile_batch( x, y );
+    ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
 
     for( ; i != imax && w < ARGS[0]; ++i, ++j )
     {
@@ -157,7 +157,7 @@ void __fastcall__ text_delay_advance_impl(void)
             x = text_delay_start_x;
             ++y;
 
-            ppu_begin_tile_batch( x, y );
+            ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
             continue;
         }
         else if( c == FONT_CHAR_CARAGE_RETURN )
@@ -167,7 +167,7 @@ void __fastcall__ text_delay_advance_impl(void)
             x = text_delay_start_x;
             ++y;
 
-            ppu_begin_tile_batch( x, y );
+            ppu_begin_tile_batch( NAMETABLE_0_BASE, x, y );
             continue;
         }
         else if( c == FONT_CHAR_TAB )
@@ -240,7 +240,7 @@ void __fastcall__ text_draw_uint8_impl(void)
 
     itoa_uint8_impl();
 
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ITOA_START_LEFT_JUSTIFIED(1);
     ITOA_END_LEFT_JUSTIFIED(0);
     ppu_end_tile_batch();
@@ -258,7 +258,7 @@ void __fastcall__ text_draw_uint16_impl(void)
 
     itoa_uint16_impl();
 
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ITOA_START_LEFT_JUSTIFIED(2);
     ITOA_PART_LEFT_JUSTIFIED(1);
     ITOA_END_LEFT_JUSTIFIED(0);
@@ -279,7 +279,7 @@ void __fastcall__ text_draw_uint32_impl(void)
 
     itoa_uint32_impl();
 
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ITOA_PART_LEFT_JUSTIFIED(4);
     ITOA_PART_LEFT_JUSTIFIED(3);
     ITOA_PART_LEFT_JUSTIFIED(2);
@@ -295,7 +295,7 @@ void __fastcall__ text_draw_uint32_impl(void)
 //  ARGS[3] = 8bit number
 void __fastcall__ text_draw_uint8_x2_impl(void)
 {
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ppu_push_tile_batch(0x0F & (ARGS[3] >> 4));
     ppu_push_tile_batch(0x0F & (ARGS[3] >> 0));
     ppu_end_tile_batch();
@@ -308,7 +308,7 @@ void __fastcall__ text_draw_uint8_x2_impl(void)
 //  ARGS_UINT16[3] = 8bit number
 void __fastcall__ text_draw_uint16_x2_impl(void)
 {
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 12));
     ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 8));
     ppu_push_tile_batch(0x0F & (ARGS_UINT16[0] >> 4));
@@ -323,7 +323,7 @@ void __fastcall__ text_draw_uint16_x2_impl(void)
 //  ARGS_UINT16[3] = 8bit number
 void __fastcall__ text_draw_uint32_x2_impl(void)
 {
-    ppu_begin_tile_batch(ARGS[0], ARGS[1]);
+    ppu_begin_tile_batch(NAMETABLE_0_BASE, ARGS[0], ARGS[1]);
     ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 28));
     ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 24));
     ppu_push_tile_batch(0x0F & (ARGS_UINT32 >> 20));

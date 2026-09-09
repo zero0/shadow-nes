@@ -172,6 +172,10 @@ void __fastcall__ game_state_title_update(void)
     {
         apu_play_sfx(0);
     }
+    else if(GAMEPAD_PRESSED(0, GAMEPAD_R))
+    {
+        apu_play_sfx(1);
+    }
 
     if( GAMEPAD_PRESSED(0, GAMEPAD_U) )
     {

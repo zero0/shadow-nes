@@ -412,7 +412,7 @@ static void __fastcall__ boss_render_status_bar(void)
         z = all_boss_health_per_block_log2[boss_index];
 
         // boss health bar
-        ppu_begin_tile_batch(2,27);
+        ppu_begin_tile_batch(NAMETABLE_0_BASE, 2,27);
 
         // full tiles
         for( i16 = 0, imax16 = (y16 >> z), j16 = (1 << z); i16 < imax16 && x16 >= j16; ++i16, j16 += (1 << z) )

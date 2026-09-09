@@ -252,7 +252,7 @@ static void __fastcall__ player_render_status_bars(void)
         y = player_max_health_per_level[ g_current_game_data.player_level ];
 
         // player health bar
-        ppu_begin_tile_batch(2,1);
+        ppu_begin_tile_batch(NAMETABLE_0_BASE, 2,1);
 
         // full tiles
         for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = 8; i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )
@@ -284,7 +284,7 @@ static void __fastcall__ player_render_status_bars(void)
         y = player_max_stamina_per_level[ g_current_game_data.player_level ];
 
         // player stamina bar
-        ppu_begin_tile_batch(2,2);
+        ppu_begin_tile_batch(NAMETABLE_0_BASE, 2,2);
 
         // full tiles
         for( i = 0, imax = (y >> PLAYER_HEALTH_PER_TILE_LOG2), j = (1 << PLAYER_HEALTH_PER_TILE_LOG2); i < imax && x >= j; ++i, j += (1 << PLAYER_HEALTH_PER_TILE_LOG2) )

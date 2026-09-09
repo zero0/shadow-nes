@@ -107,18 +107,18 @@ void __fastcall__ game_state_playing_enter()
         ppu_set_palette( PALETTE_SPRITE_0, 0x0A, 0x1A, 0x2A );
 
         // top
-        //ppu_repeat_tile_batch(ALIGN_SCREEN_WIDTH_LEFT(0), ALIGN_SCREEN_HEIGHT_TOP(0), CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER), SCREEN_WIDTH );
+        //ppu_repeat_tile_batch(NAMETABLE_0_BASE, ALIGN_SCREEN_WIDTH_LEFT(0), ALIGN_SCREEN_HEIGHT_TOP(0), CHR_SPRITE(CHR_ROM_00_HUD_PNG_SPRITE, SPRITE_BORDER_TOP_CENTER), SCREEN_WIDTH );
 
 
         // boss health bar
-        ppu_repeat_tile_batch(Boss_HealthBar_X_Min, Boss_HealthBar_Y, Sprite_HealthBar_Min, 1);
-        ppu_repeat_tile_batch(Boss_HealthBar_X_Val, Boss_HealthBar_Y, Sprite_HealthBar_100, Boss_HealthBar_W);
-        ppu_repeat_tile_batch(Boss_HealthBar_X_Max, Boss_HealthBar_Y, Sprite_HealthBar_Max, 1);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Boss_HealthBar_X_Min, Boss_HealthBar_Y, Sprite_HealthBar_Min, 1);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Boss_HealthBar_X_Val, Boss_HealthBar_Y, Sprite_HealthBar_100, Boss_HealthBar_W);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Boss_HealthBar_X_Max, Boss_HealthBar_Y, Sprite_HealthBar_Max, 1);
 
         // player health bar
-        ppu_repeat_tile_batch(Player_HealthBar_X_Min, Player_HealthBar_Y, Sprite_HealthBar_Min, 1);
-        ppu_repeat_tile_batch(Player_HealthBar_X_Val, Player_HealthBar_Y, Sprite_HealthBar_100, Player_HealthBar_W);
-        ppu_repeat_tile_batch(Player_HealthBar_X_Max, Player_HealthBar_Y, Sprite_HealthBar_Max, 1);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Player_HealthBar_X_Min, Player_HealthBar_Y, Sprite_HealthBar_Min, 1);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Player_HealthBar_X_Val, Player_HealthBar_Y, Sprite_HealthBar_100, Player_HealthBar_W);
+        ppu_repeat_tile_batch(NAMETABLE_0_BASE, Player_HealthBar_X_Max, Player_HealthBar_Y, Sprite_HealthBar_Max, 1);
 
 #if 0
         ppu_begin_tile_batch(0,2);

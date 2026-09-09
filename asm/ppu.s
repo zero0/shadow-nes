@@ -193,6 +193,8 @@ _NAMETABLE_D_ATTR    =NAMETABLE_D_ATTR
 .export _PPU_SCOPE
 .export _PALETTE_TINT_OAM_INDEX = PALETTE_TINT_OAM_INDEX
 .export _PALETTE_TINT_BACKGROUND_INDEX = PALETTE_TINT_BACKGROUND_INDEX
+.export _SCROLL_X = SCROLL_X
+.export _SCROLL_Y = SCROLL_Y
 
 ; NMI temp variables
 PALETTE_TINT_OAM_PTR =          _PPU_TEMP_PTR + 0
@@ -241,8 +243,10 @@ BG_UPLOAD_ADDR =                _PPU_TEMP_PTR + 2
 .export _ppu_update_tile_internal
 
 .export _ppu_repeat_tile_batch_internal = ppu_repeat_tile_batch_internal
+.export _ppu_repeat_tile_batch_address_internal = ppu_repeat_tile_batch_address_internal
 
 .export _ppu_begin_tile_batch_internal = ppu_begin_tile_batch_internal
+.export _ppu_begin_tile_batch_address_internal = ppu_begin_tile_batch_address_internal
 .export _ppu_push_tile_batch_internal = ppu_push_tile_batch_internal
 .export _ppu_push_repeat_tile_batch_internal = ppu_push_repeat_tile_batch_internal
 .export _ppu_end_tile_batch_internal = ppu_end_tile_batch_internal
@@ -566,8 +570,84 @@ _ppu_update_byte:
     rts
 
 
-; add repeat tile batch starting at  PPU_ARGS[0..1] nametable address, PPU_ARGS[2] count, PPU_ARGS[3] tile
+;#define TILE_TO_NAMETABLE_ADDRESS(arg, i, base, x, y) do {  \
+;    (arg)[i + 0] = (uint8_t)(base) | (uint8_t)((y) >> 3);   \
+;    (arg)[i + 1] = (uint8_t)((y) << 5) | (x);               \
+;} while( 0 )
+
+; add repeat tile batch starting at PPU_ARGS[0] base, (PPU_ARGS[1], PPU_ARGS[2]) (x,y), PPU_ARGS[3] count, PPU_ARGS[4] tile
 .proc ppu_repeat_tile_batch_internal
+
+    ; load length
+    ldx NAMETABLE_UPDATE_POS_TAIL
+
+    ; convert y coord to high address
+    lda _PPU_ARGS+2
+
+    ; y >> 3
+    lsr
+    lsr
+    lsr
+
+    ; or with base
+    ora _PPU_ARGS+0
+
+    ; store address high
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; convert remaining y to low address
+    lda _PPU_ARGS+2
+
+    ; y << 5
+    asl
+    asl
+    asl
+    asl
+    asl
+
+    ; or with x
+    ora _PPU_ARGS+1
+
+    ; store address low
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store count
+    lda _PPU_ARGS+3
+
+    ; mask length with repeat bit
+    ora #$80
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store tile
+    lda _PPU_ARGS+4
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; store new length
+    stx NAMETABLE_UPDATE_POS_TAIL
+
+    ; mark nametable dirty for upload
+    lda NMI_DIRTY_UPLOAD_MASK
+    ora #(NMI_DIRTY_UPLOAD_MASK_NAMETABLE)
+    sta NMI_DIRTY_UPLOAD_MASK
+
+    rts
+
+.endproc
+
+; add repeat tile batch starting at PPU_ARGS[0..1] nametable address, PPU_ARGS[2] count, PPU_ARGS[3] tile
+.proc ppu_repeat_tile_batch_address_internal
 
     ; load length
     ldx NAMETABLE_UPDATE_POS_TAIL
@@ -603,7 +683,7 @@ _ppu_update_byte:
     ; increment length
     inx
 
-    ; store new lenght
+    ; store new length
     stx NAMETABLE_UPDATE_POS_TAIL
 
     ; mark nametable dirty for upload
@@ -615,8 +695,67 @@ _ppu_update_byte:
 
 .endproc
 
-; begin tile batch updates starting at PPU_ARGS[0..1] nametable address
+; begin tile batch updates starting at PPU_ARGS[0] base and (PPU_ARGS[1], PPU_ARGS[2]) (x, y)
 .proc ppu_begin_tile_batch_internal
+
+    ; load length
+    ldx NAMETABLE_UPDATE_POS_TAIL
+
+    ; convert y coord to high address
+    lda _PPU_ARGS+2
+
+    ; y >> 3
+    lsr
+    lsr
+    lsr
+
+    ; or with base
+    ora _PPU_ARGS+0
+
+    ; store address high
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; convert remaining y to low address
+    lda _PPU_ARGS+2
+
+    ; y << 5
+    asl
+    asl
+    asl
+    asl
+    asl
+
+    ; or with x
+    ora _PPU_ARGS+1
+
+    ; store address low
+    sta NAMETABLE_UPDATE, x
+
+    ; increment length
+    inx
+
+    ; tile count
+    lda #0
+    sta NAMETABLE_UPDATE, x
+
+    ; store tile batch index to update
+    stx CUR_TILE_BATCH_COUNT_OFFSET
+
+    ; increment to next byte to start the next updates
+    inx
+
+    ; store new length
+    stx NAMETABLE_UPDATE_POS_TAIL
+
+    rts
+
+.endproc
+
+; begin tile batch updates starting at PPU_ARGS[0..1] nametable address
+.proc ppu_begin_tile_batch_address_internal
 
     ; load length in X
     ldx NAMETABLE_UPDATE_POS_TAIL
@@ -664,7 +803,7 @@ _ppu_update_byte:
     ; increment length
     inx
 
-    ; store new lenght
+    ; store new length
     stx NAMETABLE_UPDATE_POS_TAIL
 
     ; increment tile batch count
@@ -1002,7 +1141,7 @@ _ppu_fill_nametable_attr:
         inx
         bne :-
 
-    ; store 0 in oam update lenght
+    ; store 0 in oam update length
     stx OAM_UPDATE_LEN
 
     rts
