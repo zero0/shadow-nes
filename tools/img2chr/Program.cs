@@ -12,6 +12,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Parameters = System.Collections.Generic.Dictionary<string, string>;
+using System.ComponentModel;
+
 
 #if false
 using ImageBitmap = System.Drawing.Bitmap;
@@ -1689,141 +1691,309 @@ namespace img2chr
 
         // Palette from Lospec.com/palette-list
         // Palette Name: NES (Wikipedia)
-        static Dictionary<Color, int> kNESColorToPalette = new()
+        static Dictionary<Color, int> kPaintDotNetColorPalette = new()
         {
-            { Color.FromArgb(unchecked((int)0xFF000000)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF666666)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFaeaeae)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF002a88)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF155fda)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF64b0fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFc1e0fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF1412a8)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF4240fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF9390fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFd4d3fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF3b00a4)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF7627ff)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFc777fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFe9c8fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF5c007e)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFa11bcd)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFf36afe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfbc3fe)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF6e0040)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFb81e7c)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfe6ecd)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfec5eb)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF6c0700)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFb53220)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfe8270)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfecdc6)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF571d00)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF994f00)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFeb9f23)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFf7d9a6)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF343500)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF6c6e00)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFbdbf00)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFe5e695)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF0c4900)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF388700)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF89d900)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFd0f097)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF005200)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF0d9400)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF5de530)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFbef5ab)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF004f08)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF009032)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF45e182)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFb4f3cd)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF00404e)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF007c8e)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF48cedf)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFb5ecf3)), 0 },
-            { Color.FromArgb(unchecked((int)0xFF4f4f4f)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFb8b8b8)), 0 },
-            { Color.FromArgb(unchecked((int)0xFFfefefe)), 0 },
+            { Color.FromArgb(unchecked((int)0xFF000000)), kBlackColor }, // #000000
+            { Color.FromArgb(unchecked((int)0xFF666666)), 0 }, // #666666
+            { Color.FromArgb(unchecked((int)0xFFaeaeae)), 0 }, // #aeaeae
+            { Color.FromArgb(unchecked((int)0xFF002a88)), 0 }, // #002a88
+            { Color.FromArgb(unchecked((int)0xFF155fda)), 0 }, // #155fda
+            { Color.FromArgb(unchecked((int)0xFF64b0fe)), 0 }, // #64b0fe
+            { Color.FromArgb(unchecked((int)0xFFc1e0fe)), 0 }, // #c1e0fe
+            { Color.FromArgb(unchecked((int)0xFF1412a8)), 0 }, // #1412a8
+            { Color.FromArgb(unchecked((int)0xFF4240fe)), 0 }, // #4240fe
+            { Color.FromArgb(unchecked((int)0xFF9390fe)), 0 }, // #9390fe
+            { Color.FromArgb(unchecked((int)0xFFd4d3fe)), 0 }, // #d4d3fe
+            { Color.FromArgb(unchecked((int)0xFF3b00a4)), 0 }, // #3b00a4
+            { Color.FromArgb(unchecked((int)0xFF7627ff)), 0 }, // #7627ff
+            { Color.FromArgb(unchecked((int)0xFFc777fe)), 0 }, // #c777fe
+            { Color.FromArgb(unchecked((int)0xFFe9c8fe)), 0 }, // #e9c8fe
+            { Color.FromArgb(unchecked((int)0xFF5c007e)), 0 }, // #5c007e
+            { Color.FromArgb(unchecked((int)0xFFa11bcd)), 0 }, // #a11bcd
+            { Color.FromArgb(unchecked((int)0xFFf36afe)), 0 }, // #f36afe
+            { Color.FromArgb(unchecked((int)0xFFfbc3fe)), 0 }, // #fbc3fe
+            { Color.FromArgb(unchecked((int)0xFF6e0040)), 0 }, // #6e0040
+            { Color.FromArgb(unchecked((int)0xFFb81e7c)), 0 }, // #b81e7c
+            { Color.FromArgb(unchecked((int)0xFFfe6ecd)), 0 }, // #fe6ecd
+            { Color.FromArgb(unchecked((int)0xFFfec5eb)), 0 }, // #fec5eb
+            { Color.FromArgb(unchecked((int)0xFF6c0700)), 0 }, // #6c0700
+            { Color.FromArgb(unchecked((int)0xFFb53220)), 0 }, // #b53220
+            { Color.FromArgb(unchecked((int)0xFFfe8270)), 0 }, // #fe8270
+            { Color.FromArgb(unchecked((int)0xFFfecdc6)), 0 }, // #fecdc6
+            { Color.FromArgb(unchecked((int)0xFF571d00)), 0 }, // #571d00
+            { Color.FromArgb(unchecked((int)0xFF994f00)), 0 }, // #994f00
+            { Color.FromArgb(unchecked((int)0xFFeb9f23)), 0 }, // #eb9f23
+            { Color.FromArgb(unchecked((int)0xFFf7d9a6)), 0 }, // #f7d9a6
+            { Color.FromArgb(unchecked((int)0xFF343500)), 0 }, // #343500
+            { Color.FromArgb(unchecked((int)0xFF6c6e00)), 0 }, // #6c6e00
+            { Color.FromArgb(unchecked((int)0xFFbdbf00)), 0 }, // #bdbf00
+            { Color.FromArgb(unchecked((int)0xFFe5e695)), 0 }, // #e5e695
+            { Color.FromArgb(unchecked((int)0xFF0c4900)), 0 }, // #0c4900
+            { Color.FromArgb(unchecked((int)0xFF388700)), 0 }, // #388700
+            { Color.FromArgb(unchecked((int)0xFF89d900)), 0 }, // #89d900
+            { Color.FromArgb(unchecked((int)0xFFd0f097)), 0 }, // #d0f097
+            { Color.FromArgb(unchecked((int)0xFF005200)), 0 }, // #005200
+            { Color.FromArgb(unchecked((int)0xFF0d9400)), 0 }, // #0d9400
+            { Color.FromArgb(unchecked((int)0xFF5de530)), 0 }, // #5de530
+            { Color.FromArgb(unchecked((int)0xFFbef5ab)), 0 }, // #bef5ab
+            { Color.FromArgb(unchecked((int)0xFF004f08)), 0 }, // #004f08
+            { Color.FromArgb(unchecked((int)0xFF009032)), 0 }, // #009032
+            { Color.FromArgb(unchecked((int)0xFF45e182)), 0 }, // #45e182
+            { Color.FromArgb(unchecked((int)0xFFb4f3cd)), 0 }, // #b4f3cd
+            { Color.FromArgb(unchecked((int)0xFF00404e)), 0 }, // #00404e
+            { Color.FromArgb(unchecked((int)0xFF007c8e)), 0 }, // #007c8e
+            { Color.FromArgb(unchecked((int)0xFF48cedf)), 0 }, // #48cedf
+            { Color.FromArgb(unchecked((int)0xFFb5ecf3)), 0 }, // #b5ecf3
+            { Color.FromArgb(unchecked((int)0xFF4f4f4f)), 0 }, // #4f4f4f
+            { Color.FromArgb(unchecked((int)0xFFb8b8b8)), 0 }, // #b8b8b8
+            { Color.FromArgb(unchecked((int)0xFFfefefe)), 0 }, // #fefefe
         };
 
         // Colors from Aseprite NES palette
         static Dictionary<Color, int> kAsepriteNESPalette = new() {
-            { Color.FromArgb(0, 0, 0), 0 },
-            { Color.FromArgb(121, 121, 121),0 },
-            { Color.FromArgb(162, 162, 162),0 },
-            { Color.FromArgb(48, 81, 130),0 },
-            { Color.FromArgb(65, 146, 195),0 },
-            { Color.FromArgb(97, 211, 227),0 },
-            { Color.FromArgb(162, 255, 243),0 },
-            { Color.FromArgb(48, 97, 65),0 },
-            { Color.FromArgb(73, 162, 105),0 },
-            { Color.FromArgb(113, 227, 146),0 },
-            { Color.FromArgb(162, 255, 203),0 },
-            { Color.FromArgb(56, 109, 0),0 },
-            { Color.FromArgb(73, 170, 16),0 },
-            { Color.FromArgb(113, 243, 65),0 },
-            { Color.FromArgb(162, 243, 162),0 },
-            { Color.FromArgb(56, 105, 0),0 },
-            { Color.FromArgb(81, 162, 0),0 },
-            { Color.FromArgb(154, 235, 0),0 },
-            { Color.FromArgb(203, 243, 130),0 },
-            { Color.FromArgb(73, 89, 0),0 },
-            { Color.FromArgb(138, 138, 0),0 },
-            { Color.FromArgb(235, 211, 32),0 },
-            { Color.FromArgb(255, 243, 146),0 },
-            { Color.FromArgb(121, 65, 0),0 },
-            { Color.FromArgb(195, 113, 0),0 },
-            { Color.FromArgb(255, 162, 0),0 },
-            { Color.FromArgb(255, 219, 162),0 },
-            { Color.FromArgb(162, 48, 0),0 },
-            { Color.FromArgb(227, 81, 0),0 },
-            { Color.FromArgb(255, 121, 48),0 },
-            { Color.FromArgb(255, 203, 186),0 },
-            { Color.FromArgb(178, 16, 48),0 },
-            { Color.FromArgb(219, 65, 97),0 },
-            { Color.FromArgb(255, 97, 178),0 },
-            { Color.FromArgb(255, 186, 235),0 },
-            { Color.FromArgb(154, 32, 121),0 },
-            { Color.FromArgb(219, 65, 195),0 },
-            { Color.FromArgb(243, 97, 255),0 },
-            { Color.FromArgb(227, 178, 255),0 },
-            { Color.FromArgb(97, 16, 162),0 },
-            { Color.FromArgb(146, 65, 243),0 },
-            { Color.FromArgb(162, 113, 255),0 },
-            { Color.FromArgb(195, 178, 255),0 },
-            { Color.FromArgb(40, 0, 186),0 },
-            { Color.FromArgb(65, 65, 255),0 },
-            { Color.FromArgb(81, 130, 255),0 },
-            { Color.FromArgb(162, 186, 255),0 },
-            { Color.FromArgb(32, 0, 178),0 },
-            { Color.FromArgb(65, 97, 251),0 },
-            { Color.FromArgb(97, 162, 255),0 },
-            { Color.FromArgb(146, 211, 255),0 },
-            { Color.FromArgb(178, 178, 178),0 },
-            { Color.FromArgb(235, 235, 235),0 },
-            { Color.FromArgb(255, 255, 255),0 },
+            { Color.FromArgb(0, 0, 0), kBlackColor }, //
+            { Color.FromArgb(121, 121, 121),0 }, //
+            { Color.FromArgb(162, 162, 162),0 }, //
+            { Color.FromArgb(48, 81, 130),0 }, //
+            { Color.FromArgb(65, 146, 195),0 }, //
+            { Color.FromArgb(97, 211, 227),0 }, //
+            { Color.FromArgb(162, 255, 243),0 }, //
+            { Color.FromArgb(48, 97, 65),0 }, //
+            { Color.FromArgb(73, 162, 105),0 }, //
+            { Color.FromArgb(113, 227, 146),0 }, //
+            { Color.FromArgb(162, 255, 203),0 }, //
+            { Color.FromArgb(56, 109, 0),0 }, //
+            { Color.FromArgb(73, 170, 16),0 }, //
+            { Color.FromArgb(113, 243, 65),0 }, //
+            { Color.FromArgb(162, 243, 162),0 }, //
+            { Color.FromArgb(56, 105, 0),0 }, //
+            { Color.FromArgb(81, 162, 0),0 }, //
+            { Color.FromArgb(154, 235, 0),0 }, //
+            { Color.FromArgb(203, 243, 130),0 }, //
+            { Color.FromArgb(73, 89, 0),0 }, //
+            { Color.FromArgb(138, 138, 0),0 }, //
+            { Color.FromArgb(235, 211, 32),0 }, //
+            { Color.FromArgb(255, 243, 146),0 }, //
+            { Color.FromArgb(121, 65, 0),0 }, //
+            { Color.FromArgb(195, 113, 0),0 }, //
+            { Color.FromArgb(255, 162, 0),0 }, //
+            { Color.FromArgb(255, 219, 162),0 }, //
+            { Color.FromArgb(162, 48, 0),0 }, //
+            { Color.FromArgb(227, 81, 0),0 }, //
+            { Color.FromArgb(255, 121, 48),0 }, //
+            { Color.FromArgb(255, 203, 186),0 }, //
+            { Color.FromArgb(178, 16, 48),0 }, //
+            { Color.FromArgb(219, 65, 97),0 }, //
+            { Color.FromArgb(255, 97, 178),0 }, //
+            { Color.FromArgb(255, 186, 235),0 }, //
+            { Color.FromArgb(154, 32, 121),0 }, //
+            { Color.FromArgb(219, 65, 195),0 }, //
+            { Color.FromArgb(243, 97, 255),0 }, //
+            { Color.FromArgb(227, 178, 255),0 }, //
+            { Color.FromArgb(97, 16, 162),0 }, //
+            { Color.FromArgb(146, 65, 243),0 }, //
+            { Color.FromArgb(162, 113, 255),0 }, //
+            { Color.FromArgb(195, 178, 255),0 }, //
+            { Color.FromArgb(40, 0, 186),0 }, //
+            { Color.FromArgb(65, 65, 255),0 }, //
+            { Color.FromArgb(81, 130, 255),0 }, //
+            { Color.FromArgb(162, 186, 255),0 }, //
+            { Color.FromArgb(32, 0, 178),0 }, //
+            { Color.FromArgb(65, 97, 251),0 }, //
+            { Color.FromArgb(97, 162, 255),0 }, //
+            { Color.FromArgb(146, 211, 255),0 }, //
+            { Color.FromArgb(178, 178, 178),0 }, //
+            { Color.FromArgb(235, 235, 235),0 }, //
+            { Color.FromArgb(255, 255, 255),0 }, //
         };
 
-        private static int KnownColorToId(Color color)
+        // Palette from: https://www.romdetectives.com/Wiki/index.php?title=NES_Palette
+        static Color[] kNESPaletteToColor = new[]
+        {
+            // 0x00
+            Color.FromArgb(124,124,124),    // #7C7C7C
+            Color.FromArgb(0,0,252),        // #0000FC
+            Color.FromArgb(0,0,188),        // #0000BC
+            Color.FromArgb(68,40,188),      // #4428BC
+            Color.FromArgb(148,0,132),      // #940084
+            Color.FromArgb(168,0,32),       // #A80020
+            Color.FromArgb(168,16,0),       // #A81000
+            Color.FromArgb(136,20,0),       // #881400
+            Color.FromArgb(80,48,0),        // #503000
+            Color.FromArgb(0,120,0),        // #007800
+            Color.FromArgb(0,104,0),        // #006800
+            Color.FromArgb(0,88,0),         // #005800
+            Color.FromArgb(0,64,88),        // #004058
+            Color.FromArgb(0,0,0),          // #000000 forbidden
+            Color.FromArgb(0,0,0),          // #000000
+            Color.FromArgb(0,0,0),          // #000000
+
+            // 0x10
+            Color.FromArgb(188,188,188),    // #BCBCBC
+            Color.FromArgb(0,120,248),      // #0078F8
+            Color.FromArgb(0,88,248),       // #0058F8
+            Color.FromArgb(104,68,252),     // #6844FC
+            Color.FromArgb(216,0,204),      // #D800CC
+            Color.FromArgb(228,0,88),       // #E40058
+            Color.FromArgb(248,56,0),       // #F83800
+            Color.FromArgb(228,92,16),      // #E45C10
+            Color.FromArgb(172,124,0),      // #AC7C00
+            Color.FromArgb(0,184,0),        // #00B800
+            Color.FromArgb(0,168,0),        // #00A800
+            Color.FromArgb(0,168,68),       // #00A844
+            Color.FromArgb(0,136,136),      // #008888
+            Color.FromArgb(0,0,0),          // #000000
+            Color.FromArgb(0,0,0),          // #000000
+            Color.FromArgb(0,0,0),          // #000000
+
+            // 0x20
+            Color.FromArgb(248,248,248),    // #F8F8F8
+            Color.FromArgb(60,188,252),     // #3CBCFC
+            Color.FromArgb(104,136,252),    // #6888FC
+            Color.FromArgb(152,120,248),    // #9878F8
+            Color.FromArgb(248,120,248),    // #F878F8
+            Color.FromArgb(248,88,152),     // #F85898
+            Color.FromArgb(248,120,88),     // #F87858
+            Color.FromArgb(252,160,68),     // #FCA044
+            Color.FromArgb(248,184,0),      // #F8B800
+            Color.FromArgb(184,248,24),     // #B8F818
+            Color.FromArgb(88,216,84),      // #58D854
+            Color.FromArgb(88,248,152),     // #58F898
+            Color.FromArgb(0,232,216),      // #00E8D8
+            Color.FromArgb(120,120,120),    // #787878
+            Color.FromArgb(0,0,0),          // #000000
+            Color.FromArgb(0,0,0),          // #000000
+
+            // 0x30
+            Color.FromArgb(252,252,252),    // #FCFCFC
+            Color.FromArgb(164,228,252),    // #A4E4FC
+            Color.FromArgb(184,184,248),    // #B8B8F8
+            Color.FromArgb(216,184,248),    // #D8B8F8
+            Color.FromArgb(248,184,248),    // #F8B8F8
+            Color.FromArgb(248,164,192),    // #F8A4C0
+            Color.FromArgb(240,208,176),    // #F0D0B0
+            Color.FromArgb(252,224,168),    // #FCE0A8
+            Color.FromArgb(248,216,120),    // #F8D878
+            Color.FromArgb(216,248,120),    // #D8F878
+            Color.FromArgb(184,248,184),    // #B8F8B8
+            Color.FromArgb(184,248,216),    // #B8F8D8
+            Color.FromArgb(0,252,252),      // #00FCFC
+            Color.FromArgb(248,216,248),    // #F8D8F8
+            Color.FromArgb(0,0,0),          // #000000
+            Color.FromArgb(0,0,0)           // #000000
+        };
+
+        private static int KnownColorToId(in Color color)
         {
             return IsKnownColor(color, out int id) ? id : 0;
         }
 
-        private static bool IsKnownColor(Color color, out int id)
+        private static bool IsKnownColor(in Color color, out int id)
         {
+            int idx = Array.IndexOf(kNESPaletteToColor, color);
+            if (idx >= 0)
+            {
+                // remap forbidden color to black
+                if (idx == kForbiddenColor)
+                {
+                    idx = kBlackColor;
+                }
+
+                id = idx;
+                return true;
+            }
+
             bool known = kAsepriteNESPalette.TryGetValue(color, out id);
             if (!known)
             {
-                known = kNESColorToPalette.TryGetValue(color, out id);
+                known = kPaintDotNetColorPalette.TryGetValue(color, out id);
             }
 
             return known;
         }
 
+        const int kForbiddenColor = 0x0D;
+        const int kBlackColor = 0x0F;
+
         private static Color GetColorFromId(int id)
         {
-            return Color.AliceBlue;
+            Assert(id >= 0 && id < kNESPaletteToColor.Length);
+            AssertWarn(id == kForbiddenColor, "Using forbidden color!");
+            return kNESPaletteToColor[id];
+        }
+
+        private static void CreatePalettes(string rootPath)
+        {
+            const string kPaletteBaseFilename = "nes-palette";
+
+            File.WriteAllText(Path.Combine(rootPath, $"{kPaletteBaseFilename}-aseprite.pal"), GenerateAsepritePaletteFile(kNESPaletteToColor));
+            File.WriteAllText(Path.Combine(rootPath, $"{kPaletteBaseFilename}-paint.net.txt"), GeneratePaintDotNetPaletteFile(kNESPaletteToColor));
+            File.WriteAllText(Path.Combine(rootPath, $"{kPaletteBaseFilename}-gimp.gpl"), GenerateGimpPalleteFile(kNESPaletteToColor));
+        }
+
+        // Aseprite .pal format
+        private static string GenerateAsepritePaletteFile(Color[] paletteColors)
+        {
+            using var auto = AutoStringBuilder.Auto();
+
+            var sb = auto.sb;
+
+            sb.Clear();
+            sb.AppendLine("JASC-PAL");
+            sb.AppendLine("0100");
+            sb.AppendLine(paletteColors.Length.ToString());
+
+            foreach (var color in paletteColors)
+            {
+                sb.AppendLine($"{color.R} {color.G} {color.B}");
+            }
+
+            sb.AppendLine();
+
+            return sb.ToString();
+        }
+
+        // Paint.NET .txt format
+        private static string GeneratePaintDotNetPaletteFile(Color[] paletteColors, bool useAlpha = false)
+        {
+            using var auto = AutoStringBuilder.Auto();
+
+            var sb = auto.sb;
+
+            AssertWarn(paletteColors.Length < 96, "Too many colors for Paint .NET palette.");
+
+            sb.AppendLine("; Auto-generated NES Palette");
+            sb.AppendLine("; Format: AARRGGBB");
+            sb.AppendLine($"; Colors: {paletteColors.Length}");
+
+            foreach (var color in paletteColors)
+            {
+                sb.AppendLine($"{(useAlpha ? color.A : 255):X2}{color.R:X2}{color.G:X2}{color.B:X2}");
+            }
+
+            return sb.ToString();
+        }
+
+        // GIMP .gpl format
+        private static string GenerateGimpPalleteFile(Color[] paletterColors)
+        {
+            using var auto = AutoStringBuilder.Auto();
+
+            var sb = auto.sb;
+
+            sb.Clear();
+            sb.AppendLine("GIMP Palette");
+            sb.AppendLine("Name: Auto-generated NES Palette");
+            sb.AppendLine("Columns: 16");
+            sb.AppendLine($"# Colors: {paletterColors.Length}");
+
+            for (int i = 0; i < paletterColors.Length; i++)
+            {
+                ref readonly Color color = ref paletterColors[i];
+                sb.AppendLine($"{color.R}\t{color.G}\t{color.B}\t0x{color.ToArgb():X8} ${i:X2}");
+            }
+
+            return sb.ToString();
         }
 
         private static (List<TileEntry> tiles, List<SpritePalette> spritePalettes) ConvertImageToTiles(ImageBitmap bitmapImage, Rectangle area, int paletteWidth, int paletteHeight, Color? backgroundColor = null)
@@ -5516,6 +5686,7 @@ namespace img2chr
             //   dependency thing needed to make sure that all sprites are
             //   generated in chr rom when one changes to make sure it's generated correctly
             bool forceReimport = true;
+            bool generatePalettes = false;
 
 #if DEBUG
             forceReimport |= Debugger.IsAttached;
@@ -5557,6 +5728,11 @@ namespace img2chr
                             {
                                 options.language = args[i];
                             }
+                            break;
+
+                        case "-p":
+                        case "--palette":
+                            generatePalettes = true;
                             break;
                     }
                 }
@@ -5680,6 +5856,11 @@ namespace img2chr
             foreach (var task in compilerTasks)
             {
                 task.convertFunc(task.inputFileName, outputChrData, options);
+            }
+
+            if(generatePalettes)
+            {
+                CreatePalettes(cwd);
             }
 
             return ExitCode;
