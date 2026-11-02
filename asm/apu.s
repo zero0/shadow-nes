@@ -107,12 +107,14 @@ APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
 .define APU_PULSE_VOLUME_ENVOLOPE       %00000000
 .define APU_PULSE_VOLUME_MASK           $0F
 
-.macro lda_apu_pulse_volume    duty, inf, const, vol
-    lda #(((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & #(APU_PULSE_VOLUME_MASK)))
+.macro num_apu_pulse_volume    duty, inf, const, vol
+    (((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & (APU_PULSE_VOLUME_MASK)))
 .endmacro
 
-.macro num_apu_pulse_volume    duty, inf, const, vol
-    .byte $80, (((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & (APU_PULSE_VOLUME_MASK)))
+; chan = 0,1
+.macro byte_apu_pulse_volume    chan, duty, inf, const, vol
+    .byte $80 + (chan * 4)
+    .byte (((duty & 3) << 6 ) | ((inf & 1) << 5) | ((const & 1) << 4 ) | (vol & (APU_PULSE_VOLUME_MASK)))
 .endmacro
 
 ; $4001/5
@@ -122,12 +124,14 @@ APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
 .define APU_PULSE_SWEEP_PERIOD_MASK     %01110000
 .define APU_PULSE_SWEEP_SHIFT_MASK      %00000111
 
-.macro lda_apu_pulse_sweep  enable, negate, period, shift
-    lda #( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
+.macro num_apu_pulse_sweep  enable, negate, period, shift
+    ( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
 .endmacro
 
-.macro num_apu_pulse_sweep  enable, negate, period, shift
-    .byte $81, ( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
+; chan = 0,1
+.macro byte_apu_pulse_sweep  chan, enable, negate, period, shift
+    .byte $81 + (chan * 4)
+    .byte ( ((enable & 1) << 7) | ((negate & 1) << 3) | (((period & 7) << APU_PULSE_SWEEP_PERIOD_SHIFT) & APU_PULSE_SWEEP_PERIOD_MASK) | (shift & APU_PULSE_SWEEP_SHIFT_MASK) )
 .endmacro
 
 ; $4002/6
@@ -143,9 +147,12 @@ APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
     ldx #( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
 .endmacro
 
-.macro num_apu_pulse_timer     period, length
-    .byte $82, ( .lobyte(period) )
-    .byte $83, ( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
+; chan = 0, 1
+.macro byte_apu_pulse_timer     chan, period, length
+    .byte $82 + (chan * 4)
+    .byte ( .lobyte(period) )
+    .byte $83 + (chan * 4)
+    .byte ( (.hibyte(period) & APU_PULSE_PERIOD_HIGH_MASK) | ((length << APU_PULSE_LENGTH_LOAD_SHIFT) & APU_PULSE_LENGTH_LOAD_MASK ) )
 .endmacro
 
 
@@ -154,10 +161,15 @@ APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
 .define APU_TRIANGLE_LENGTH_COUNTER_HALT        %10000000
 
 .define APU_TRIANGLE_LINEAR_COUNTER_LOAD_SHIFT  0
-.define APU_TRIANGLE_LINEAR_COUNTER_LOAD_MASK   %01111111
+.define APU_TRIANGLE_LINEAR_COUNTER_LOAD_MASK   %00000111
 
 .define APU_TRIANGLE_LENGTH_COUNTER_LOAD_SHIFT  3
-.define APU_TRIANGLE_LENGTH_COUNTER_LOAD_MASK   %11111000
+.define APU_TRIANGLE_LENGTH_COUNTER_LOAD_MASK   %01111000
+
+.macro byte_apu_triangle_count_length   halt, counter, length
+    .byte $88
+    .byte ((halt * APU_TRIANGLE_LENGTH_COUNTER_HALT) | ((counter << APU_TRIANGLE_LINEAR_COUNTER_LOAD_SHIFT) & APU_TRIANGLE_LINEAR_COUNTER_LOAD_MASK) | ((length << APU_TRIANGLE_LENGTH_COUNTER_LOAD_SHIFT) & APU_TRIANGLE_LENGTH_COUNTER_LOAD_MASK))
+.endmacro
 
 
 ; $400A
@@ -172,6 +184,13 @@ APU_REG_DMC_SAMPLE_LENGTH   =APU_REG_DMC + 3
 .macro ldax_apu_triangle_pulse_timer    period, length
     lda #( .lobyte(period) )
     ldx #( .hibyte(period) & APU_TRIANGLE_PERIOD_HIGH_MASK ) | ((length << APU_TRIANGLE_LENGTH_LOAD_SHIFT) & APU_TRIANGLE_LENGTH_LOAD_MASK )
+.endmacro
+
+.macro byte_apu_triangle_pulse_timer   period, length
+    .byte $8A
+    .byte .lobyte(period)
+    .byte $8B
+    .byte ( .hibyte(period) & APU_TRIANGLE_PERIOD_HIGH_MASK ) | ((length << APU_TRIANGLE_LENGTH_LOAD_SHIFT) & APU_TRIANGLE_LENGTH_LOAD_MASK )
 .endmacro
 
 ; Noise
@@ -1080,9 +1099,11 @@ _tmp_music_song_3:
     .byte 0
 
 _tmp_sfx_hit_0:
-num_apu_pulse_volume APU_PULSE_DUTY_CYCLE_12_5, APU_PULSE_PLAY_ONE_SHOT, APU_PULSE_VOLUME_CONSTANT, 15
-num_apu_pulse_sweep APU_PULSE_SWEEP_ENABLED, 0, 2, 3
-num_apu_pulse_timer 20000, 10
+byte_apu_pulse_volume           0, APU_PULSE_DUTY_CYCLE_12_5, APU_PULSE_PLAY_ONE_SHOT, APU_PULSE_VOLUME_CONSTANT, 15
+byte_apu_pulse_sweep            0, APU_PULSE_SWEEP_ENABLED, 0, 2, 3
+byte_apu_pulse_timer            0, 20000, 10
+byte_apu_triangle_count_length  0, 10, 10
+byte_apu_triangle_pulse_timer   20000, 10
     .byte 10
     .byte 0
 
